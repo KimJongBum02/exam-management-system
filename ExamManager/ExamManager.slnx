@@ -1,1 +1,15 @@
-<Solution />
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="NetworkLib/NetworkLib.csproj" />
+  <Project Path="ProcessControll/ProcessControll.vcxproj" />
+  <Project Path="ProfessorUI/ProfessorUI.csproj">
+    <Platform Solution="*|x64" Project="x64" />
+  </Project>
+  <Project Path="StudentUI/StudentUI.csproj">
+    <Platform Solution="*|x64" Project="x64" />
+  </Project>
+</Solution>
