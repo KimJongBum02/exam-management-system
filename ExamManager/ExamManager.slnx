@@ -5,7 +5,7 @@
     <Platform Name="x86" />
   </Configurations>
   <Project Path="NetworkLib/NetworkLib.csproj" />
-  <Project Path="ProcessControll/ProcessControll.vcxproj" />
+  <Project Path="ProcessControll/ProcessControll.vcxproj" Id="9b7baa44-6f03-4691-845b-e5275670500c" />
   <Project Path="ProfessorUI/ProfessorUI.csproj">
     <Platform Solution="*|x64" Project="x64" />
   </Project>
