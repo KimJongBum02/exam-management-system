@@ -43,21 +43,21 @@ namespace ProfessorUI.ViewModels
                 case 0: // 현황판
                     _navigationStore.CurrentViewModel = new ViewModels.StudentBoardViewModel();
                     break;
-                //case 1: // 파일 배포
-                //    _navigationStore.CurrentViewModel = new FileReadyViewModel();
-                //    break;
-                //case 2: // 시험 시작/종료
-                //    _navigationStore.CurrentViewModel = new ExaminationViewModel();
-                //    break;
-                //case 3:
-                //    _navigationStore.CurrentViewModel = new ProcessViewModel();
-                //    break;
-                //case 4:
-                //    _navigationStore.CurrentViewModel = new RollcallViewModel();
-                //    break;
-                //case 5:
-                //    _navigationStore.CurrentViewModel = new QuizViewModel();
-                //    break;
+                case 1: // 파일 배포 (주석 해제 후 쟁반 뷰모델 연결!)
+                    _navigationStore.CurrentViewModel = new FileDeployMainViewModel();
+                    break;
+                case 2: // 시험 시작/종료 (⭐ 이 부분 주석을 풀고 새 뷰모델을 연결합니다!)
+                    _navigationStore.CurrentViewModel = new ExaminationMainViewModel();
+                    break;
+                case 3:
+                    _navigationStore.CurrentViewModel = new ProgramControlMainViewModel();
+                    break;
+                    //case 4:
+                    //    _navigationStore.CurrentViewModel = new RollcallViewModel();
+                    //    break;
+                    //case 5:
+                    //    _navigationStore.CurrentViewModel = new QuizViewModel();
+                    //    break;
             }
         }
         public event PropertyChangedEventHandler PropertyChanged;
