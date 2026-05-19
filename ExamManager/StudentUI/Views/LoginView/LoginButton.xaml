@@ -1,0 +1,44 @@
+﻿<UserControl x:Class="StudentUI.Views.LoginView.LoginButton"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:StudentUI.Views.LoginView"
+             mc:Ignorable="d">
+
+    <Button x:Name="Login_Button"
+            Height="48"
+            BorderThickness="0"
+            Cursor="Hand">
+        <Button.Template>
+            <ControlTemplate TargetType="Button">
+                <Border x:Name="ButtonBorder"
+                        Background="#5C6AC4"
+                        CornerRadius="24">
+                    <ContentPresenter HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"/>
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter TargetName="ButtonBorder" Property="Background" Value="#4C5AB4"/>
+                    </Trigger>
+                    <Trigger Property="IsPressed" Value="True">
+                        <Setter TargetName="ButtonBorder" Property="Background" Value="#3C4AA4"/>
+                    </Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate>
+        </Button.Template>
+
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Login"
+                       FontSize="15"
+                       FontWeight="SemiBold"
+                       Foreground="White"
+                       VerticalAlignment="Center"/>
+            <TextBlock Text=" →"
+                       FontSize="15"
+                       Foreground="White"
+                       VerticalAlignment="Center"/>
+        </StackPanel>
+    </Button>
+</UserControl>

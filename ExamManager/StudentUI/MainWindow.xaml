@@ -1,14 +1,15 @@
 ﻿<Window x:Class="StudentUI.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:local="clr-namespace:StudentUI.Views.StudentExamView"
+        xmlns:local="clr-namespace:StudentUI.Views.LoginView"
         Title="StudentUI" Height="600" Width="900"
         ResizeMode="NoResize"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        Icon="/Views/LoginView/Assets/yuhan.png">
 
     <Frame NavigationUIVisibility="Hidden">
         <Frame.Content>
-            <local:StudentPage/>
+            <local:LoginPage/>
         </Frame.Content>
     </Frame>
 </Window>
