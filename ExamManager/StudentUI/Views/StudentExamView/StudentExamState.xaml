@@ -1,0 +1,90 @@
+﻿<UserControl x:Class="StudentUI.Views.StudentExamView.StudentExamState"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:StudentUI.Views.StudentExamView"
+             mc:Ignorable="d">
+    <Border Background="White"
+        CornerRadius="12"
+        Padding="16"
+        Margin="6,0,0,0">
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" Opacity="0.05"
+                          BlurRadius="10" ShadowDepth="2"/>
+        </Border.Effect>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <!-- 내용이 남은 공간 차지 -->
+                <RowDefinition Height="Auto"/>
+                <!-- 버튼은 아래 고정 -->
+            </Grid.RowDefinitions>
+
+            <!-- 시험 응시 -->
+            <StackPanel Grid.Row="0">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                    <TextBlock Text="📁" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBlock Text="시험 응시" FontSize="14" FontWeight="Bold" Foreground="#2E7D32" VerticalAlignment="Center"/>
+                </StackPanel>
+
+
+                <!-- 파일 상태 -->
+                <StackPanel Margin="0,0,0,15">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="✓" FontSize="12" Foreground="#2E7D32" FontWeight="Bold" Margin="0,0,8,0"/>
+                        <TextBlock Text="problem_1.pdf" FontSize="12" FontWeight="SemiBold" Foreground="#1A1A2E"/>
+                        <TextBlock Text="  (문제 파일)" FontSize="11" Foreground="#888888" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="✓" FontSize="12" Foreground="#2E7D32" FontWeight="Bold" Margin="0,0,8,0"/>
+                        <TextBlock Text="answer_sheet.docx" FontSize="12" FontWeight="SemiBold" Foreground="#1A1A2E"/>
+                        <TextBlock Text="  (답안 파일)" FontSize="11" Foreground="#888888" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="✓" FontSize="12" Foreground="#2E7D32" FontWeight="Bold" Margin="0,0,8,0"/>
+                        <TextBlock Text="resources/" FontSize="12" FontWeight="SemiBold" Foreground="#1A1A2E"/>
+                        <TextBlock Text="  (참고 자료)" FontSize="11" Foreground="#888888" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <Separator Background="#F0F0F0"/>
+            </StackPanel>
+
+            <!-- 시험종료 버튼 -->
+            <Button Grid.Row="1"
+                x:Name="ExamEndButton"
+                Content="시험 종료"
+                FontSize="13"
+                FontWeight="Bold"
+                Foreground="#A32D2D"
+                Cursor="Hand"
+                Padding="0,12">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="EndBorder" Background="#FCEBEB" BorderBrush="#F09595" BorderThickness="1" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="EndBorder" Property="Background" Value="#F9D6D6"/>
+                                        </Trigger>
+                                        <Trigger Property="IsPressed" Value="True">
+                                            <Setter TargetName="EndBorder" Property="Background" Value="#F5C0C0"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </Grid>
+    </Border>
+</UserControl>
