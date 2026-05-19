@@ -4,9 +4,42 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ProfessorUI"
+        xmlns:sidebarviews="clr-namespace:ProfessorUI.Views.SidebarView"
+        xmlns:dashboardviews="clr-namespace:ProfessorUI.Views.DashBoardCardView"
+        xmlns:currenttimeviews="clr-namespace:ProfessorUI.Views.CurrentTimeView"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="MainWindow" Height="750" Width="1300" Background="#FFF5F5F3">
     <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/>
+            <!-- 사이드바 영역 -->
+            <ColumnDefinition Width="*"/>
+            <!-- 메인 화면 영역 -->
+        </Grid.ColumnDefinitions>
+        <!-- 사이드바 뷰 (DataContext는 App.xaml.cs 등에서 주입) -->
+        <sidebarviews:SidebarView Grid.Column="0" DataContext="{Binding SidebarViewModel}" />
 
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Grid Grid.Row="0" Margin="15,15,15,15">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.8*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid Grid.Column="0">
+                    <dashboardviews:DashBoardCardView/>
+                </Grid>
+                <Grid Grid.Column="1">
+                    <currenttimeviews:CurrentTimeView/>
+                </Grid>
+            </Grid>
+
+
+            <!-- 여기에 ViewModel이 들어오면 위의 DataTemplate에 따라 View가 자동 렌더링됨 -->
+            <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding CurrentViewModel}" />
+        </Grid>
     </Grid>
 </Window>
