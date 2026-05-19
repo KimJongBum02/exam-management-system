@@ -2,18 +2,29 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:ProfessorUI"
-             xmlns:views="clr-namespace:ProfessorUI.Views.StudentStatusView"
+             xmlns:status="clr-namespace:ProfessorUI.Views.StudentStatusView"
+             xmlns:files="clr-namespace:ProfessorUI.Views.FileReadyandDistributeView"
+             xmlns:exam="clr-namespace:ProfessorUI.Views.ExamView"
+             xmlns:program="clr-namespace:ProfessorUI.Views.ProgramControlView"
              xmlns:viewmodels="clr-namespace:ProfessorUI.ViewModels"
              >
     <Application.Resources>
         <!-- ViewModel과 View 매핑 -->
         <DataTemplate DataType="{x:Type viewmodels:StudentBoardViewModel}">
-            <views:StudentStatusView />
+            <status:StudentStatusView />
         </DataTemplate>
 
-        <!--<DataTemplate DataType="{x:Type viewmodels:FileReadyViewModel}">
-            <views:FileReadyView />
-        </DataTemplate>-->
+        <DataTemplate DataType="{x:Type viewmodels:FileDeployMainViewModel}">
+            <files:FileDeployMainView />
+        </DataTemplate>
+        
+        <DataTemplate DataType="{x:Type viewmodels:ExaminationMainViewModel}">
+            <exam:ExaminationMainView />
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type viewmodels:ProgramControlMainViewModel}">
+            <program:ProgramControlMainView />
+        </DataTemplate>
 
         <!-- 나머지 ViewModel-View 매핑도 동일하게 추가 -->
     </Application.Resources>
