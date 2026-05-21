@@ -1,0 +1,25 @@
+﻿<Page x:Class="StudentUI.Views.LockScreenView.LockScreenPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:StudentUI.Views.LockScreenView"
+      mc:Ignorable="d" 
+      d:DesignHeight="450" d:DesignWidth="800"
+      Background="#F5F5F5"
+      Title="LockScreenPage">
+
+    <Grid>
+        <StackPanel HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Width="500">
+
+            <!-- 학생 이름 + 학번 -->
+            <local:NameBorder Margin="0,0,0,12"/>
+
+            <!-- 대기 카드 -->
+            <local:WaitingBorder/>
+
+        </StackPanel>
+    </Grid>
+</Page>

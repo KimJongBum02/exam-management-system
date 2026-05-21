@@ -29,31 +29,136 @@
                     <TextBlock Text="시험 응시" FontSize="14" FontWeight="Bold" Foreground="#2E7D32" VerticalAlignment="Center"/>
                 </StackPanel>
 
-
-                <!-- 파일 상태 -->
-                <StackPanel Margin="0,0,0,15">
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                        <TextBlock Text="✓" FontSize="12" Foreground="#2E7D32" FontWeight="Bold" Margin="0,0,8,0"/>
-                        <TextBlock Text="problem_1.pdf" FontSize="12" FontWeight="SemiBold" Foreground="#1A1A2E"/>
-                        <TextBlock Text="  (문제 파일)" FontSize="11" Foreground="#888888" VerticalAlignment="Center"/>
-                    </StackPanel>
-
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                        <TextBlock Text="✓" FontSize="12" Foreground="#2E7D32" FontWeight="Bold" Margin="0,0,8,0"/>
-                        <TextBlock Text="answer_sheet.docx" FontSize="12" FontWeight="SemiBold" Foreground="#1A1A2E"/>
-                        <TextBlock Text="  (답안 파일)" FontSize="11" Foreground="#888888" VerticalAlignment="Center"/>
-                    </StackPanel>
-
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="✓" FontSize="12" Foreground="#2E7D32" FontWeight="Bold" Margin="0,0,8,0"/>
-                        <TextBlock Text="resources/" FontSize="12" FontWeight="SemiBold" Foreground="#1A1A2E"/>
-                        <TextBlock Text="  (참고 자료)" FontSize="11" Foreground="#888888" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </StackPanel>
-
-                <Separator Background="#F0F0F0"/>
+            <Separator Background="#F0F0F0"/>
             </StackPanel>
+            <Border Background="#F8F9FA"
+        BorderBrush="#E0E0E0"
+        BorderThickness="1"
+        CornerRadius="8"
+        Padding="12,10"
+        Margin="0,0,0,10">
+                <StackPanel>
 
+                    <!-- 원본 대상 폴더 라벨 -->
+                    <TextBlock Text="원본 대상 폴더"
+                   FontSize="13"
+                   FontWeight="SemiBold"
+                   Foreground="#1A1A2E"
+                   Margin="0,0,0,8"/>
+
+                    <!-- 파일 경로 입력창 + 폴더 버튼 -->
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0"
+                    BorderBrush="#E0E0E0"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="12,10">
+                            <TextBlock x:Name="SelectedFileName"
+                           Text=""
+                           FontSize="12"
+                           Foreground="#1A1A2E"/>
+                        </Border>
+
+                        <Button Grid.Column="2"
+                    x:Name="SelectFileButton"
+                    Width="44" Height="44"
+                    Cursor="Hand">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="FolderBorder"
+                                            Background="White"
+                                            BorderBrush="#E0E0E0"
+                                            BorderThickness="1"
+                                            CornerRadius="8">
+                                                    <TextBlock Text="🗀"
+                                                   FontSize="18"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="#1A1A2E"/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="FolderBorder" Property="Background" Value="#F0F0F0"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </Grid>
+
+                    <!-- 진행 상태 영역 -->
+                    <Border Background="#F0F2FF"
+                BorderBrush="#E0E0E0"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="14,12">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="StatusText"
+                               Grid.Column="0"
+                               Text="대기 중..."
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               Foreground="#1A1A2E"/>
+                                <TextBlock x:Name="ProgressText"
+                               Grid.Column="1"
+                               Text="0%"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               Foreground="#5C6AC4"/>
+                            </Grid>
+
+                            <!-- 프로그레스 바 -->
+                            <ProgressBar x:Name="FileProgressBar"
+                             Height="6"
+                             Value="0"
+                             Maximum="100"
+                             Margin="0,0,0,8">
+                                <ProgressBar.Style>
+                                    <Style TargetType="ProgressBar">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ProgressBar">
+                                                    <Border Background="#D0D4F0" CornerRadius="3">
+                                                        <Border x:Name="PART_Track">
+                                                            <Border x:Name="PART_Indicator"
+                                                        Background="#5C6AC4"
+                                                        CornerRadius="3"
+                                                        HorizontalAlignment="Left"/>
+                                                        </Border>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ProgressBar.Style>
+                            </ProgressBar>
+
+                            <TextBlock x:Name="CurrentFileText"
+                           Text="현재 파일: data_package.zip"
+                           FontSize="11"
+                           Foreground="#8888AA"/>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </Border>
             <!-- 시험종료 버튼 -->
             <Button Grid.Row="1"
                 x:Name="ExamEndButton"
