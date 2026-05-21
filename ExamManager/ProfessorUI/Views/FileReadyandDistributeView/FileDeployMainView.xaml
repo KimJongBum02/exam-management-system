@@ -5,16 +5,16 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:ProfessorUI.Views.FileReadyandDistributeView"
              mc:Ignorable="d">
-    <Grid Margin="20">
+    <Grid>
 
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <local:FileReadyView Grid.Column="0" DataContext="{Binding ReadyVM}" Margin="10"/>
+        <local:FileReadyView Grid.Column="0" DataContext="{Binding ReadyVM}" Margin="5,5,7.5,10"/>
 
-        <local:FileDistributeView Grid.Column="1" DataContext="{Binding DistributeVM}" Margin="10"/>
+        <local:FileDistributeView Grid.Column="1" DataContext="{Binding DistributeVM}" Margin="7.5,5,13,10"/>
 
     </Grid>
 </UserControl>

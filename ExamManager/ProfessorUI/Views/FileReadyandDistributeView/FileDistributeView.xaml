@@ -7,7 +7,7 @@
              mc:Ignorable="d" 
              >
     <Grid>
-        <Border BorderBrush="#5C6AC4" BorderThickness="2" CornerRadius="16" Background="White" Padding="24">
+        <Border BorderBrush="#5C6AC4" BorderThickness="1" CornerRadius="16" Background="White" Padding="24">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>

@@ -5,8 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ProfessorUI"
         xmlns:sidebarviews="clr-namespace:ProfessorUI.Views.SidebarView"
-        xmlns:dashboardviews="clr-namespace:ProfessorUI.Views.DashBoardCardView"
-        xmlns:currenttimeviews="clr-namespace:ProfessorUI.Views.CurrentTimeView"
+        xmlns:top="clr-namespace:ProfessorUI.Views.TopMainView"
+        xmlns:background="clr-namespace:ProfessorUI.Views.BackGroundStyle"
         mc:Ignorable="d"
         Title="MainWindow" Height="750" Width="1300" Background="#F5F5F5">
     <Grid>
@@ -16,6 +16,8 @@
             <ColumnDefinition Width="*"/>
             <!-- 메인 화면 영역 -->
         </Grid.ColumnDefinitions>
+        <background:BackGround Grid.ColumnSpan="2" Panel.ZIndex="-1" />
+        
         <!-- 사이드바 뷰 (DataContext는 App.xaml.cs 등에서 주입) -->
         <sidebarviews:SidebarView Grid.Column="0" DataContext="{Binding SidebarViewModel}" />
 
@@ -24,22 +26,13 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
-            <Grid Grid.Row="0" Margin="15,15,15,15">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1.8*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <Grid Grid.Column="0">
-                    <dashboardviews:DashBoardCardView/>
-                </Grid>
-                <Grid Grid.Column="1">
-                    <currenttimeviews:CurrentTimeView/>
-                </Grid>
+            <Grid Grid.Row="0" Margin="15">
+                <top:TopView/>
             </Grid>
 
 
             <!-- 여기에 ViewModel이 들어오면 위의 DataTemplate에 따라 View가 자동 렌더링됨 -->
-            <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding CurrentViewModel}" />
+            <ContentControl Grid.Row="1" Content="{Binding CurrentViewModel}" Margin="10,5,0,10"/>
         </Grid>
     </Grid>
 </Window>
