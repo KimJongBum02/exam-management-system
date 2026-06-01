@@ -6,6 +6,7 @@
              xmlns:files="clr-namespace:ProfessorUI.Views.FileReadyandDistributeView"
              xmlns:exam="clr-namespace:ProfessorUI.Views.ExamView"
              xmlns:program="clr-namespace:ProfessorUI.Views.ProgramControlView"
+             xmlns:attendance="clr-namespace:ProfessorUI.Views.AttenandceView"
              xmlns:viewmodels="clr-namespace:ProfessorUI.ViewModels"
              >
     <Application.Resources>
@@ -24,6 +25,10 @@
 
         <DataTemplate DataType="{x:Type viewmodels:ProgramControlMainViewModel}">
             <program:ProgramControlMainView />
+        </DataTemplate>
+        
+        <DataTemplate DataType="{x:Type viewmodels:AttendanceMainViewModel}">
+            <attendance:AttendanceMainView/>
         </DataTemplate>
 
         <!-- 나머지 ViewModel-View 매핑도 동일하게 추가 -->

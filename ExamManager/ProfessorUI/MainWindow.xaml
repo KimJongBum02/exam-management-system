@@ -16,8 +16,7 @@
             <ColumnDefinition Width="*"/>
             <!-- 메인 화면 영역 -->
         </Grid.ColumnDefinitions>
-        <background:BackGround Grid.ColumnSpan="2" Panel.ZIndex="-1" />
-        
+
         <!-- 사이드바 뷰 (DataContext는 App.xaml.cs 등에서 주입) -->
         <sidebarviews:SidebarView Grid.Column="0" DataContext="{Binding SidebarViewModel}" />
 
