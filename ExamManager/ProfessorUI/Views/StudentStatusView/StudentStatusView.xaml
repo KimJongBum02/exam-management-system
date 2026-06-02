@@ -19,8 +19,8 @@
 
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border x:Name="CardBorder" Background="LightYellow" BorderBrush="#FDE047" BorderThickness="2" 
-                            CornerRadius="16" Margin="0, 0, 10, 10" Padding="20">
+                        <Border x:Name="CardBorder" Background="LightYellow" BorderBrush="#FDE047" BorderThickness="1" 
+                            CornerRadius="16" Margin="5" Padding="20">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
