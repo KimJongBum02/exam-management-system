@@ -24,7 +24,8 @@
                      Background="Transparent"
                      BorderThickness="0,0,0,0.5"
                      BorderBrush="#000000"
-                     Padding="0,4"/>
+                     Padding="0,4"
+                     Text="{Binding Student.StudentNumber, UpdateSourceTrigger=PropertyChanged}"/>
         </Grid>
     </StackPanel>
 </UserControl>

@@ -9,7 +9,9 @@
     <Button x:Name="Login_Button"
             Height="48"
             BorderThickness="0"
-            Cursor="Hand">
+            Cursor="Hand"
+            Command="{Binding DataContext.LoginCommand, 
+                  RelativeSource={RelativeSource AncestorType=Page}}">
         <Button.Template>
             <ControlTemplate TargetType="Button">
                 <Border x:Name="ButtonBorder"

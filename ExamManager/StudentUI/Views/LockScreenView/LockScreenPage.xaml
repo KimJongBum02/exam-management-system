@@ -14,10 +14,8 @@
                     VerticalAlignment="Center"
                     Width="500">
 
-            <!-- 학생 이름 + 학번 -->
-            <local:NameBorder Margin="0,0,0,12"/>
-
-            <!-- 대기 카드 -->
+            <local:NameBorder Margin="0,0,0,12"
+                  LogoutCommand="{Binding LogoutCommand}"/>
             <local:WaitingBorder/>
 
         </StackPanel>

@@ -18,9 +18,11 @@ namespace StudentUI.Views.LoginView
     /// </summary>
     public partial class LoginButton : UserControl
     {
-        public LoginButton()
-        {
-            InitializeComponent();
+        
+            public LoginButton()
+            {
+                InitializeComponent();
+            }
         }
     }
-}
+
