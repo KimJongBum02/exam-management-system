@@ -67,7 +67,7 @@
                                    Foreground="#888888"
                                    HorizontalAlignment="Center"
                                    Margin="0,0,0,4"/>
-                        <TextBlock Text="김민준"
+                        <TextBlock Text="{Binding Student.StudentName}"
                                    FontSize="14"
                                    FontWeight="SemiBold"
                                    Foreground="#1A1A2E"
@@ -84,7 +84,7 @@
                                    Foreground="#888888"
                                    HorizontalAlignment="Center"
                                    Margin="0,0,0,4"/>
-                        <TextBlock Text="20220001"
+                        <TextBlock Text="{Binding Student.StudentNumber}"
                                    FontSize="14"
                                    FontWeight="SemiBold"
                                    Foreground="#1A1A2E"

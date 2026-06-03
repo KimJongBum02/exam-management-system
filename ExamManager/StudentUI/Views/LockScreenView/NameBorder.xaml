@@ -6,6 +6,7 @@
              xmlns:local="clr-namespace:StudentUI.Views.LockScreenView"
              mc:Ignorable="d">
 
+    
     <Border Background="White"
             CornerRadius="12"
             Padding="14,14,18,14">
@@ -22,11 +23,11 @@
 
             <!-- 이름 + 학번 -->
             <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                <TextBlock Text="김민준"
+                <TextBlock Text="{Binding Student.StudentName}"
                            FontSize="15"
                            FontWeight="SemiBold"
                            Foreground="#1A1A2E"/>
-                <TextBlock Text="20220001 · 1번 좌석"
+                <TextBlock Text="{Binding Student.StudentNumber}"
                            FontSize="12"
                            Foreground="#888888"
                            Margin="0,2,0,0"/>
@@ -34,9 +35,11 @@
 
             <!-- 로그아웃 버튼 -->
             <Button Grid.Column="1"
-                    VerticalAlignment="Center"
-                    Cursor="Hand"
-                    BorderThickness="0">
+        VerticalAlignment="Center"
+        Cursor="Hand"
+        BorderThickness="0"
+        Click="LogoutButton_Click">
+                
                 <Button.Style>
                     <Style TargetType="Button">
                         <Setter Property="Template">

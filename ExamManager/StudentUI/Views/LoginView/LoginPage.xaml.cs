@@ -10,6 +10,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using StudentUI.ViewModel;
+using StudentUI.Views.LockScreenView;
 
 namespace StudentUI.Views.LoginView
 {
@@ -21,6 +23,19 @@ namespace StudentUI.Views.LoginView
         public LoginPage()
         {
             InitializeComponent();
+
+            // DataContext 가 설정된 후에 이벤트 연결
+            Loaded += (s, e) =>
+            {
+                if (DataContext is LoginViewModel vm)
+                {
+                    vm.LoginSucceeded += () =>
+                    {
+                        NavigationService.Navigate(new LockScreenPage(vm.Student));
+                    };
+                }
+            };
         }
     }
 }
+    
