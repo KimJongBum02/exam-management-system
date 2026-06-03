@@ -7,6 +7,7 @@
   <Project Path="NetworkLib/NetworkLib.csproj" />
   <Project Path="ProcessControl/ProcessControl.vcxproj" Id="2c019956-2481-4105-8cf0-00c336112ac8" />
   <Project Path="ProcessControll/ProcessControll.vcxproj" Id="9b7baa44-6f03-4691-845b-e5275670500c" />
+  <Project Path="ProcessControlTest/ProcessControlTest.vcxproj" Id="2376ce7c-8c2a-48d9-80ba-353dbaefb803" />
   <Project Path="ProfessorUI/ProfessorUI.csproj">
     <Platform Solution="*|x64" Project="x64" />
   </Project>
