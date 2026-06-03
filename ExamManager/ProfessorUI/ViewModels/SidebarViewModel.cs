@@ -52,9 +52,9 @@ namespace ProfessorUI.ViewModels
                 case 3:
                     _navigationStore.CurrentViewModel = new ProgramControlMainViewModel();
                     break;
-                    //case 4:
-                    //    _navigationStore.CurrentViewModel = new RollcallViewModel();
-                    //    break;
+                    case 4:
+                        _navigationStore.CurrentViewModel = new AttendanceMainViewModel();
+                        break;
                     //case 5:
                     //    _navigationStore.CurrentViewModel = new QuizViewModel();
                     //    break;

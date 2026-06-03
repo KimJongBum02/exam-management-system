@@ -6,7 +6,7 @@
              xmlns:local="clr-namespace:ProfessorUI.Views.ExamView"
              mc:Ignorable="d" 
     Background="Transparent">
-    <Border BorderBrush="#E2E8F0" BorderThickness="2" CornerRadius="16" Background="#F8FAFC" Padding="28">
+    <Border BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="16" Background="#F8FAFC" Padding="28">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
