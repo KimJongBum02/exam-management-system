@@ -1,4 +1,6 @@
-﻿using System;
+﻿using StudentUI.Model;
+using StudentUI.ViewModel;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Windows;
@@ -18,9 +20,11 @@ namespace StudentUI.Views.StudentExamView
     /// </summary>
     public partial class StudentPage : Page
     {
-        public StudentPage()
+        public StudentPage(Student student)
         {
             InitializeComponent();
+            var vm = new StudentExamViewModel(student);
+            DataContext = vm;
         }
     }
 }
