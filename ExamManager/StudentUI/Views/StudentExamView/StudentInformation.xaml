@@ -25,15 +25,18 @@
                          Orientation="Horizontal"
                          VerticalAlignment="Center">
                  <StackPanel VerticalAlignment="Center">
-                     <TextBlock Text="김민준"
-                                FontSize="15"
-                                FontWeight="SemiBold"
-                                Foreground="#1A1A2E"/>
-                     <TextBlock Text="20220001 · 1번 좌석 "
-                                FontSize="12"
-                                Foreground="#888888"
-                                Margin="0,2,0,0"/>
-                 </StackPanel>
+                        <!-- 이름 바인딩 -->
+                        <TextBlock Text="{Binding Student.StudentName}"
+                                   FontSize="15"
+                                   FontWeight="SemiBold"
+                                   Foreground="#1A1A2E"/>
+
+                        <!-- 학번 바인딩 -->
+                        <TextBlock Text="{Binding Student.StudentNumber}"
+                                   FontSize="12"
+                                   Foreground="#888888"
+                                   Margin="0,2,0,0"/>
+                    </StackPanel>
              </StackPanel>
 
            

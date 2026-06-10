@@ -21,6 +21,10 @@ namespace StudentUI.Views.StudentExamView
         public StudentExamState()
         {
             InitializeComponent();
+            ExamEndButton.Click += (s, e) =>
+            {
+                MessageBox.Show("시험 종료 버튼 클릭됨!");
+            };
         }
     }
 }

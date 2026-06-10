@@ -11,8 +11,9 @@ namespace StudentUI.ViewModel
     {
         public Student Student { get; set; }
         public ICommand LogoutCommand { get; }
+        public ICommand StartCommand { get; }
         public event Action? LogoutSucceeded;
-
+        public event Action? StartSuccceeded;
         public LockScreenViewModel(Student student)
         {
             Student = student;
@@ -20,6 +21,11 @@ namespace StudentUI.ViewModel
             LogoutCommand = new RelayCommand(() =>
             {
                 LogoutSucceeded?.Invoke();
+            });
+
+            StartCommand = new RelayCommand(()=>
+                {
+                StartSuccceeded?.Invoke();
             });
         }
     }
