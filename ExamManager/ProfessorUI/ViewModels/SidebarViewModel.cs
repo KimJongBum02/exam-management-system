@@ -12,6 +12,13 @@ namespace ProfessorUI.ViewModels
     {
         private readonly NavigationStore _navigationStore;
 
+        private readonly StudentBoardViewModel _studentBoardViewModel;
+        private readonly FileDeployMainViewModel _fileDeployMainViewModel;
+        private readonly ExaminationMainViewModel _examinationMainViewModel;
+        private readonly ProgramControlMainViewModel _programControlMainViewModel;
+        private readonly AttendanceMainViewModel _attendanceMainViewModel;
+        // private readonly QuizViewModel _quizViewModel;
+
         private int _selectedIndex;
         public int SelectedIndex
         {
@@ -31,6 +38,13 @@ namespace ProfessorUI.ViewModels
         {
             _navigationStore = navigationStore;
 
+            _studentBoardViewModel = new StudentBoardViewModel();
+            _fileDeployMainViewModel = new FileDeployMainViewModel();
+            _examinationMainViewModel = new ExaminationMainViewModel();
+            _programControlMainViewModel = new ProgramControlMainViewModel();
+            _attendanceMainViewModel = new AttendanceMainViewModel();
+            // _quizViewModel = new QuizViewModel();
+
             // ⭐ 앱이 처음 켜질 때 현재 인덱스(0번 = 현황판) 화면을 즉시 띄우도록 호출!
             NavigateToSelectedMenu();
         }
@@ -41,20 +55,20 @@ namespace ProfessorUI.ViewModels
             switch (SelectedIndex)
             {
                 case 0: // 현황판
-                    _navigationStore.CurrentViewModel = new ViewModels.StudentBoardViewModel();
+                    _navigationStore.CurrentViewModel = _studentBoardViewModel;
                     break;
                 case 1: // 파일 배포 (주석 해제 후 쟁반 뷰모델 연결!)
-                    _navigationStore.CurrentViewModel = new FileDeployMainViewModel();
+                    _navigationStore.CurrentViewModel = _fileDeployMainViewModel;
                     break;
                 case 2: // 시험 시작/종료 (⭐ 이 부분 주석을 풀고 새 뷰모델을 연결합니다!)
-                    _navigationStore.CurrentViewModel = new ExaminationMainViewModel();
+                    _navigationStore.CurrentViewModel = _examinationMainViewModel;
                     break;
                 case 3:
-                    _navigationStore.CurrentViewModel = new ProgramControlMainViewModel();
+                    _navigationStore.CurrentViewModel = _programControlMainViewModel;
                     break;
-                    case 4:
-                        _navigationStore.CurrentViewModel = new AttendanceMainViewModel();
-                        break;
+                case 4:
+                    _navigationStore.CurrentViewModel = _attendanceMainViewModel;
+                    break;
                     //case 5:
                     //    _navigationStore.CurrentViewModel = new QuizViewModel();
                     //    break;
