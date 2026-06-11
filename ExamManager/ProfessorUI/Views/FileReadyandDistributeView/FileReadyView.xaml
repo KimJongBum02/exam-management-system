@@ -6,7 +6,7 @@
              xmlns:local="clr-namespace:ProfessorUI.Views.FileReadyandDistributeView"
              mc:Ignorable="d">
     <Grid>
-        <Border BorderBrush="#5C6AC4" BorderThickness="1" CornerRadius="16" Background="White" Padding="24">
+        <Border BorderBrush="#5C6AC4" BorderThickness="1" CornerRadius="12" Background="White" Padding="20">
 
             <Grid>
                 <Grid.RowDefinitions>
@@ -15,56 +15,73 @@
                 </Grid.RowDefinitions>
 
                 <StackPanel Grid.Row="0">
-                    <Grid Margin="0,0,0,24">
-                        <Border HorizontalAlignment="Left" Width="44" Height="44" CornerRadius="22" Background="#5C6AC4">
-                            <TextBlock Text="1" Foreground="White" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Grid Margin="0,0,0,16">
+                        <Border HorizontalAlignment="Left" Width="36" Height="36" CornerRadius="18" Background="#5C6AC4">
+                            <TextBlock Text="1" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <Border HorizontalAlignment="Right" VerticalAlignment="Top" Background="#EEF2FF" CornerRadius="16" Padding="16,8">
-                            <TextBlock Text="진행 중" Foreground="#4F46E5" FontSize="14" FontWeight="Bold"/>
+                        <Border HorizontalAlignment="Right" VerticalAlignment="Top" Background="#EEF2FF" CornerRadius="12" Padding="12,6">
+                            <TextBlock Text="진행 중" Foreground="#4F46E5" FontSize="12" FontWeight="Bold"/>
                         </Border>
                     </Grid>
 
-                    <TextBlock Text="파일 준비 및 암호화" FontSize="32" FontWeight="Bold" Foreground="#1E1B4B" Margin="0,0,0,16"/>
-                    <TextBlock Text="배포할 원본 폴더를 선택하면, 자동으로 암호화 및 압축을 진행합니다." FontSize="18" Foreground="#64748B" Margin="0,0,0,40"/>
+                    <TextBlock Text="파일 준비 및 암호화" FontSize="24" FontWeight="Bold" Foreground="#1E1B4B" Margin="0,0,0,8"/>
+                    <TextBlock Text="배포할 파일들을 선택하면, 자동으로 암호화 및 압축을 진행합니다." FontSize="14" Foreground="#64748B" Margin="0,0,0,24"/>
 
-                    <TextBlock Text="원본 대상 폴더" FontSize="16" FontWeight="Bold" Foreground="#475569" Margin="0,0,0,10"/>
+                    <TextBlock Text="원본 대상 파일" FontSize="14" FontWeight="Bold" Foreground="#475569" Margin="0,0,0,8"/>
 
-                    <Grid Margin="0,0,0,24">
+                    <Grid Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBox Grid.Column="0" Text="{Binding SelectedFolderPath, UpdateSourceTrigger=PropertyChanged}" FontSize="18" Foreground="#334155" Padding="16,12" BorderBrush="#CBD5E1" BorderThickness="1" VerticalContentAlignment="Center">
+
+                        <TextBox Grid.Column="0" Text="{Binding SelectedFilesSummary, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" FontSize="14" Foreground="#334155" Padding="12,8" Height="36" BorderBrush="#CBD5E1" BorderThickness="1" VerticalContentAlignment="Center">
                             <TextBox.Resources>
                                 <Style TargetType="Border">
-                                    <Setter Property="CornerRadius" Value="8"/>
+                                    <Setter Property="CornerRadius" Value="6"/>
                                 </Style>
                             </TextBox.Resources>
                         </TextBox>
-                        <Button Grid.Column="1" Command="{Binding SelectFolderCommand}" Width="60" Margin="12,0,0,0" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" Cursor="Hand">
+
+                        <Button Grid.Column="1" Command="{Binding SelectFilesCommand}" Width="48" Height="36" Margin="8,0,0,0" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" Cursor="Hand">
                             <Button.Resources>
                                 <Style TargetType="Border">
-                                    <Setter Property="CornerRadius" Value="8"/>
+                                    <Setter Property="CornerRadius" Value="6"/>
                                 </Style>
                             </Button.Resources>
-                            <Path Data="M4 4h6l2 2h8v12H4z" Fill="Transparent" Stroke="#475569" StrokeThickness="2" Width="24" Height="20" Stretch="Fill" Margin="0,2,0,0"/>
+                            <Path Data="M4 4h6l2 2h8v12H4z" Fill="Transparent" Stroke="#475569" StrokeThickness="2" Width="20" Height="16" Stretch="Fill"/>
                         </Button>
                     </Grid>
 
-                    <Border Background="#F8FAFC" BorderBrush="#F1F5F9" BorderThickness="1" CornerRadius="12" Padding="24" Margin="0,0,0,32">
+                    <ItemsControl ItemsSource="{Binding SelectedFileNames}" Margin="0,0,0,20" MaxHeight="80">
+                        <ItemsControl.Template>
+                            <ControlTemplate>
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <ItemsPresenter />
+                                </ScrollViewer>
+                            </ControlTemplate>
+                        </ItemsControl.Template>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" FontSize="12" Foreground="#94A3B8" Margin="4,2"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Border Background="#F8FAFC" BorderBrush="#F1F5F9" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,24">
                         <StackPanel>
-                            <Grid Margin="0,0,0,12">
-                                <TextBlock Text="{Binding CurrentStatusMessage}" FontSize="18" FontWeight="Bold" Foreground="#475569" HorizontalAlignment="Left"/>
-                                <TextBlock Text="{Binding ProgressText}" FontSize="18" FontWeight="Bold" Foreground="#5C6AC4" HorizontalAlignment="Right"/>
+                            <Grid Margin="0,0,0,8">
+                                <TextBlock Text="{Binding CurrentStatusMessage}" FontSize="14" FontWeight="Bold" Foreground="#475569" HorizontalAlignment="Left"/>
+                                <TextBlock Text="{Binding ProgressText}" FontSize="14" FontWeight="Bold" Foreground="#5C6AC4" HorizontalAlignment="Right"/>
                             </Grid>
-                            <ProgressBar Value="{Binding ProgressValue}" Height="12" Background="#E2E8F0" Foreground="#5C6AC4" BorderThickness="0" Margin="0,0,0,16">
+                            <ProgressBar Value="{Binding ProgressValue}" Height="8" Background="#E2E8F0" Foreground="#5C6AC4" BorderThickness="0" Margin="0,0,0,12">
                                 <ProgressBar.Resources>
                                     <Style TargetType="Border">
-                                        <Setter Property="CornerRadius" Value="6"/>
+                                        <Setter Property="CornerRadius" Value="4"/>
                                     </Style>
                                 </ProgressBar.Resources>
                             </ProgressBar>
-                            <TextBlock Text="현재 파일: data_package.zip" FontSize="15" Foreground="#94A3B8"/>
+                            <TextBlock Text="{Binding CurrentFileNameDisplay}" FontSize="12" Foreground="#94A3B8"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -72,26 +89,24 @@
                 <Button Grid.Row="1" Command="{Binding StartProcessCommand}" Cursor="Hand">
                     <Button.Style>
                         <Style TargetType="Button">
-                            <Setter Property="Height" Value="54"/>
+                            <Setter Property="Height" Value="44"/>
                             <Setter Property="Background" Value="#5C6AC4"/>
                             <Setter Property="Foreground" Value="White"/>
                             <Setter Property="BorderBrush" Value="#5C6AC4"/>
                             <Setter Property="BorderThickness" Value="1"/>
-                            <Setter Property="FontSize" Value="20"/>
+                            <Setter Property="FontSize" Value="16"/>
                             <Setter Property="FontWeight" Value="Bold"/>
-                            <Setter Property="Padding" Value="0,16"/>
 
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="Button">
                                         <Border x:Name="BtnBorder" 
-                                Background="{TemplateBinding Background}" 
-                                BorderBrush="{TemplateBinding BorderBrush}" 
-                                BorderThickness="{TemplateBinding BorderThickness}" 
-                                CornerRadius="12">
+                                                Background="{TemplateBinding Background}" 
+                                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                                CornerRadius="8">
                                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
-
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
                                                 <Setter TargetName="BtnBorder" Property="Background" Value="#4A58B2"/>
@@ -105,7 +120,6 @@
                             </Setter>
                         </Style>
                     </Button.Style>
-
                     압축 및 암호화 시작
                 </Button>
             </Grid>
