@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -21,6 +21,14 @@
   <ItemGroup>
     <Resource Include="Views\LoginView\Assets\loginbackground.png" />
     <Resource Include="Views\LoginView\Assets\yuhan.png" />
+  </ItemGroup>
+  <!-- NetworkLib_Native.dll 자동 복사 (Debug/Release 구성에 맞게 자동 선택) -->
+  <ItemGroup>
+    <None Include="$(SolutionDir)x64\$(Configuration)\NetworkLib_Native.dll"
+          Condition="Exists('$(SolutionDir)x64\$(Configuration)\NetworkLib_Native.dll')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>NetworkLib_Native.dll</Link>
+    </None>
   </ItemGroup>
 
 </Project>
