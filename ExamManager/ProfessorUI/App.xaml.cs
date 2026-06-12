@@ -1,4 +1,5 @@
-﻿using System.Configuration;
+﻿using NetworkLib;
+using System.Configuration;
 using System.Data;
 using System.Windows;
 
@@ -27,6 +28,20 @@ namespace ProfessorUI
             {
                 DataContext = mainViewModel // MainWindow의 데이터는 MainViewModel이 담당한다!
             };
+            /*
+            // ── 서버 테스트 ──────────────────────────
+            NetworkLibrary.Initialize();
+            var server = new ProfessorServer(port: 9000);
+            server.StudentConnected += (sid, studentId, name, ip) =>
+                MessageBox.Show($"학생 접속: {name} ({studentId}) | {ip}");
+            server.StudentDisconnected += (sid, studentId, name, reason) =>
+                MessageBox.Show($"학생 종료: {name} | 사유: {reason}");
+            server.PacketReceived += (sid, studentId, name, type, payload, len) =>
+                System.Diagnostics.Debug.WriteLine($"패킷 수신: {name} → Type={type}");
+            bool started = server.Start();
+            MessageBox.Show(started ? "서버 시작 성공 (포트 9000)" : "서버 시작 실패");
+            // ───────────────────────────────────
+            */
 
             // 화면 띄우기
             mainWindow.Show();
