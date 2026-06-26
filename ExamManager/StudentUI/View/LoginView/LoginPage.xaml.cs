@@ -25,13 +25,10 @@ namespace StudentUI.View.LoginView
             {
                 vm.ShowIPInput += () =>
                 {
-                    var dialog = new InputIp();
-                    dialog.Owner = Window.GetWindow(this);
-
+                    var dialog = new IPInputDialog();
                     if (dialog.ShowDialog() == true)
                     {
                         vm.Student.IPAddress = dialog.IPAddress;
-                        vm.Student.Port = dialog.Port; 
                         NavigationService.Navigate(new LockScreenPage(vm.Student));
                     }
                 };

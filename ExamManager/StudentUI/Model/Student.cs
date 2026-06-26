@@ -9,6 +9,6 @@ namespace StudentUI.Model
         public string StudentName { get; set; } = string.Empty;
         public string StudentNumber { get; set; } = string.Empty;
         public string IPAddress { get; set; } = string.Empty;
-        public string Port { get; set; } = string.Empty;
-    }
+
+   }
 }
