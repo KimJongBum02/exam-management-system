@@ -36,8 +36,8 @@
 
             <StackPanel>
                 <local:StudentLogin Margin="0,0,0,16"/>
-                <local:StudentInputName x:Name="NameInput" Margin="0,0,0,12"/>
                 <local:StudentInputNumber x:Name="NumberInput" Margin="0,0,0,12"/>
+                <local:StudentInputName x:Name="NameInput" Margin="0,0,0,12"/>
                 <local:LoginButton x:Name="LoginBtn"/>
             </StackPanel>
         </Border>

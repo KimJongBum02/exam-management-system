@@ -15,27 +15,29 @@ using StudentUI.View.LockScreenView;
 
 namespace StudentUI.View.LoginView
 {
-    /// <summary>
-    /// LoginPage.xaml에 대한 상호 작용 논리
-    /// </summary>
     public partial class LoginPage : Page
     {
         public LoginPage()
         {
             InitializeComponent();
 
-            // DataContext 가 설정된 후에 이벤트 연결
-            Loaded += (s, e) =>
+            if (DataContext is LoginViewModel vm)
             {
-                if (DataContext is LoginViewModel vm)
+                vm.ShowIPInput += () =>
                 {
-                    vm.LoginSucceeded += () =>
+                    var dialog = new IPInputDialog();
+                    if (dialog.ShowDialog() == true)
                     {
+                        vm.Student.IPAddress = dialog.IPAddress;
                         NavigationService.Navigate(new LockScreenPage(vm.Student));
-                    };
-                }
-            };
+                    }
+                };
+
+                vm.LoginSucceeded += () =>
+                {
+                    NavigationService.Navigate(new LockScreenPage(vm.Student));
+                };
+            }
         }
     }
 }
-    

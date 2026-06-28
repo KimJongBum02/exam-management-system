@@ -11,6 +11,9 @@ namespace StudentUI.ViewModel
         public Student Student { get; set; } = new Student();
         public ICommand LoginCommand { get; }
         public event Action? LoginSucceeded;
+        public event Action? ShowIPInput;  
+
+        private bool _isIPStep = false;  
 
         public LoginViewModel()
         {
@@ -18,7 +21,8 @@ namespace StudentUI.ViewModel
             {
                 if (TryLogin())
                 {
-                    LoginSucceeded?.Invoke();
+                    _isIPStep = true;
+                    ShowIPInput?.Invoke();
                 }
                 else
                 {
