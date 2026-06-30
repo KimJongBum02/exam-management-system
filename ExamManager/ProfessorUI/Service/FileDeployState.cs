@@ -14,5 +14,21 @@ namespace ProfessorUI.Service
         public static string? ExamId { get; set; }
         public static string? PackagePath { get; set; }
         public static string? Password { get; set; }
+
+        private static bool _isFileDistributed = false;
+        public static bool IsFileDistributed
+        {
+            get => _isFileDistributed;
+            set
+            {
+                _isFileDistributed = value;
+                // 값이 바뀔 때마다 이벤트를 발생시켜 다른 화면들에 알림
+                StateChanged?.Invoke();
+            }
+        }
+
+        // 상태가 변했을 때 뷰모델들에게 알려줄 이벤트
+        public static event Action StateChanged;
     }
 }
+

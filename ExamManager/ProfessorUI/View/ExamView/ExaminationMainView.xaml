@@ -13,8 +13,8 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <local:ExamStartView Grid.Column="0" Margin="5,10,5,10"/>
-        <local:AnswerCollectView Grid.Column="1" Margin="5,10,5,10"/>
-        <local:ExamEndView Grid.Column="2" Margin="5,10,13,10"/>
+        <local:ExamStartView DataContext="{Binding ExamStartVM}" Grid.Column="0" Margin="5,10,5,10"/>
+        <local:AnswerCollectView DataContext="{Binding AnswerCollectVM}" Grid.Column="1" Margin="5,10,5,10"/>
+        <local:ExamEndView DataContext="{Binding ExamEndVM}" Grid.Column="2" Margin="5,10,13,10"/>
     </Grid>
 </UserControl>

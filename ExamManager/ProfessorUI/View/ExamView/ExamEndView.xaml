@@ -5,38 +5,194 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:ProfessorUI.View.ExamView"
              mc:Ignorable="d" 
-   Background="Transparent">
-    <Border BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="16" Background="#F8FAFC" Padding="28">
+             Background="Transparent">
+
+    <Border IsEnabled="{Binding IsContainerEnabled}" BorderThickness="1" CornerRadius="16" Padding="24">
+        <Border.Style>
+            <Style TargetType="Border">
+                <Setter Property="Background" Value="#F8FAFC"/>
+                <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                <Style.Triggers>
+                    <Trigger Property="IsEnabled" Value="True">
+                        <Setter Property="Background" Value="White"/>
+                        <Setter Property="BorderBrush" Value="#5C6AC4"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+        </Border.Style>
+
         <Grid>
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <StackPanel Grid.Row="0">
-                <Grid Margin="0,0,0,20">
-                    <Border HorizontalAlignment="Left" Width="40" Height="40" CornerRadius="20" Background="#F1F5F9">
-                        <TextBlock Text="3" Foreground="#94A3B8" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                    <Border HorizontalAlignment="Right" VerticalAlignment="Top" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="14" Padding="12,6">
-                        <TextBlock Text="대기 중" Foreground="#94A3B8" FontSize="13" FontWeight="Bold"/>
+            <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                <Grid Margin="0,0,0,12">
+                    <Border HorizontalAlignment="Left" Width="36" Height="36" CornerRadius="18">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="#F1F5F9"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsContainerEnabled}" Value="True">
+                                        <Setter Property="Background" Value="#5C6AC4"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock Text="3" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#94A3B8"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsContainerEnabled}" Value="True">
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </Border>
                 </Grid>
 
-                <Border Width="60" Height="60" Background="#F1F5F9" CornerRadius="12" HorizontalAlignment="Left" Margin="0,0,0,24">
-                    <Path Data="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" Fill="#CBD5E1" HorizontalAlignment="Center" VerticalAlignment="Center" Stretch="Uniform" Width="24" Height="24"/>
-                </Border>
-
-                <TextBlock Text="승인 후 종료" FontSize="28" FontWeight="Bold" Foreground="#94A3B8" Margin="0,0,0,12"/>
-                <TextBlock Text="실습 폴더 삭제 후 PC를 자동 종료합니다." FontSize="16" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,0,0,30"/>
+                <TextBlock Text="승인 후 종료" FontSize="24" FontWeight="Bold" Margin="0,0,0,6">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="#94A3B8"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsContainerEnabled}" Value="True">
+                                    <Setter Property="Foreground" Value="#1E1B4B"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <TextBlock Text="실습 폴더 삭제 후 PC를 자동 종료합니다." FontSize="14" Foreground="#94A3B8" Margin="0,0,0,8"/>
             </StackPanel>
 
-            <Border Grid.Row="1" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="0,14">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <Path Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" Fill="#94A3B8" Stretch="Uniform" Width="16" Height="16" Margin="0,0,8,0"/>
-                    <TextBlock Text="답안 수집 후 활성화" Foreground="#94A3B8" FontSize="16" FontWeight="Bold"/>
-                </StackPanel>
+            <Border Grid.Row="1" Background="#F8FAFC" CornerRadius="8" Padding="10,8" Margin="0,0,0,8">
+                <CheckBox IsChecked="{Binding IsAllSelected, Mode=TwoWay}" VerticalAlignment="Center">
+                    <TextBlock Text="전체 학생 선택 / 해제" FontSize="12" FontWeight="Bold" Foreground="#475569" Margin="4,0,0,0"/>
+                </CheckBox>
             </Border>
+
+            <Grid Grid.Row="2" Margin="0,0,0,16">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="180">
+                    <ItemsControl ItemsSource="{Binding Students}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="#F1F5F9" BorderThickness="0,0,0,1" Padding="0,6" Margin="0,2">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" Foreground="#334155" VerticalAlignment="Center"/>
+
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Path Data="M 0,5 A 5,5 0 1 1 10,5 A 5,5 0 1 1 0,5 Z" Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,6,0">
+                                                <Path.Style>
+                                                    <Style TargetType="Path">
+                                                        <Setter Property="Fill" Value="#EF4444"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsFileReceived}" Value="True">
+                                                                <Setter Property="Fill" Value="#10B981"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Path.Style>
+                                            </Path>
+                                            <TextBlock FontSize="12" Foreground="#64748B" VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="미수집"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsFileReceived}" Value="True">
+                                                                <Setter Property="Text" Value="수집완료"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
+
+                                        <Grid Grid.Column="3" VerticalAlignment="Center">
+
+                                            <Button Content="승인" 
+                                                    Command="{Binding DataContext.ApproveSingleCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Background="#EEF2FF" Foreground="#4F46E5" FontWeight="Bold" FontSize="11" Padding="8,3" Cursor="Hand">
+                                                <Button.Style>
+                                                    <Style TargetType="Button">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding IsFileReceived}" Value="True"/>
+                                                                    <Condition Binding="{Binding IsApproved}" Value="False"/>
+                                                                </MultiDataTrigger.Conditions>
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </MultiDataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
+
+                                            <TextBlock Text="✓ 승인완료" Foreground="#10B981" FontSize="12" FontWeight="Bold" Margin="4,0">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsApproved}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Grid>
+
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+
+            <Button Grid.Row="3" Command="{Binding ApproveSelectedCommand}" Height="44" Cursor="Hand">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Background" Value="#F1F5F9"/>
+                        <Setter Property="Foreground" Value="#94A3B8"/>
+                        <Setter Property="FontSize" Value="14"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                        <Setter Property="Content" Value="🔒 답안 수집 후 활성화"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="BtnBorder" Background="{TemplateBinding Background}" CornerRadius="8" BorderBrush="#E2E8F0" BorderThickness="1">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsEnabled" Value="True">
+                                <Setter Property="Background" Value="#4F46E5"/>
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="Content" Value="✓ 선택 항목 일괄 승인 및 종료"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
         </Grid>
     </Border>
 </UserControl>

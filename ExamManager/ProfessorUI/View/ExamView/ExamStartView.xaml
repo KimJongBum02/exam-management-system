@@ -6,7 +6,7 @@
              xmlns:local="clr-namespace:ProfessorUI.View.ExamView"
              mc:Ignorable="d" 
             Background="Transparent">
-    <Border BorderBrush="#5C6AC4" BorderThickness="1" CornerRadius="16" Background="White" Padding="28">
+    <Border IsEnabled="{Binding IsContainerEnabled}" BorderBrush="#5C6AC4" BorderThickness="1" CornerRadius="16" Background="White" Padding="28">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
@@ -18,9 +18,6 @@
                     <Border HorizontalAlignment="Left" Width="40" Height="40" CornerRadius="20" Background="#5C6AC4">
                         <TextBlock Text="1" Foreground="White" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
-                    <Border HorizontalAlignment="Right" VerticalAlignment="Top" Background="#EEF2FF" CornerRadius="14" Padding="12,6">
-                        <TextBlock Text="진행 중" Foreground="#4F46E5" FontSize="13" FontWeight="Bold"/>
-                    </Border>
                 </Grid>
 
                 <Border Width="60" Height="60" Background="#EEF2FF" CornerRadius="12" HorizontalAlignment="Left" Margin="0,0,0,24">
@@ -30,7 +27,7 @@
                 <TextBlock Text="시험 시작" FontSize="28" FontWeight="Bold" Foreground="#1E1B4B" Margin="0,0,0,12"/>
                 <TextBlock Text="학생 PC 압축 해제 후 시험을 시작합니다." FontSize="16" Foreground="#64748B" TextWrapping="Wrap" Margin="0,0,0,30"/>
 
-                <Border Background="#FFF7ED" BorderBrush="#FED7AA" BorderThickness="1" CornerRadius="10" Padding="16,12" Margin="0,0,0,20">
+                <Border Visibility="{Binding WarningVisibility}" Background="#FFF7ED" BorderBrush="#FED7AA" BorderThickness="1" CornerRadius="10" Padding="16,12" Margin="0,0,0,20">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <Path Data="M12 2L1 21h22L12 2zm1 14h-2v-2h2v2zm0-4h-2V8h2v4z" Fill="#C2410C" Stretch="Uniform" Width="18" Height="18" Margin="0,0,8,0"/>
                         <TextBlock Text="파일 배포 먼저 완료 필요" Foreground="#C2410C" FontSize="15" FontWeight="Bold" VerticalAlignment="Center"/>
@@ -38,13 +35,13 @@
                 </Border>
             </StackPanel>
 
-            <Button Grid.Row="1" Content="시험 시작" Cursor="Hand">
+            <Button Grid.Row="1" Content="시험 시작" Command="{Binding StartExamCommand}" IsEnabled="{Binding IsStartButtonEnabled}" Cursor="Hand">
                 <Button.Style>
                     <Style TargetType="Button">
-                        <Setter Property="Height" Value="54"/>
+                        <Setter Property="Height" Value="50"/>
                         <Setter Property="Background" Value="#5C6AC4"/>
                         <Setter Property="Foreground" Value="White"/>
-                        <Setter Property="FontSize" Value="18"/>
+                        <Setter Property="FontSize" Value="16"/>
                         <Setter Property="FontWeight" Value="Bold"/>
                         <Setter Property="Padding" Value="0,14"/>
                         <Setter Property="Template">
@@ -54,9 +51,21 @@
                                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <ControlTemplate.Triggers>
+
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter TargetName="BtnBorder" Property="Background" Value="#F8FAFC"/>
+
+                                            <Setter TargetName="BtnBorder" Property="BorderBrush" Value="#E2E8F0"/>
+                                            <Setter TargetName="BtnBorder" Property="BorderThickness" Value="1"/>
+
+                                            <Setter Property="Foreground" Value="#94A3B8"/>
+                                            <Setter Property="Cursor" Value="Arrow"/>
+                                        </Trigger>
+
                                         <Trigger Property="IsMouseOver" Value="True">
                                             <Setter TargetName="BtnBorder" Property="Background" Value="#4A58B2"/>
                                         </Trigger>
+
                                         <Trigger Property="IsPressed" Value="True">
                                             <Setter TargetName="BtnBorder" Property="Background" Value="#3D499A"/>
                                         </Trigger>

@@ -6,6 +6,8 @@ namespace ProfessorUI.ViewModel
 {
     public class MainViewModel : INotifyPropertyChanged
     {
+        public TopViewModel TopVM { get; } = new TopViewModel();
+
         private readonly NavigationStore _navigationStore;
         public SidebarViewModel SidebarViewModel { get; }
 
@@ -17,6 +19,7 @@ namespace ProfessorUI.ViewModel
             _navigationStore = navigationStore;
             _navigationStore.CurrentViewModelChanged += OnCurrentViewModelChanged;
             SidebarViewModel = new SidebarViewModel(navigationStore);
+
         }
 
         private void OnCurrentViewModelChanged()

@@ -9,7 +9,7 @@ using ProfessorUI.Service;
 
 namespace ProfessorUI.ViewModel
 {
-    // ⭐ 개별 학생 데이터를 관리하는 클래스
+    // ⭐ 개별 학생 데이터를 관리하는 클래스 (기존 유지)
     public class StudentItem : INotifyPropertyChanged
     {
         private bool _isSelected = true; // 기본적으로 모두 선택
@@ -44,7 +44,6 @@ namespace ProfessorUI.ViewModel
 
     public class FileDistributeViewModel : INotifyPropertyChanged
     {
-        // 테스트용 플래그
         private bool _isDeploying = false; // 중복 실행 방지용
 
         // ⭐ 학생 목록을 담을 컬렉션
@@ -75,10 +74,20 @@ namespace ProfessorUI.ViewModel
             SelectAllCommand = new RelayCommand(o => SetAllSelection(true));
             DeselectAllCommand = new RelayCommand(o => SetAllSelection(false));
 
-            // 테스트용 학생 10명 생성
-            for (int i = 1; i <= 10; i++)
+            // ⭐ [수정 완료] 기존 하드코딩 10명 루프 제거! 
+            // 아까 승인 단계 등에서 전역으로 공유해 쓰던 StudentStore 데이터로 명단을 채웁니다.
+            if (StudentStore.Instance?.Students != null)
             {
-                Students.Add(new StudentItem { Name = $"학생 {i} (PC-{i:D2})" });
+                foreach (var globalStudent in StudentStore.Instance.Students)
+                {
+                    Students.Add(new StudentItem
+                    {
+                        Name = globalStudent.Name,
+                        IsSelected = true,
+                        ProgressValue = 0,
+                        StatusText = "대기 중"
+                    });
+                }
             }
         }
 
@@ -94,17 +103,13 @@ namespace ProfessorUI.ViewModel
 
         private async void ExecuteStartDeploy(object? obj)
         {
-            // ⭐ 1. 이제 내부에 있는 가짜 변수가 아닌, 공용 저장소의 상태를 확인합니다.
+            // 1. 공용 저장소의 상태 확인
             if (!FileDeployState.IsFilePrepared)
             {
                 ValidationMessage = "⚠️ 1단계: 파일 준비 및 암호화를 먼저 완료해 주세요.";
-                await Task.Delay(5000); // 2초 대기
-                ValidationMessage = ""; // 메시지 지우기
-
-                // ❌ 임시 통과되도록 했던 아래 코드를 완전히 삭제합니다!
-                // _isFilePrepared = true;
-
-                return; // 파일이 준비 안 됐으면 무조건 배포 중단
+                await Task.Delay(5000);
+                ValidationMessage = "";
+                return;
             }
 
             // 2. 선택된 학생이 있는지 체크
@@ -153,6 +158,9 @@ namespace ProfessorUI.ViewModel
 
             DeployStatusMessage = "선택한 모든 학생에게 배포가 완료되었습니다.";
             _isDeploying = false;
+
+            // 배포가 완벽히 끝났음을 공용 저장소에 기록!
+            FileDeployState.IsFileDistributed = true;
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
