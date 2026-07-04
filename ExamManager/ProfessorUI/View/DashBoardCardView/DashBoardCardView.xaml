@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:ProfessorUI.View.DashBoardCardView"
              mc:Ignorable="d" 
-            Background="Transparent">
+             Background="Transparent">
     <Grid Margin="0,0,20,0">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
@@ -20,28 +20,28 @@
         <Border Grid.Column="0" Background="#F8FAFC" BorderBrush="#E2E8F0" CornerRadius="12" BorderThickness="1" Margin="0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <TextBlock Text="총 학생" Foreground="#64748B" FontSize="14" FontWeight="Medium" VerticalAlignment="Center" />
-                <TextBlock Text="20" Foreground="#1E293B" FontSize="20" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding TotalStudents}" Foreground="#1E293B" FontSize="20" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center" />
             </StackPanel>
         </Border>
 
         <Border Grid.Column="2" Background="#EFF6FF" BorderBrush="#BFDBFE" CornerRadius="12" BorderThickness="1" Margin="0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <TextBlock Text="접속" Foreground="#64748B" FontSize="14" FontWeight="Medium" VerticalAlignment="Center" />
-                <TextBlock Text="18" Foreground="#2563EB" FontSize="20" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding ConnectedStudents}" Foreground="#2563EB" FontSize="20" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center" />
             </StackPanel>
         </Border>
 
         <Border Grid.Column="4" Background="#F0FDF4" BorderBrush="#BBF7D0" CornerRadius="12" BorderThickness="1" Margin="0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <TextBlock Text="진행 중" Foreground="#64748B" FontSize="14" FontWeight="Medium" VerticalAlignment="Center" />
-                <TextBlock Text="0" Foreground="#059669" FontSize="20" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding ProgressStudents}" Foreground="#059669" FontSize="20" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center" />
             </StackPanel>
         </Border>
 
         <Border Grid.Column="6" Background="#FEF2F2" BorderBrush="#FECACA" CornerRadius="12" BorderThickness="1" Margin="0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <TextBlock Text="부정행위" Foreground="#64748B" FontSize="14" FontWeight="Medium" VerticalAlignment="Center" />
-                <TextBlock Text="0" Foreground="#DC2626" FontSize="20" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding CheatStudents}" Foreground="#DC2626" FontSize="20" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center" />
             </StackPanel>
         </Border>
     </Grid>

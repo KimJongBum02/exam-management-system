@@ -5,8 +5,22 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:ProfessorUI.View.ExamView"
              mc:Ignorable="d" 
-    Background="Transparent">
-    <Border BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="16" Background="#F8FAFC" Padding="28">
+             Background="Transparent">
+
+    <Border IsEnabled="{Binding IsContainerEnabled}" BorderThickness="1" CornerRadius="16" Padding="24">
+        <Border.Style>
+            <Style TargetType="Border">
+                <Setter Property="Background" Value="#F8FAFC"/>
+                <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                <Style.Triggers>
+                    <Trigger Property="IsEnabled" Value="True">
+                        <Setter Property="Background" Value="White"/>
+                        <Setter Property="BorderBrush" Value="#5C6AC4"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+        </Border.Style>
+
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
@@ -14,29 +28,102 @@
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0">
-                <Grid Margin="0,0,0,20">
-                    <Border HorizontalAlignment="Left" Width="40" Height="40" CornerRadius="20" Background="#F1F5F9">
-                        <TextBlock Text="2" Foreground="#94A3B8" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <Grid Margin="0,0,0,16">
+                    <Border HorizontalAlignment="Left" Width="36" Height="36" CornerRadius="18">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="#F1F5F9"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsContainerEnabled}" Value="True">
+                                        <Setter Property="Background" Value="#5C6AC4"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock Text="2" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#94A3B8"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsContainerEnabled}" Value="True">
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </Border>
-                    <Border HorizontalAlignment="Right" VerticalAlignment="Top" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="14" Padding="12,6">
-                        <TextBlock Text="대기 중" Foreground="#94A3B8" FontSize="13" FontWeight="Bold"/>
-                    </Border>
+
+                    
                 </Grid>
 
-                <Border Width="60" Height="60" Background="#F1F5F9" CornerRadius="12" HorizontalAlignment="Left" Margin="0,0,0,24">
-                    <Path Data="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z" Fill="#CBD5E1" HorizontalAlignment="Center" VerticalAlignment="Center" Stretch="Uniform" Width="24" Height="24"/>
+                <Border Width="48" Height="48" CornerRadius="10" HorizontalAlignment="Left" Margin="0,0,0,16">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="#F1F5F9"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsContainerEnabled}" Value="True">
+                                    <Setter Property="Background" Value="#EEF2FF"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Path Data="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z" HorizontalAlignment="Center" VerticalAlignment="Center" Stretch="Uniform" Width="20" Height="20">
+                        <Path.Style>
+                            <Style TargetType="Path">
+                                <Setter Property="Fill" Value="#CBD5E1"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsContainerEnabled}" Value="True">
+                                        <Setter Property="Fill" Value="#5C6AC4"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Path.Style>
+                    </Path>
                 </Border>
 
-                <TextBlock Text="답안 수집" FontSize="28" FontWeight="Bold" Foreground="#94A3B8" Margin="0,0,0,12"/>
-                <TextBlock Text="암호화·압축된 답안 폴더를 자동 수집합니다." FontSize="16" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,0,0,30"/>
+                <TextBlock Text="답안 수집" FontSize="24" FontWeight="Bold" Margin="0,0,0,8">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="#94A3B8"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsContainerEnabled}" Value="True">
+                                    <Setter Property="Foreground" Value="#1E1B4B"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <TextBlock Text="암호화·압축된 답안 폴더를 자동 수집합니다." FontSize="14" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,0,0,24"/>
             </StackPanel>
 
-            <Border Grid.Row="1" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="0,14">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <Path Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" Fill="#94A3B8" Stretch="Uniform" Width="16" Height="16" Margin="0,0,8,0"/>
-                    <TextBlock Text="시험 시작 후 활성화" Foreground="#94A3B8" FontSize="16" FontWeight="Bold"/>
-                </StackPanel>
-            </Border>
+            <Button Grid.Row="1" Command="{Binding CollectAllCommand}" Height="44" Cursor="Hand">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Background" Value="#F1F5F9"/>
+                        <Setter Property="Foreground" Value="#94A3B8"/>
+                        <Setter Property="FontSize" Value="14"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                        <Setter Property="Content" Value="🔒 시험 시작 후 활성화"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="BtnBorder" Background="{TemplateBinding Background}" CornerRadius="8" BorderBrush="#E2E8F0" BorderThickness="1">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsEnabled" Value="True">
+                                <Setter Property="Background" Value="#5C6AC4"/>
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="Content" Value="📥 답안 일괄 수집 시작"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
         </Grid>
     </Border>
 </UserControl>

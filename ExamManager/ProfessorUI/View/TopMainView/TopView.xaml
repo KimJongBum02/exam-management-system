@@ -13,11 +13,13 @@
                 <ColumnDefinition Width="1.8*"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
+
             <Grid Grid.Column="0">
-                <dash:DashBoardCardView/>
+                <dash:DashBoardCardView DataContext="{Binding DashBoardCardVM}"/>
             </Grid>
+
             <Grid Grid.Column="1">
-                <timer:CurrentTimeView/>
+                <timer:CurrentTimeView DataContext="{Binding CurrentTimeVM}"/>
             </Grid>
         </Grid>
     </Border>

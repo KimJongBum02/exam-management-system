@@ -6,20 +6,16 @@
              xmlns:local="clr-namespace:ProfessorUI.View.CurrentTimeView"
              mc:Ignorable="d" >
     <Border Background="White" BorderBrush="#5A6BC4" BorderThickness="1" CornerRadius="14" >
-
-        
-
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0">
 
-            <TextBlock Text="2026. 05. 17 (일)" 
+            <TextBlock Text="{Binding CurrentDate}" 
                        Foreground="Black" FontSize="14" FontWeight="Medium" 
                        HorizontalAlignment="Center" Margin="0,0,0,4"/>
 
-            <TextBlock Text="19:33:59" 
+            <TextBlock Text="{Binding CurrentTime}" 
                        Foreground="Black" FontSize="30" FontWeight="Bold" 
                        HorizontalAlignment="Center" FontFamily="Consolas, Arial"/>
 
         </StackPanel>
     </Border>
 </UserControl>
-
