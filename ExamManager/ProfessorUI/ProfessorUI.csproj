@@ -17,18 +17,15 @@
 
   <!-- NetworkLib_Native.dll 자동 복사 (Debug/Release 구성에 맞게 자동 선택) -->
   <ItemGroup>
-    <None Include="$(SolutionDir)x64\$(Configuration)\NetworkLib_Native.dll"
-          Condition="Exists('$(SolutionDir)x64\$(Configuration)\NetworkLib_Native.dll')">
+    <None Include="$(SolutionDir)x64\$(Configuration)\NetworkLib_Native.dll" Condition="Exists('$(SolutionDir)x64\$(Configuration)\NetworkLib_Native.dll')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>NetworkLib_Native.dll</Link>
     </None>
-    <None Include="$(SolutionDir)x64\$(Configuration)\FileControl.dll"
-          Condition="Exists('$(SolutionDir)x64\$(Configuration)\FileControl.dll')">
+    <None Include="$(SolutionDir)x64\$(Configuration)\FileControl.dll" Condition="Exists('$(SolutionDir)x64\$(Configuration)\FileControl.dll')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>FileControl.dll</Link>
     </None>
-    <None Include="$(SolutionDir)7za.exe"
-          Condition="Exists('$(SolutionDir)7za.exe')">
+    <None Include="$(SolutionDir)7za.exe" Condition="Exists('$(SolutionDir)7za.exe')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>7za.exe</Link>
     </None>

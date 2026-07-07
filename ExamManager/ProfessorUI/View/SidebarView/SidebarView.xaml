@@ -68,8 +68,30 @@
 
                 <!-- 현황판 (기본 선택 상태로 두려면 IsSelected="True" 추가) -->
                 <ListBoxItem>
-                    <StackPanel Orientation="Horizontal">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="현황판" FontSize="16" VerticalAlignment="Center" FontWeight="Medium"/>
+
+                        <Button Click="OpenMonitorWindow_Click" Cursor="Hand" Margin="12,0,0,0" ToolTip="보조 모니터용 현황판 띄우기">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="badge" Background="#E0E7FF" BorderBrush="#A5B4FC" BorderThickness="1" CornerRadius="8" Padding="6,3">
+                                        <TextBlock x:Name="txt" Text="새 창 띄우기" FontSize="11" FontWeight="Bold" Foreground="#4338CA" VerticalAlignment="Center"/>
+                                    </Border>
+
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="badge" Property="Background" Value="#C7D2FE"/>
+                                        </Trigger>
+
+                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                            <Setter TargetName="badge" Property="Background" Value="White"/>
+                                            <Setter TargetName="badge" Property="BorderBrush" Value="White"/>
+                                            <Setter TargetName="txt" Property="Foreground" Value="#1A56DB"/>
+                                        </DataTrigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
                     </StackPanel>
                 </ListBoxItem>
 
