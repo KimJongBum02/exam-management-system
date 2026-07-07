@@ -19,9 +19,7 @@
                         <Border HorizontalAlignment="Left" Width="36" Height="36" CornerRadius="18" Background="#5C6AC4">
                             <TextBlock Text="1" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <Border HorizontalAlignment="Right" VerticalAlignment="Top" Background="#EEF2FF" CornerRadius="12" Padding="12,6">
-                            <TextBlock Text="진행 중" Foreground="#4F46E5" FontSize="12" FontWeight="Bold"/>
-                        </Border>
+                        
                     </Grid>
 
                     <TextBlock Text="파일 준비 및 암호화" FontSize="24" FontWeight="Bold" Foreground="#1E1B4B" Margin="0,0,0,8"/>

@@ -1,0 +1,16 @@
+﻿<Window x:Class="ProfessorUI.View.MonitoringView.MonitorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ProfessorUI.View.MonitoringView"
+        mc:Ignorable="d"
+        xmlns:top="clr-namespace:ProfessorUI.View.TopMainView"
+        Title="시험 현황 모니터링" Width="1300" Height="200">
+    <Grid Background="#F1F5F9">
+
+
+        <top:TopView Grid.Row="0" DataContext="{Binding TopVM}" Margin="10"/>
+
+    </Grid>
+</Window>

@@ -1,7 +1,9 @@
 using NetworkLib;
+using ProfessorUI.View;
 using System.Configuration;
 using System.Data;
 using System.Windows;
+using ProfessorUI.View.MonitoringView;
 
 namespace ProfessorUI
 {
@@ -41,10 +43,11 @@ namespace ProfessorUI
             bool started = server.Start();
             MessageBox.Show(started ? "서버 시작 성공 (포트 9000)" : "서버 시작 실패");
             // ───────────────────────────────────
-            
 
-            // 화면 띄우기
+
+            // 기존 MainWindow 띄우는 코드 아래에 추가...
             mainWindow.Show();
+
         }
     }
 
