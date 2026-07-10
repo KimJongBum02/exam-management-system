@@ -11,14 +11,14 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace ProfessorUI.View.TopMainView
+namespace ProfessorUI.View.NotificationView
 {
     /// <summary>
-    /// TopView.xaml에 대한 상호 작용 논리
+    /// NotificationButtonView.xaml에 대한 상호 작용 논리
     /// </summary>
-    public partial class TopView : UserControl
+    public partial class NotificationButtonView : UserControl
     {
-        public TopView()
+        public NotificationButtonView()
         {
             InitializeComponent();
         }

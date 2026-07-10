@@ -11,14 +11,14 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace ProfessorUI.View.BackGroundStyle
+namespace ProfessorUI.View.ChatView
 {
     /// <summary>
-    /// BackGround.xaml에 대한 상호 작용 논리
+    /// ChatButtonView.xaml에 대한 상호 작용 논리
     /// </summary>
-    public partial class BackGround : UserControl
+    public partial class ChatButtonView : UserControl
     {
-        public BackGround()
+        public ChatButtonView()
         {
             InitializeComponent();
         }

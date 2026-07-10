@@ -1,4 +1,6 @@
-﻿using System;
+﻿using ProfessorUI.View.MonitoringView;
+using ProfessorUI.ViewModel;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Windows;
@@ -10,7 +12,6 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using ProfessorUI.View.MonitoringView;
 
 namespace ProfessorUI.View.SidebarView
 {
@@ -30,17 +31,16 @@ namespace ProfessorUI.View.SidebarView
         // 🖥️ 꼬마 버튼 클릭 시 실행되는 이벤트
         private void OpenMonitorWindow_Click(object sender, RoutedEventArgs e)
         {
-            // 리스트박스 아이템 클릭(메뉴 이동)이 중복으로 발생하지 않도록 이벤트 먹어치우기
             e.Handled = true;
 
-            // 창이 없거나 닫혔으면 새로 생성
             if (_monitorWindow == null || !_monitorWindow.IsLoaded)
             {
+                var mainVM = Application.Current.MainWindow.DataContext as MainViewModel;
+
                 _monitorWindow = new MonitorWindow()
                 {
-                    // 듀얼 모니터용 뷰모델 연결
-                    DataContext = new ProfessorUI.ViewModel.MonitorViewModel(),
-                    // 🔌 [여기가 핵심!] 이 창의 주인은 메인 윈도우다! (메인창 닫히면 같이 닫힘)
+                    // mainVM이 null이면 기본 생성자로 생성, 아니면 기존 인스턴스 사용
+                    DataContext = mainVM?.MonitorVM ?? new MonitorViewModel(),
                     Owner = Application.Current.MainWindow
                 };
                 _monitorWindow.Show();
