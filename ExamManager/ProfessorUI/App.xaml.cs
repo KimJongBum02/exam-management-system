@@ -19,11 +19,13 @@ namespace ProfessorUI
             // 1. 상태 저장소 생성 (프로그램 전체에서 딱 1개만 존재)
             Service.NavigationStore navigationStore = new Service.NavigationStore();
 
+            Service.LayoutStore layoutStore = new ProfessorUI.Service.LayoutStore();
+
             // 처음 프로그램이 켜졌을 때 보여줄 기본 화면 설정 (예: 현황판)
             //navigationStore.CurrentViewModel = new StudentBoardViewModel();
 
             // 2. 메인 뷰모델 생성 (저장소와 사이드바 뷰모델을 연결)
-            ViewModel.MainViewModel mainViewModel = new ViewModel.MainViewModel(navigationStore);
+            ViewModel.MainViewModel mainViewModel = new ViewModel.MainViewModel(navigationStore, layoutStore);
 
             // 3. 메인 창(MainWindow) 생성 후 데이터(ViewModel) 연결
             MainWindow mainWindow = new MainWindow()

@@ -5,15 +5,15 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:ProfessorUI.View.CurrentTimeView"
              mc:Ignorable="d" >
-    <Border Background="White" BorderBrush="#5A6BC4" BorderThickness="1" CornerRadius="14" >
+    <Border Background="Transparent">
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0">
 
             <TextBlock Text="{Binding CurrentDate}" 
-                       Foreground="Black" FontSize="14" FontWeight="Medium" 
+                       Foreground="Black" FontSize="19" FontWeight="Medium" 
                        HorizontalAlignment="Center" Margin="0,0,0,4"/>
 
             <TextBlock Text="{Binding CurrentTime}" 
-                       Foreground="Black" FontSize="30" FontWeight="Bold" 
+                       Foreground="Black" FontSize="35" FontWeight="Bold" 
                        HorizontalAlignment="Center" FontFamily="Consolas, Arial"/>
 
         </StackPanel>
