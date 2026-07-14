@@ -33,5 +33,12 @@
       <Link>NetworkLib_Native.dll</Link>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="$(SolutionDir)x64\$(Configuration)\NetworkControl.dll"
+          Condition="Exists('$(SolutionDir)x64\$(Configuration)\NetworkControl.dll')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>NetworkControl.dll</Link>
+    </None>
+  </ItemGroup>
 
 </Project>
