@@ -5,7 +5,8 @@
     <Platform Name="x86" />
   </Configurations>
   <Project Path="FileControl/FileControl.vcxproj" Id="49a2fb45-ad36-4e8a-a573-453a4be75705" />
-
+  <Project Path="NetworkControl/NetworkControl.vcxproj" Id="9bba17c0-e8a2-45a1-bb38-448fb7b6e0d4" />
+    <Platform Project="x64" />
   <Project Path="NetworkLib_Native/NetworkLib_Native.vcxproj" Id="f3a7d2e1-8b4c-4f6a-9d2e-1a3b5c7d9e0f">
     <Platform Project="x64" />
   </Project>
@@ -14,11 +15,14 @@
     <BuildDependency Project="FileControl/FileControl.vcxproj" />
     <BuildDependency Project="NetworkLib_Native/NetworkLib_Native.vcxproj" />
     <Platform Solution="*|x64" Project="x64" />
+    <Platform Solution="Debug|Any CPU" Project="x64" />
   </Project>
   <Project Path="StudentUI/StudentUI.csproj">
     <BuildDependency Project="FileControl/FileControl.vcxproj" />
     <BuildDependency Project="NetworkLib_Native/NetworkLib_Native.vcxproj" />
     <BuildDependency Project="ProcessControl/ProcessControl.vcxproj" />
+    <BuildDependency Project="NetworkControl/NetworkControl.vcxproj" />
     <Platform Solution="*|x64" Project="x64" />
+    <Platform Solution="Debug|Any CPU" Project="x64" />
   </Project>
 </Solution>
