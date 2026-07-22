@@ -21,7 +21,7 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            
+
             <!-- Row 0: 학생 정보 + 로그아웃 -->
             <Grid Grid.Row="0">
                 <Grid.ColumnDefinitions>
@@ -29,9 +29,12 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="{Binding StudentInfo}" FontWeight="Bold" FontSize="14" Foreground="#333333" VerticalAlignment="Center"/>
-                <Button Grid.Column="1" Command="{Binding LogoutCommand}" Content="로그아웃" Background="Transparent" BorderThickness="0" Foreground="#D32F2F" FontSize="11" Cursor="Hand" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Command="{Binding LogoutCommand}" Content="로그아웃" Background="Transparent" BorderThickness="0" Foreground="#D32F2F" FontSize="11" Cursor="Hand" VerticalAlignment="Center"/>
+                    <Button Command="{Binding ExitCommand}" Content="종료" Background="Transparent" BorderThickness="0" Foreground="#888888" FontSize="11" Cursor="Hand" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                </StackPanel>
             </Grid>
-            
+
             <!-- Row 1: 대기 메시지 + 현재 시각 -->
             <Grid Grid.Row="1" Margin="0,6,0,0">
                 <Grid.ColumnDefinitions>
@@ -58,7 +61,7 @@
                 </Ellipse>
                 <TextBlock Text="{Binding ConnectionStatusText}" FontSize="11" Foreground="#888888" VerticalAlignment="Center"/>
             </StackPanel>
-            
+
             <!-- Row 3: 시험 시작 테스트 버튼 -->
             <Button Grid.Row="3" Command="{Binding TestExamCommand}" Content="시험 시작 테스트" Margin="0,8,0,0" Background="#E0E0E0" BorderThickness="0" Padding="5" Cursor="Hand" FontSize="11"/>
         </Grid>

@@ -5,6 +5,9 @@ namespace StudentUI.Service
 {
     public class NetworkService : IDisposable
     {
+        // ⭐ 앱 전체에서 공유하는 단일 클라이언트 인스턴스
+        public static NetworkService Instance { get; } = new NetworkService();
+
         private StudentClient? _client;
 
         public event Action<string, int>? Connected;
@@ -30,7 +33,7 @@ namespace StudentUI.Service
         }
 
         public bool Connect(string serverIp, int port = 9000) => _client?.Connect(serverIp, port) ?? false;
-        
+
         public void Disconnect() => _client?.Disconnect();
 
         public bool IsConnected => _client?.IsConnected ?? false;

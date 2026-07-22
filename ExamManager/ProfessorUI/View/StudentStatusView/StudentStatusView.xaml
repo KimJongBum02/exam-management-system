@@ -25,6 +25,7 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
                                 <TextBlock Grid.Row="0" Text="{Binding StudentId}" Foreground="#94A3B8" FontWeight="Bold" FontSize="15" Margin="0,0,0,8"/>
@@ -38,6 +39,8 @@
                                         </StackPanel>
                                     </Border>
                                 </StackPanel>
+
+                                <TextBlock Grid.Row="2" Text="{Binding Ip}" Foreground="#94A3B8" FontSize="12" Margin="0,8,0,0"/>
                             </Grid>
                         </Border>
 

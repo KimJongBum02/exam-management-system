@@ -20,6 +20,10 @@ namespace StudentUI.View.LoginView
         public IPInputDialog()
         {
             InitializeComponent();
+
+            // 창이 열리면 IP 입력란으로 바로 커서 포커스
+            Loaded += (s, e) => IPTextBox.Focus();
+
             ConnectButton.Click += (s, e) =>
             {
                 if (string.IsNullOrEmpty(IPTextBox.Text.Trim()))

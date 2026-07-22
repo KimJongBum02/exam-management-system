@@ -1,3 +1,4 @@
+using System;
 using NetworkLib;
 using ProfessorUI.View;
 using System.Configuration;
@@ -12,6 +13,8 @@ namespace ProfessorUI
     /// </summary>
     public partial class App : Application
     {
+        private bool _shuttingDown;
+
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
@@ -32,24 +35,60 @@ namespace ProfessorUI
             {
                 DataContext = mainViewModel // MainWindow의 데이터는 MainViewModel이 담당한다!
             };
-            
-            // ── 서버 테스트 ──────────────────────────
-            NetworkLibrary.Initialize();
-            var server = new ProfessorServer(port: 9000);
-            server.StudentConnected += (sid, studentId, name, ip) =>
-                MessageBox.Show($"학생 접속: {name} ({studentId}) | {ip}");
-            server.StudentDisconnected += (sid, studentId, name, reason) =>
-                MessageBox.Show($"학생 종료: {name} | 사유: {reason}");
-            server.PacketReceived += (sid, studentId, name, type, payload, len) =>
-                System.Diagnostics.Debug.WriteLine($"패킷 수신: {name} → Type={type}");
-            bool started = server.Start();
-            MessageBox.Show(started ? "서버 시작 성공 (포트 9000)" : "서버 시작 실패");
+
+            // ── 서버 시작 및 학생 접속/응답 이벤트를 현황판(StudentStore)에 연동 ──
+            // 콜백은 네이티브 스레드에서 올라오므로 UI 스레드로 넘겨 처리한다.
+            var network = Service.NetworkService.Instance;
+
+            network.StudentConnected += (sid, studentId, name, ip) =>
+                PostToUi(() => Service.StudentStore.Instance.AddOrUpdateConnected(sid, studentId, name, ip));
+
+            network.StudentDisconnected += (sid, studentId, name, reason) =>
+                PostToUi(() => Service.StudentStore.Instance.MarkDisconnected(sid));
+
+            network.PacketReceived += (sid, studentId, name, type, payload, len) =>
+            {
+                if (type == PacketType.ExamStatusUpdate &&
+                    ReadStatus(payload, len) == StudentStatus.FileReceived)
+                {
+                    PostToUi(() => Service.StudentStore.Instance.MarkFileReceived(studentId));
+                }
+            };
+
+            if (!network.StartServer())
+                MessageBox.Show("서버 시작에 실패했습니다. 포트 9000을 확인해 주세요.");
             // ───────────────────────────────────
 
 
             // 기존 MainWindow 띄우는 코드 아래에 추가...
             mainWindow.Show();
 
+        }
+
+        // 네이티브 스레드에서 올라온 콜백을 UI 스레드로 안전하게 넘긴다.
+        // 종료가 시작되었으면 무시하여 종료 중 Dispatcher 예외를 막는다.
+        private void PostToUi(Action action)
+        {
+            if (_shuttingDown) return;
+            var dispatcher = Dispatcher;
+            if (dispatcher == null || dispatcher.HasShutdownStarted) return;
+            dispatcher.BeginInvoke(action);
+        }
+
+        // 학생이 보낸 상태 갱신 패킷의 payload(4바이트)를 StudentStatus로 해석
+        private static StudentStatus ReadStatus(IntPtr payload, uint len)
+        {
+            if (payload == IntPtr.Zero || len < 4) return StudentStatus.NotConnected;
+            return (StudentStatus)(uint)System.Runtime.InteropServices.Marshal.ReadInt32(payload);
+        }
+
+        // 프로그램 종료 시 서버를 멈추고 네이티브 리소스를 정리한다.
+        // (이 정리를 하지 않으면 종료 중 네이티브 콜백이 CLR로 들어와 오류가 발생한다)
+        protected override void OnExit(ExitEventArgs e)
+        {
+            _shuttingDown = true;
+            try { Service.NetworkService.Instance.Dispose(); } catch { }
+            base.OnExit(e);
         }
     }
 

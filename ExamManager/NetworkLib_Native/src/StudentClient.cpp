@@ -6,15 +6,15 @@
 StudentClient::StudentClient()
 {
     fileReceiver_.onFileReceived = [this](const std::string& tid, const std::string& sid,
-                                          const std::string& fn,  const std::string& tp,
-                                          int64_t sz, const std::string& pw)
-    { if (onFileReceived) onFileReceived(tid.c_str(), sid.c_str(), fn.c_str(), tp.c_str(), sz, pw.c_str()); };
+        const std::string& fn, const std::string& tp,
+        int64_t sz, const std::string& pw)
+        { if (onFileReceived) onFileReceived(tid.c_str(), sid.c_str(), fn.c_str(), tp.c_str(), sz, pw.c_str()); };
 
     fileReceiver_.onFileProgress = [this](const std::string& tid, const std::string& fn, int pct)
-    { if (onFileProgress) onFileProgress(tid.c_str(), fn.c_str(), pct); };
+        { if (onFileProgress) onFileProgress(tid.c_str(), fn.c_str(), pct); };
 
     fileReceiver_.onFileError = [this](const std::string& tid, const std::string& msg)
-    { if (onFileError) onFileError(tid.c_str(), msg.c_str()); };
+        { if (onFileError) onFileError(tid.c_str(), msg.c_str()); };
 }
 
 // ─── 소멸자 ────────────────────────────────────────────────────────
@@ -34,7 +34,7 @@ bool StudentClient::Connect(const std::string& serverIp, int port)
 
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
-    addr.sin_port   = htons(static_cast<u_short>(port));
+    addr.sin_port = htons(static_cast<u_short>(port));
     inet_pton(AF_INET, serverIp.c_str(), &addr.sin_addr);
 
     if (::connect(sock_, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == SOCKET_ERROR)
@@ -48,13 +48,13 @@ bool StudentClient::Connect(const std::string& serverIp, int port)
     // TCP_NODELAY 설정
     int nodelay = 1;
     ::setsockopt(sock_, IPPROTO_TCP, TCP_NODELAY,
-                 reinterpret_cast<const char*>(&nodelay), sizeof(nodelay));
+        reinterpret_cast<const char*>(&nodelay), sizeof(nodelay));
 
     connected_ = true;
 
     if (onConnected) onConnected(serverIp.c_str(), port);
 
-    recvThread_      = std::thread(&StudentClient::RecvLoop,      this);
+    recvThread_ = std::thread(&StudentClient::RecvLoop, this);
     heartbeatThread_ = std::thread(&StudentClient::HeartbeatLoop, this);
 
     return true;
@@ -63,13 +63,15 @@ bool StudentClient::Connect(const std::string& serverIp, int port)
 // ─── 연결 해제 ─────────────────────────────────────────────────────
 void StudentClient::Disconnect()
 {
-    if (!connected_) return;
-    connected_ = false;
-
-    // Disconnect 패킷 전송 시도 (무시해도 무방)
-    DisconnectPayload dp{};
-    strncpy_s(dp.reason, "클라이언트 정상 종료", _TRUNCATE);
-    SendPacket(PacketType::Disconnect, &dp, sizeof(dp));
+    // 아직 살아 있던 경우에만 정상 종료 패킷 전송 후 소켓을 닫는다.
+    // (이미 연결이 끊긴 상태여도 아래 스레드 정리는 반드시 수행해야 한다)
+    if (connected_.exchange(false))
+    {
+        DisconnectPayload dp{};
+        strncpy_s(dp.reason, "클라이언트 정상 종료", _TRUNCATE);
+        // 멤버 SendPacket은 connected_를 검사하므로 전역 함수로 직접 전송
+        ::SendPacket(sock_, sendMutex_, PacketType::Disconnect, &dp, sizeof(dp));
+    }
 
     if (sock_ != INVALID_SOCKET)
     {
@@ -78,6 +80,8 @@ void StudentClient::Disconnect()
         sock_ = INVALID_SOCKET;
     }
 
+    // 연결 상태와 무관하게 스레드를 정리한다.
+    // (join하지 않으면 joinable한 std::thread가 파괴될 때 std::terminate로 프로세스가 죽는다)
     if (recvThread_.joinable())      recvThread_.join();
     if (heartbeatThread_.joinable()) heartbeatThread_.join();
 }
@@ -97,14 +101,14 @@ bool StudentClient::SendFile(const std::string& filePath, const std::string& pas
     if (!connected_) return false;
 
     std::thread([this, filePath, password]()
-    {
-        FileTransferSender::SendFile(
-            sock_, sendMutex_, filePath, password,
-            [this](const std::string& tid, const std::string& fn, int pct)
-            { if (onFileProgress) onFileProgress(tid.c_str(), fn.c_str(), pct); },
-            [this](const std::string& tid, const std::string& msg)
-            { if (onFileError) onFileError(tid.c_str(), msg.c_str()); });
-    }).detach();
+        {
+            FileTransferSender::SendFile(
+                sock_, sendMutex_, filePath, password,
+                [this](const std::string& tid, const std::string& fn, int pct)
+                { if (onFileProgress) onFileProgress(tid.c_str(), fn.c_str(), pct); },
+                [this](const std::string& tid, const std::string& msg)
+                { if (onFileError) onFileError(tid.c_str(), msg.c_str()); });
+        }).detach();
 
     return true;
 }
@@ -135,11 +139,17 @@ void StudentClient::RecvLoop()
 
         // 파일 전송 패킷 라우팅
         if (type == PacketType::FileTransferStart)
-        { fileReceiver_.HandleStart("server", payload.data(), hdr.payloadLen); continue; }
+        {
+            fileReceiver_.HandleStart("server", payload.data(), hdr.payloadLen); continue;
+        }
         if (type == PacketType::FileChunk)
-        { fileReceiver_.HandleChunk(payload.data(), hdr.payloadLen); continue; }
+        {
+            fileReceiver_.HandleChunk(payload.data(), hdr.payloadLen); continue;
+        }
         if (type == PacketType::FileTransferComplete)
-        { fileReceiver_.HandleComplete(payload.data(), hdr.payloadLen); continue; }
+        {
+            fileReceiver_.HandleComplete(payload.data(), hdr.payloadLen); continue;
+        }
 
         if (onPacketReceived)
             onPacketReceived(static_cast<uint32_t>(type), payload.data(), hdr.payloadLen);
