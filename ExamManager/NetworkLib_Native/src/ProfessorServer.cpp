@@ -7,19 +7,19 @@ ProfessorServer::ProfessorServer(int port) : port_(port)
 {
     // FileTransferReceiver 콜백 연결
     fileReceiver_.onFileReceived = [this](const std::string& tid, const std::string& sid,
-                                          const std::string& fn,  const std::string& tp,
-                                          int64_t sz, const std::string& pw)
-    {
-        if (onFileReceived) onFileReceived(tid.c_str(), sid.c_str(), fn.c_str(), tp.c_str(), sz, pw.c_str());
-    };
+        const std::string& fn, const std::string& tp,
+        int64_t sz, const std::string& pw)
+        {
+            if (onFileReceived) onFileReceived(tid.c_str(), sid.c_str(), fn.c_str(), tp.c_str(), sz, pw.c_str());
+        };
     fileReceiver_.onFileProgress = [this](const std::string& tid, const std::string& fn, int pct)
-    {
-        if (onFileProgress) onFileProgress(tid.c_str(), fn.c_str(), pct);
-    };
+        {
+            if (onFileProgress) onFileProgress(tid.c_str(), fn.c_str(), pct);
+        };
     fileReceiver_.onFileError = [this](const std::string& tid, const std::string& msg)
-    {
-        if (onFileError) onFileError(tid.c_str(), msg.c_str());
-    };
+        {
+            if (onFileError) onFileError(tid.c_str(), msg.c_str());
+        };
 }
 
 // ─── 소멸자 ────────────────────────────────────────────────────────
@@ -35,12 +35,12 @@ bool ProfessorServer::Start()
     // SO_REUSEADDR — 빠른 재시작 시 포트 재사용
     int opt = 1;
     ::setsockopt(listenSock_, SOL_SOCKET, SO_REUSEADDR,
-                 reinterpret_cast<const char*>(&opt), sizeof(opt));
+        reinterpret_cast<const char*>(&opt), sizeof(opt));
 
     sockaddr_in addr{};
-    addr.sin_family      = AF_INET;
+    addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port        = htons(static_cast<u_short>(port_));
+    addr.sin_port = htons(static_cast<u_short>(port_));
 
     if (::bind(listenSock_, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == SOCKET_ERROR)
     {
@@ -54,7 +54,7 @@ bool ProfessorServer::Start()
     }
 
     running_ = true;
-    acceptThread_    = std::thread(&ProfessorServer::AcceptLoop,    this);
+    acceptThread_ = std::thread(&ProfessorServer::AcceptLoop, this);
     heartbeatThread_ = std::thread(&ProfessorServer::HeartbeatLoop, this);
     return true;
 }
@@ -92,35 +92,35 @@ void ProfessorServer::AcceptLoop()
         int addrLen = sizeof(clientAddr);
 
         SOCKET clientSock = ::accept(listenSock_,
-                                     reinterpret_cast<sockaddr*>(&clientAddr), &addrLen);
+            reinterpret_cast<sockaddr*>(&clientAddr), &addrLen);
         if (clientSock == INVALID_SOCKET) break; // 서버 중지 시 탈출
 
         // TCP_NODELAY — Nagle 알고리즘 비활성화 (응답성 향상)
         int nodelay = 1;
         ::setsockopt(clientSock, IPPROTO_TCP, TCP_NODELAY,
-                     reinterpret_cast<const char*>(&nodelay), sizeof(nodelay));
+            reinterpret_cast<const char*>(&nodelay), sizeof(nodelay));
 
         // 클라이언트 IP:포트 문자열
         char ipBuf[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &clientAddr.sin_addr, ipBuf, sizeof(ipBuf));
         std::string remoteAddr = std::string(ipBuf) + ":" +
-                                 std::to_string(ntohs(clientAddr.sin_port));
+            std::to_string(ntohs(clientAddr.sin_port));
 
         // 세션 생성
         std::string sessionId = NewUUID();
         auto session = std::make_shared<ClientSession>(clientSock, remoteAddr);
-        session->sessionId   = sessionId;
+        session->sessionId = sessionId;
         session->fileReceiver = &fileReceiver_;
 
         session->onPacket = [this](ClientSession* s, PacketType t,
-                                   const uint8_t* p, uint32_t l)
-        {
-            OnSessionPacket(s, t, p, l);
-        };
+            const uint8_t* p, uint32_t l)
+            {
+                OnSessionPacket(s, t, p, l);
+            };
         session->onDisconnected = [this](ClientSession* s, int r)
-        {
-            OnSessionDisconnected(s, r);
-        };
+            {
+                OnSessionDisconnected(s, r);
+            };
 
         {
             std::lock_guard<std::mutex> lock(sessionsMutex_);
@@ -164,8 +164,8 @@ void ProfessorServer::OnSessionPacket(
 
     if (onPacketReceived)
         onPacketReceived(s->sessionId.c_str(), s->studentId.c_str(),
-                         s->studentName.c_str(),
-                         static_cast<uint32_t>(type), payload, len);
+            s->studentName.c_str(),
+            static_cast<uint32_t>(type), payload, len);
 }
 
 void ProfessorServer::HandleLogin(ClientSession* s, const uint8_t* payload, uint32_t len)
@@ -173,34 +173,41 @@ void ProfessorServer::HandleLogin(ClientSession* s, const uint8_t* payload, uint
     if (len < sizeof(LoginPayload)) return;
     const auto* p = reinterpret_cast<const LoginPayload*>(payload);
 
-    s->studentId   = p->studentId;
+    s->studentId = p->studentId;
     s->studentName = p->studentName;
-    s->status      = static_cast<uint32_t>(StudentStatus::Connected);
+    s->status = static_cast<uint32_t>(StudentStatus::Connected);
 
     // 로그인 승인 응답 전송
     LoginResponsePayload resp{};
     resp.success = 1;
     snprintf(resp.message, sizeof(resp.message),
-             "접속 승인. 안녕하세요, %s님.", p->studentName);
+        "접속 승인. 안녕하세요, %s님.", p->studentName);
     s->Send(PacketType::LoginResponse, &resp, sizeof(resp));
 
     // UI에 알림
     if (onStudentConnected)
         onStudentConnected(s->sessionId.c_str(), s->studentId.c_str(),
-                           s->studentName.c_str(), s->remoteAddr.c_str());
+            s->studentName.c_str(), s->remoteAddr.c_str());
 }
 
 void ProfessorServer::OnSessionDisconnected(ClientSession* s, int reason)
 {
+    // 콜백에 넘길 식별 정보를 세션 파괴 전에 미리 복사한다.
+    // (아래 erase가 마지막 shared_ptr를 없애 *s를 파괴할 수 있으므로,
+    //  그 후 s를 역참조하면 use-after-free가 되어 프로세스가 죽는다)
+    std::string sessionId = s->sessionId;
+    std::string studentId = s->studentId;
+    std::string studentName = s->studentName;
+
     // 세션 맵에서 제거
     {
         std::lock_guard<std::mutex> lock(sessionsMutex_);
-        sessions_.erase(s->sessionId);
+        sessions_.erase(sessionId);
     }
 
     if (onStudentDisconnected)
-        onStudentDisconnected(s->sessionId.c_str(), s->studentId.c_str(),
-                              s->studentName.c_str(), reason);
+        onStudentDisconnected(sessionId.c_str(), studentId.c_str(),
+            studentName.c_str(), reason);
 }
 
 // ─── 브로드캐스트 / 개별 전송 ─────────────────────────────────────
@@ -232,28 +239,28 @@ int ProfessorServer::BroadcastFile(const std::string& filePath, const std::strin
 
     // 비동기: 각 세션마다 별도 스레드에서 전송
     std::thread([this, snapshot, filePath, password]() mutable
-    {
-        std::vector<std::thread> threads;
-        threads.reserve(snapshot.size());
-
-        for (auto& session : snapshot)
         {
-            if (session->studentId.empty()) continue;
-            threads.emplace_back([this, session, &filePath, &password]()
+            std::vector<std::thread> threads;
+            threads.reserve(snapshot.size());
+
+            for (auto& session : snapshot)
             {
-                FileTransferSender::SendFile(
-                    session->sock,
-                    session->sendMutex,
-                    filePath,
-                    password,
-                    [this](const std::string& tid, const std::string& fn, int pct)
-                    { if (onFileProgress) onFileProgress(tid.c_str(), fn.c_str(), pct); },
-                    [this](const std::string& tid, const std::string& msg)
-                    { if (onFileError) onFileError(tid.c_str(), msg.c_str()); });
-            });
-        }
-        for (auto& t : threads) t.join();
-    }).detach();
+                if (session->studentId.empty()) continue;
+                threads.emplace_back([this, session, &filePath, &password]()
+                    {
+                        FileTransferSender::SendFile(
+                            session->sock,
+                            session->sendMutex,
+                            filePath,
+                            password,
+                            [this](const std::string& tid, const std::string& fn, int pct)
+                            { if (onFileProgress) onFileProgress(tid.c_str(), fn.c_str(), pct); },
+                            [this](const std::string& tid, const std::string& msg)
+                            { if (onFileError) onFileError(tid.c_str(), msg.c_str()); });
+                    });
+            }
+            for (auto& t : threads) t.join();
+        }).detach();
 
     return 1;
 }
@@ -270,16 +277,16 @@ int ProfessorServer::SendFileToSession(
     }
 
     std::thread([this, session, filePath, password]()
-    {
-        FileTransferSender::SendFile(
-            session->sock,
-            session->sendMutex,
-            filePath, password,
-            [this](const std::string& tid, const std::string& fn, int pct)
-            { if (onFileProgress) onFileProgress(tid.c_str(), fn.c_str(), pct); },
-            [this](const std::string& tid, const std::string& msg)
-            { if (onFileError) onFileError(tid.c_str(), msg.c_str()); });
-    }).detach();
+        {
+            FileTransferSender::SendFile(
+                session->sock,
+                session->sendMutex,
+                filePath, password,
+                [this](const std::string& tid, const std::string& fn, int pct)
+                { if (onFileProgress) onFileProgress(tid.c_str(), fn.c_str(), pct); },
+                [this](const std::string& tid, const std::string& msg)
+                { if (onFileError) onFileError(tid.c_str(), msg.c_str()); });
+        }).detach();
 
     return 1;
 }
@@ -309,9 +316,9 @@ std::string ProfessorServer::NewUUID()
     CoCreateGuid(&guid);
     char buf[37];
     snprintf(buf, sizeof(buf),
-             "%08lx-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-             guid.Data1, guid.Data2, guid.Data3,
-             guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],
-             guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
+        "%08lx-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+        guid.Data1, guid.Data2, guid.Data3,
+        guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],
+        guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
     return buf;
 }

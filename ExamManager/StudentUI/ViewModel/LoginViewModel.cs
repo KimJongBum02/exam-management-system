@@ -1,3 +1,4 @@
+using NetworkLib;
 using StudentUI.Model;
 using StudentUI.Service;
 using System;
@@ -5,6 +6,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Windows;
 using System.Windows.Input;
 
 namespace StudentUI.ViewModel
@@ -44,9 +46,24 @@ namespace StudentUI.ViewModel
                 }
             });
         }
-        
+
         public void CompleteLogin()
         {
+            // IP 입력이 끝난 시점에 실제 서버로 연결을 시도한다.
+            bool connected = NetworkService.Instance.Connect(Student.IPAddress);
+            if (!connected)
+            {
+                MessageBox.Show($"서버에 연결하지 못했습니다: {Student.IPAddress}\nIP 주소와 서버 실행 여부를 확인해 주세요.",
+                    "연결 실패");
+                return;
+            }
+
+            // 학번(16바이트) + 이름을 담은 로그인 패킷 전송 → 교수 PC 현황판에 표시됨
+            byte[] loginPayload = new byte[80];
+            Encoding.UTF8.GetBytes(Student.StudentNumber).CopyTo(loginPayload, 0);
+            Encoding.UTF8.GetBytes(Student.StudentName).CopyTo(loginPayload, 16);
+            NetworkService.Instance.SendPacket(PacketType.StudentLogin, loginPayload);
+
             _navigationStore.CurrentViewModel = new WaitingViewModel(_navigationStore, Student);
         }
 

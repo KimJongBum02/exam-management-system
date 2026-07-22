@@ -10,9 +10,12 @@ namespace StudentUI.View.LoginView
         public LoginView()
         {
             InitializeComponent();
-            
+
             this.Loaded += (s, e) =>
             {
+                // 로그인 창이 뜨면 이름 입력란으로 바로 커서 포커스
+                NameInput.StudentName.Focus();
+
                 if (DataContext is LoginViewModel vm)
                 {
                     vm.ShowIPInput += () =>

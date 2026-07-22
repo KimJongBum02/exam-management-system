@@ -9,6 +9,9 @@ namespace ProfessorUI.ViewModel
         // 🎯 View가 바인딩할 수 있도록 LayoutStore를 프로퍼티로 엽니다.
         public LayoutStore LayoutStore { get; }
 
+        // 🎯 학생에게 알려줄 이 PC의 접속 IP (상단 헤더에 표시)
+        public string ServerAddress { get; } = NetworkService.GetLocalIPv4();
+
         // 🎯 우측에 무엇을 보여줄지 결정하는 프로퍼티
         public object? RightPaneViewModel { get; private set; }
 
