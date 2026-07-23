@@ -22,6 +22,11 @@
     <Resource Include="View\LoginView\Assets\loginbackground.png" />
     <Resource Include="View\LoginView\Assets\yuhan.png" />
   </ItemGroup>
+  <!-- 두 UI가 공유하는 글꼴 (ExamManager\Fonts) -->
+  <ItemGroup>
+    <Resource Include="..\Fonts\NEXON Lv2 Gothic.ttf" Link="Fonts\NEXON Lv2 Gothic.ttf" />
+    <Resource Include="..\Fonts\NEXON Lv2 Gothic Bold.ttf" Link="Fonts\NEXON Lv2 Gothic Bold.ttf" />
+  </ItemGroup>
   <ItemGroup>
     <Compile Include="..\NetworkInterop\NetworkInterop.cs" Link="NetworkInterop.cs" />
   </ItemGroup>

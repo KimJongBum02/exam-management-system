@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:StudentUI.View.LoginView"
         Title="StudentUI" Height="600" Width="900"
+        FontFamily="{StaticResource AppFont}"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
         Icon="/View/LoginView/Assets/yuhan.png">

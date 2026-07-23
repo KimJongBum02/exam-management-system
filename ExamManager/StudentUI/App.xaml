@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:StudentUI">
     <Application.Resources>
-         
+        <!-- 앱 전체 기본 글꼴 — 글꼴을 바꿀 때는 이 줄과 csproj의 Resource 항목만 수정하면 된다 -->
+        <FontFamily x:Key="AppFont">pack://application:,,,/Fonts/#NEXON Lv2 Gothic</FontFamily>
     </Application.Resources>
 </Application>

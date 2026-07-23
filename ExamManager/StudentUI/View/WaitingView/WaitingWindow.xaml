@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:StudentUI.View.WaitingView"
         mc:Ignorable="d"
         Title="시험 대기" Height="152" Width="280"
+        FontFamily="{StaticResource AppFont}"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ShowInTaskbar="True" ResizeMode="NoResize"
         Loaded="Window_Loaded">
