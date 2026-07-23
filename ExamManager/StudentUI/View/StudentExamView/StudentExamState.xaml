@@ -39,8 +39,8 @@
         Margin="0,0,0,10">
                 <StackPanel>
 
-                    <!-- 원본 대상 폴더 라벨 -->
-                    <TextBlock Text="원본 대상 폴더"
+                    <!-- 압축 해제 폴더 라벨 -->
+                    <TextBlock Text="압축 해제 폴더"
                    FontSize="13"
                    FontWeight="SemiBold"
                    Foreground="#1A1A2E"
@@ -60,13 +60,16 @@
                     CornerRadius="8"
                     Padding="12,10">
                             <TextBlock x:Name="SelectedFileName"
-                           Text=""
+                           Text="{Binding ExamFile.ExtractFolder}"
+                           TextTrimming="CharacterEllipsis"
                            FontSize="12"
                            Foreground="#1A1A2E"/>
                         </Border>
 
                         <Button Grid.Column="2"
                     x:Name="SelectFileButton"
+                    Command="{Binding OpenExtractFolderCommand}"
+                    ToolTip="압축 해제 폴더 열기"
                     Width="44" Height="44"
                     Cursor="Hand">
                             <Button.Style>
@@ -112,13 +115,13 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBlock x:Name="StatusText"
                                Grid.Column="0"
-                               Text="대기 중..."
+                               Text="{Binding ExamFile.StatusText}"
                                FontSize="13"
                                FontWeight="SemiBold"
                                Foreground="#1A1A2E"/>
                                 <TextBlock x:Name="ProgressText"
                                Grid.Column="1"
-                               Text="0%"
+                               Text="{Binding ExamFile.Progress, StringFormat={}{0}%}"
                                FontSize="13"
                                FontWeight="SemiBold"
                                Foreground="#5C6AC4"/>
@@ -127,7 +130,7 @@
                             <!-- 프로그레스 바 -->
                             <ProgressBar x:Name="FileProgressBar"
                              Height="6"
-                             Value="0"
+                             Value="{Binding ExamFile.Progress, Mode=OneWay}"
                              Maximum="100"
                              Margin="0,0,0,8">
                                 <ProgressBar.Style>
@@ -151,7 +154,7 @@
                             </ProgressBar>
 
                             <TextBlock x:Name="CurrentFileText"
-                           Text="현재 파일: data_package.zip"
+                           Text="{Binding ExamFile.FileName, StringFormat=현재 파일: {0}}"
                            FontSize="11"
                            Foreground="#8888AA"/>
                         </StackPanel>

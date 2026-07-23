@@ -40,5 +40,17 @@
       <Link>NetworkControl.dll</Link>
     </None>
   </ItemGroup>
+  <!-- 압축 해제용 FileControl.dll + 7za.exe 복사 -->
+  <ItemGroup>
+    <None Include="$(SolutionDir)x64\$(Configuration)\FileControl.dll"
+          Condition="Exists('$(SolutionDir)x64\$(Configuration)\FileControl.dll')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>FileControl.dll</Link>
+    </None>
+    <None Include="$(SolutionDir)7za.exe" Condition="Exists('$(SolutionDir)7za.exe')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>7za.exe</Link>
+    </None>
+  </ItemGroup>
 
 </Project>
