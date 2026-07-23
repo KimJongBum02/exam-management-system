@@ -3,7 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:dashboard="clr-namespace:ProfessorUI.View.DashBoardCardView"
         xmlns:current="clr-namespace:ProfessorUI.View.CurrentTimeView"
-        Title="시험 현황 모니터링" Width="1300" Height="800">
+        Title="시험 현황 모니터링" Width="1300" Height="800"
+        FontFamily="{StaticResource AppFont}">
 
     <Grid Background="#F1F5F9">
         <Grid.RowDefinitions>

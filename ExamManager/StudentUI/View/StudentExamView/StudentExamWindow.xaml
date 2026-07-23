@@ -6,6 +6,7 @@
       xmlns:local="clr-namespace:StudentUI.View.StudentExamView"
       mc:Ignorable="d" 
       Background="#F5F5F5"
+      FontFamily="{StaticResource AppFont}"
       Title="StudentExamWindow" Height="750" Width="1300">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="20">

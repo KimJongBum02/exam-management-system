@@ -15,6 +15,12 @@
     <Compile Include="..\NetworkInterop\NetworkInterop.cs" Link="NetworkInterop.cs" />
   </ItemGroup>
 
+  <!-- 두 UI가 공유하는 글꼴 (ExamManager\Fonts) -->
+  <ItemGroup>
+    <Resource Include="..\Fonts\NEXON Lv2 Gothic.ttf" Link="Fonts\NEXON Lv2 Gothic.ttf" />
+    <Resource Include="..\Fonts\NEXON Lv2 Gothic Bold.ttf" Link="Fonts\NEXON Lv2 Gothic Bold.ttf" />
+  </ItemGroup>
+
   <!-- NetworkLib_Native.dll 자동 복사 (Debug/Release 구성에 맞게 자동 선택) -->
   <ItemGroup>
     <None Include="$(SolutionDir)x64\$(Configuration)\NetworkLib_Native.dll" Condition="Exists('$(SolutionDir)x64\$(Configuration)\NetworkLib_Native.dll')">
