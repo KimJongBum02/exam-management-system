@@ -27,16 +27,16 @@ namespace StudentUI
             var loginViewModel = new LoginViewModel(_navigationStore);
             _navigationStore.CurrentViewModel = loginViewModel;
 
+            // 파일 수신 상태 저장소 구독 시작 (대기 화면에서 도착한 파일도 놓치지 않도록 앱 시작 시점에)
+            Service.ExamFileStore.Instance.Start();
+
             // ── 시험 파일을 수신하면 교수 PC로 '수신 완료' 응답을 보낸다 ──
             // 실제 접속/로그인 패킷 전송은 IP 입력 후 LoginViewModel.CompleteLogin 에서 수행한다.
+            // 수신 사실은 대기 화면·시험 준비 화면이 ExamFileStore를 통해 표시하므로 별도 알림창은 띄우지 않는다.
             Service.NetworkService.Instance.FileReceived += (tid, senderId, fileName, tempPath, size, pw) =>
             {
                 byte[] payload = BitConverter.GetBytes((uint)StudentStatus.FileReceived);
                 Service.NetworkService.Instance.SendPacket(PacketType.ExamStatusUpdate, payload);
-
-                if (!Dispatcher.HasShutdownStarted)
-                    Dispatcher.BeginInvoke(() =>
-                        MessageBox.Show($"시험 파일을 수신했습니다: {fileName}", "파일 수신 완료"));
             };
         }
 

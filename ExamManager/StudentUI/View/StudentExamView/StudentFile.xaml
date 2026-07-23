@@ -6,6 +6,10 @@
              xmlns:local="clr-namespace:StudentUI.View.StudentExamView"
              mc:Ignorable="d">
 
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
+
     <Border Background="White"
         CornerRadius="12"
         Padding="16"
@@ -41,19 +45,47 @@
                             <TextBlock Text="🔒" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="exam_files_encrypted.zip" FontSize="12"
+                            <TextBlock Text="{Binding ExamFile.FileName}" FontSize="12"
                                    FontWeight="SemiBold" Foreground="#1A1A2E"/>
-                            <TextBlock Text="수신 완료 · AES-256 암호화됨" FontSize="11"
+                            <TextBlock Text="{Binding ExamFile.StatusText}" FontSize="11"
                                    Foreground="#888888" Margin="0,2,0,0"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,10"
+                            Visibility="{Binding ExamFile.IsReceived, Converter={StaticResource BoolToVis}}">
                     <TextBlock Text="✓" FontSize="12" Foreground="#2E7D32"
                                VerticalAlignment="Center" Margin="0,0,6,0"/>
                     <TextBlock Text="시험 파일 수신 완료" FontSize="12" FontWeight="SemiBold"
                                Foreground="#2E7D32" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- 압축 해제 결과 (해제 성공 시에만 표시) -->
+                <StackPanel Visibility="{Binding ExamFile.IsExtracted, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <TextBlock Text="✓" FontSize="12" Foreground="#2E7D32"
+                                   VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="{Binding ExamFile.ExtractedFiles.Count, StringFormat=압축 해제 완료 · 파일 {0}개}"
+                                   FontSize="12" FontWeight="SemiBold"
+                                   Foreground="#2E7D32" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <Border Background="#F8F9FA" BorderBrush="#E0E0E0" BorderThickness="1"
+                            CornerRadius="8" Padding="10,8" Margin="0,0,0,10">
+                        <ScrollViewer MaxHeight="120" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding ExamFile.ExtractedFiles}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" FontSize="11"
+                                                   Foreground="#666666"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Margin="0,1"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
                 </StackPanel>
                 
             </StackPanel>
@@ -62,6 +94,7 @@
             <Button Grid.Row="1"
                 x:Name="UnzipButton"
                 Content="압축 해제"
+                Command="{Binding ExtractCommand}"
                 FontSize="12"
                 FontWeight="SemiBold"
                 Foreground="White"
@@ -86,6 +119,10 @@
                                         </Trigger>
                                         <Trigger Property="IsPressed" Value="True">
                                             <Setter TargetName="UnzipBorder" Property="Background" Value="#3A3AB4"/>
+                                        </Trigger>
+                                        <!-- 파일 수신 전·해제 완료 후에는 비활성 -->
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter TargetName="UnzipBorder" Property="Background" Value="#C7C7D9"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>

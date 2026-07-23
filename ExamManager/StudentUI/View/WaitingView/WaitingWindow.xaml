@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:StudentUI.View.WaitingView"
         mc:Ignorable="d"
-        Title="시험 대기" Height="130" Width="280"
+        Title="시험 대기" Height="152" Width="280"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ShowInTaskbar="True" ResizeMode="NoResize"
         Loaded="Window_Loaded">
@@ -16,6 +16,7 @@
         </Border.Effect>
         <Grid Margin="15,10">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -62,8 +63,26 @@
                 <TextBlock Text="{Binding ConnectionStatusText}" FontSize="11" Foreground="#888888" VerticalAlignment="Center"/>
             </StackPanel>
 
-            <!-- Row 3: 시험 시작 테스트 버튼 -->
-            <Button Grid.Row="3" Command="{Binding TestExamCommand}" Content="시험 시작 테스트" Margin="0,8,0,0" Background="#E0E0E0" BorderThickness="0" Padding="5" Cursor="Hand" FontSize="11"/>
+            <!-- Row 3: 시험 파일 수신 상태 -->
+            <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,6,0,0">
+                <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,5,0">
+                    <Ellipse.Style>
+                        <Style TargetType="Ellipse">
+                            <Setter Property="Fill" Value="#BDBDBD"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ExamFile.IsReceived}" Value="True">
+                                    <Setter Property="Fill" Value="#43A047"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Ellipse.Style>
+                </Ellipse>
+                <TextBlock Text="{Binding ExamFile.StatusText}" FontSize="11" Foreground="#888888"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+            </StackPanel>
+
+            <!-- Row 4: 시험 준비 화면 전환 버튼 -->
+            <Button Grid.Row="4" Command="{Binding TestExamCommand}" Content="시험 준비 화면으로 전환" Margin="0,8,0,0" Background="#E0E0E0" BorderThickness="0" Padding="5" Cursor="Hand" FontSize="11"/>
         </Grid>
     </Border>
 </Window>

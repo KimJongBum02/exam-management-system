@@ -21,10 +21,6 @@ namespace StudentUI.View.StudentExamView
         public StudentFile()
         {
             InitializeComponent();
-            UnzipButton.Click += (s, e) =>
-            {
-                MessageBox.Show("압축 해제 버튼 클릭!");
-            };
         }
     }
 }

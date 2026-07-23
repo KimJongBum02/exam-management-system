@@ -39,7 +39,39 @@
                     </StackPanel>
              </StackPanel>
 
-           
+             <!-- 서버 접속 상태 -->
+             <StackPanel Grid.Column="1"
+                         Orientation="Horizontal"
+                         VerticalAlignment="Center">
+                 <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,6,0">
+                     <Ellipse.Style>
+                         <Style TargetType="Ellipse">
+                             <Setter Property="Fill" Value="#E53935"/>
+                             <Style.Triggers>
+                                 <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                     <Setter Property="Fill" Value="#43A047"/>
+                                 </DataTrigger>
+                             </Style.Triggers>
+                         </Style>
+                     </Ellipse.Style>
+                 </Ellipse>
+                 <TextBlock Text="{Binding ConnectionStatusText}"
+                            FontSize="12"
+                            VerticalAlignment="Center">
+                     <TextBlock.Style>
+                         <Style TargetType="TextBlock">
+                             <Setter Property="Foreground" Value="#E53935"/>
+                             <Setter Property="FontWeight" Value="SemiBold"/>
+                             <Style.Triggers>
+                                 <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                     <Setter Property="Foreground" Value="#888888"/>
+                                     <Setter Property="FontWeight" Value="Normal"/>
+                                 </DataTrigger>
+                             </Style.Triggers>
+                         </Style>
+                     </TextBlock.Style>
+                 </TextBlock>
+             </StackPanel>
          </Grid>
      </Border>
  </Grid>
