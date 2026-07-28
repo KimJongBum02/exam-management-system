@@ -38,6 +38,7 @@ void ProcessMonitor::Start()
 
     m_running = true;
     m_prevRunningWhitelist.clear();
+    m_prevRunningBlacklist.clear();
     m_monitorThread = std::thread(&ProcessMonitor::MonitorThreadFunc, this);
 }
 
@@ -59,9 +60,9 @@ void ProcessMonitor::MonitorThreadFunc()
     }
 }
 
-std::vector<std::wstring> ProcessMonitor::GetRunningProcesses()
+std::vector<ProcessInfo> ProcessMonitor::GetRunningProcesses()
 {
-    std::vector<std::wstring> running;
+    std::vector<ProcessInfo> running;
 
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (snapshot == INVALID_HANDLE_VALUE) return running;
@@ -74,7 +75,7 @@ std::vector<std::wstring> ProcessMonitor::GetRunningProcesses()
         do
         {
             if (pe.th32ProcessID == m_myPid) continue;
-            running.emplace_back(pe.szExeFile);
+            running.push_back({ pe.szExeFile, pe.th32ProcessID });
         } while (Process32NextW(snapshot, &pe));
     }
 
@@ -96,7 +97,7 @@ bool ProcessMonitor::IsInList(const std::wstring& name, const std::vector<std::w
 
 void ProcessMonitor::CheckOnce()
 {
-    std::vector<std::wstring> running = GetRunningProcesses();
+    std::vector<ProcessInfo> running = GetRunningProcesses();
 
     std::vector<std::wstring> blacklist, whitelist;
     {
@@ -111,45 +112,44 @@ void ProcessMonitor::CheckOnce()
         cb = m_detectCallback;
     }
 
-    // ===== 1. 블랙리스트 실행 감지 → 종료 + 콜백 =====
+    // ===== 1. 블랙리스트: 실행 중이면 종료, 새로 등장했을 때만 알림 =====
+    // 종료는 매 검사마다 시도하되(못 죽인 프로세스는 계속 재시도),
+    // 콜백은 '없다→있다'로 새로 등장한 경우에만 발화해 500ms 반복 알림을 막는다.
+    std::vector<std::wstring> currentBlacklist;
     for (const auto& proc : running)
     {
-        if (IsInList(proc, blacklist))
+        if (IsInList(proc.name, blacklist))
         {
-            HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-            if (snapshot != INVALID_HANDLE_VALUE)
+            // PID를 이미 알고 있으므로 재스냅샷 없이 바로 종료
+            HANDLE h = OpenProcess(PROCESS_TERMINATE, FALSE, proc.pid);
+            if (h)
             {
-                PROCESSENTRY32W pe;
-                pe.dwSize = sizeof(PROCESSENTRY32W);
-                if (Process32FirstW(snapshot, &pe))
-                {
-                    do
-                    {
-                        if (_wcsicmp(pe.szExeFile, proc.c_str()) == 0)
-                        {
-                            HANDLE h = OpenProcess(PROCESS_TERMINATE, FALSE, pe.th32ProcessID);
-                            if (h)
-                            {
-                                TerminateProcess(h, 1);
-                                CloseHandle(h);
-                            }
-                        }
-                    } while (Process32NextW(snapshot, &pe));
-                }
-                CloseHandle(snapshot);
+                TerminateProcess(h, 1);
+                CloseHandle(h);
             }
 
-            if (cb) cb(0, proc);  // type 0 = 블랙리스트 실행
+            if (!IsInList(proc.name, currentBlacklist))
+                currentBlacklist.push_back(proc.name);
         }
     }
+
+    for (const auto& name : currentBlacklist)
+    {
+        if (!IsInList(name, m_prevRunningBlacklist))
+        {
+            if (cb) cb(0, name);  // type 0 = 블랙리스트 실행 (신규 등장)
+        }
+    }
+
+    m_prevRunningBlacklist = currentBlacklist;
 
     // ===== 2. 화이트리스트 종료 감지 → 콜백 =====
     std::vector<std::wstring> currentWhitelist;
     for (const auto& proc : running)
     {
-        if (IsInList(proc, whitelist))
+        if (IsInList(proc.name, whitelist))
         {
-            currentWhitelist.push_back(proc);
+            currentWhitelist.push_back(proc.name);
         }
     }
 
