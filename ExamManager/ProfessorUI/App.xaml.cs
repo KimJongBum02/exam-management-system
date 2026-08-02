@@ -18,7 +18,8 @@ namespace ProfessorUI
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
-
+            // 소프트웨어 렌더링(CPU)으로 강제 전환하여 그래픽 깨짐 방지
+            System.Windows.Media.RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;
             // 1. 상태 저장소 생성 (프로그램 전체에서 딱 1개만 존재)
             Service.NavigationStore navigationStore = new Service.NavigationStore();
 

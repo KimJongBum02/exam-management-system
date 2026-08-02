@@ -12,6 +12,7 @@ namespace ProfessorUI.ViewModel
         private string _name = string.Empty;
         private string _status = string.Empty; // 메인 화면용 (대기, 미접속, 시험중 등)
         private string _ip = string.Empty;
+        private string _attendance = string.Empty;
 
         // ⭐ 2, 3단계 lifecycle을 위한 속성 추가
         private bool _isSelected;
@@ -22,6 +23,7 @@ namespace ProfessorUI.ViewModel
         public string Name { get => _name; set { _name = value; OnPropertyChanged(); } }
         public string Status { get => _status; set { _status = value; OnPropertyChanged(); } }
         public string Ip { get => _ip; set { _ip = value; OnPropertyChanged(); } }
+        public string Attendance { get => _attendance; set { _attendance = value; OnPropertyChanged(); } }
 
         // 서버가 부여한 세션 식별자 (접속 종료·개별 전송 매핑용)
         public string SessionId { get; set; } = string.Empty;

@@ -49,6 +49,9 @@ namespace ProfessorUI.ViewModel
     {
         private bool _isDeploying = false; // 중복 실행 방지용
 
+        // ⭐ 핵심 1: XAML이 바라보는 활성화 여부 프로퍼티 (FileDeployState 연동)
+        public bool IsContainerEnabled => FileDeployState.IsFilePrepared;
+
         // ⭐ 학생 목록을 담을 컬렉션
         public ObservableCollection<StudentItem> Students { get; } = new ObservableCollection<StudentItem>();
 
@@ -73,18 +76,40 @@ namespace ProfessorUI.ViewModel
 
         public FileDistributeViewModel()
         {
-            StartDeployCommand = new RelayCommand(ExecuteStartDeploy);
-            SelectAllCommand = new RelayCommand(o => SetAllSelection(true));
-            DeselectAllCommand = new RelayCommand(o => SetAllSelection(false));
+            // ⭐ 핵심 2: Command CanExecute 조건에 IsContainerEnabled 연결
+            StartDeployCommand = new RelayCommand(
+                ExecuteStartDeploy,
+                canExecute: o => IsContainerEnabled && !_isDeploying
+            );
+            SelectAllCommand = new RelayCommand(
+                o => SetAllSelection(true),
+                canExecute: o => IsContainerEnabled
+            );
+            DeselectAllCommand = new RelayCommand(
+                o => SetAllSelection(false),
+                canExecute: o => IsContainerEnabled
+            );
 
-            // 실제 접속한 학생(현황판)과 동기화한다.
-            // 배포 화면은 앱 시작 시 만들어지고 학생은 그 이후에 접속하므로,
-            // 현재 목록을 채운 뒤 이후 접속/종료도 실시간으로 반영한다.
+            // ⭐ 핵심 3: static 클래스의 상태가 바뀌면 UI 전체 갱신 호출
+            FileDeployState.StateChanged += OnFileDeployStateChanged;
+
+            // 실제 접속한 학생(현황판)과 동기화
             foreach (var connected in StudentStore.Instance.Students)
                 Students.Add(CreateRow(connected));
 
             StudentStore.Instance.Students.CollectionChanged += OnStoreStudentsChanged;
             StudentStore.Instance.FileReceivedConfirmed += OnFileReceivedConfirmed;
+        }
+
+        // static 상태 변경 시 호출되는 이벤트 핸들러
+        private void OnFileDeployStateChanged()
+        {
+            // XAML 바인딩 속성 갱신 알림
+            // 1. IsContainerEnabled 속성 변경 알림 (XAML 바인딩 갱신)
+            OnPropertyChanged(nameof(IsContainerEnabled));
+
+            // 2. Command들의 CanExecute 상태를 다시 평가하도록 WPF UI 프레임워크에 알림
+            CommandManager.InvalidateRequerySuggested();
         }
 
         private static StudentItem CreateRow(StudentItemViewModel student) => new StudentItem
@@ -130,7 +155,7 @@ namespace ProfessorUI.ViewModel
         // 전체 선택/해제 로직
         private void SetAllSelection(bool isSelected)
         {
-            if (_isDeploying) return; // 전송 중에는 선택 변경 불가
+            if (_isDeploying || !IsContainerEnabled) return; // 전송 중이거나 비활성화 시 선택 변경 불가
             foreach (var student in Students)
             {
                 student.IsSelected = isSelected;
