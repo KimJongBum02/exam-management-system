@@ -31,7 +31,7 @@
         </DataTemplate>
         
         <DataTemplate DataType="{x:Type viewmodels:AttendanceMainViewModel}">
-            <attendance:AttendanceMainView/>
+            <attendance:StudentListView/>
         </DataTemplate>
 
         <!-- 나머지 ViewModel-View 매핑도 동일하게 추가 -->

@@ -26,11 +26,10 @@
             <ListView Grid.Row="1" ScrollViewer.VerticalScrollBarVisibility="Auto" BorderThickness="0">
                 <ListView.View>
                     <GridView>
-                        <GridViewColumn Header="학번" Width="120" DisplayMemberBinding="{Binding StudentId}"/>
-                        <GridViewColumn Header="이름" Width="100" DisplayMemberBinding="{Binding Name}"/>
-                        <GridViewColumn Header="좌석" Width="80" DisplayMemberBinding="{Binding SeatNumber}"/>
-                        <GridViewColumn Header="상태" Width="100" DisplayMemberBinding="{Binding Status}"/>
-                        <GridViewColumn Header="출석 응답" Width="120" DisplayMemberBinding="{Binding Response}"/>
+                        <GridViewColumn Header="학번" Width="180" DisplayMemberBinding="{Binding StudentId}"/>
+                        <GridViewColumn Header="이름" Width="130" DisplayMemberBinding="{Binding Name}"/>
+                        <GridViewColumn Header="출석" Width="80" DisplayMemberBinding="{Binding Attendance}"/>
+                        <GridViewColumn Header="부정행위" Width="100" DisplayMemberBinding="{Binding Status}"/>
                     </GridView>
                 </ListView.View>
             </ListView>
