@@ -24,6 +24,14 @@
                 <local:StudentFile Grid.Column="0" VerticalAlignment="Stretch"/>
                 <local:StudentExamState Grid.Column="2" VerticalAlignment="Stretch"/>
             </Grid>
+
+            <!-- 교수 PC 시험 흐름 연결 전까지 화면 전환 확인용 임시 버튼 -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0">
+                <Button Command="{Binding GoToWaitingCommand}" Content="시험 대기 화면으로 전환"
+                        Background="#E0E0E0" BorderThickness="0" Padding="12,6" Cursor="Hand" FontSize="12"/>
+                <Button Command="{Binding GoToStartedCommand}" Content="시험 시작 화면으로 전환"
+                        Background="#E0E0E0" BorderThickness="0" Padding="12,6" Cursor="Hand" FontSize="12" Margin="10,0,0,0"/>
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </Window>

@@ -10,7 +10,10 @@ using StudentUI.Service;
 
 namespace StudentUI.ViewModel
 {
-    public class WaitingViewModel : INotifyPropertyChanged
+    // 시험 '시작' 상태의 학생 화면. 대기 화면과 같은 플로팅 위젯 형태이며,
+    // 아래에 알림/채팅 버튼을 두고 누르면 위젯이 아래로 펼쳐지며 해당 패널이 나타난다.
+    // (채팅·알림 내용의 실제 송수신은 이후 네트워크 연결 단계에서 구현)
+    public class ExamProgressViewModel : INotifyPropertyChanged
     {
         private readonly NavigationStore _navigationStore;
         private readonly DispatcherTimer _clockTimer;
@@ -19,10 +22,7 @@ namespace StudentUI.ViewModel
 
         public string StudentInfo => $"{Student.StudentNumber} {Student.StudentName}";
 
-        // 시험 파일 수신 상태 (파일은 대기 중에 도착하므로 이 화면에서도 보여준다)
-        public ExamFileStore ExamFile => ExamFileStore.Instance;
-
-        // ── 1. 현재 시각 표시 ──
+        // ── 현재 시각 (교수 PC가 시험 시간을 보내기 전까지는 시계로 표시) ──
         private string _currentTime = string.Empty;
         public string CurrentTime
         {
@@ -30,8 +30,8 @@ namespace StudentUI.ViewModel
             set { _currentTime = value; OnPropertyChanged(); }
         }
 
-        // ── 2. 접속 상태 표시 ──
-        private bool _isConnected = false;
+        // ── 서버 접속 상태 ──
+        private bool _isConnected;
         public bool IsConnected
         {
             get => _isConnected;
@@ -40,7 +40,7 @@ namespace StudentUI.ViewModel
 
         public string ConnectionStatusText => IsConnected ? "서버 연결됨" : "서버 미연결";
 
-        // ── 알림/채팅 펼침 패널 상태 (하나만 열림) ──
+        // ── 펼침 패널 상태 (알림/채팅 중 하나만 열림) ──
         private bool _isNotificationOpen;
         public bool IsNotificationOpen
         {
@@ -57,48 +57,25 @@ namespace StudentUI.ViewModel
 
         public ICommand ToggleNotificationCommand { get; }
         public ICommand ToggleChatCommand { get; }
-
         public ICommand LogoutCommand { get; }
-        public ICommand TestExamCommand { get; }
-        public ICommand TestExamStartCommand { get; }
         public ICommand ExitCommand { get; }
 
-        public WaitingViewModel(NavigationStore navigationStore, Student student)
+        // 교수 PC 시험 흐름 연결 전까지, 대기/준비 화면으로 되돌아가 테스트하기 위한 임시 전환
+        public ICommand GoToWaitingCommand { get; }
+        public ICommand GoToPrepCommand { get; }
+
+        public ExamProgressViewModel(NavigationStore navigationStore, Student student)
         {
             _navigationStore = navigationStore;
             Student = student;
 
-            // 로그인 단계에서 실제 연결을 맺고 넘어오므로 현재 연결 상태를 반영하고,
-            // 이후 서버가 끊기면(교수 PC 종료 등) 실시간으로 '미연결'로 갱신한다.
             IsConnected = NetworkService.Instance.IsConnected;
             NetworkService.Instance.Disconnected += OnServerDisconnected;
 
-            // 시계 타이머 (1초 간격)
             UpdateTime();
-            _clockTimer = new DispatcherTimer();
-            _clockTimer.Interval = TimeSpan.FromSeconds(1);
+            _clockTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             _clockTimer.Tick += (s, e) => UpdateTime();
             _clockTimer.Start();
-
-            LogoutCommand = new RelayCommand(() =>
-            {
-                Cleanup();
-                NetworkService.Instance.Disconnect(); // 로그아웃 시 연결도 정리
-                _navigationStore.CurrentViewModel = new LoginViewModel(_navigationStore);
-            });
-
-            TestExamCommand = new RelayCommand(() =>
-            {
-                Cleanup();
-                _navigationStore.CurrentViewModel = new StudentExamViewModel(_navigationStore, student);
-            });
-
-            // 교수 PC의 시험 시작 명령 연결 전까지, 시험 시작 상태 화면을 확인하기 위한 임시 진입
-            TestExamStartCommand = new RelayCommand(() =>
-            {
-                Cleanup();
-                _navigationStore.CurrentViewModel = new ExamProgressViewModel(_navigationStore, student);
-            });
 
             ToggleNotificationCommand = new RelayCommand(() =>
             {
@@ -112,14 +89,33 @@ namespace StudentUI.ViewModel
                 if (IsChatOpen) IsNotificationOpen = false;
             });
 
+            LogoutCommand = new RelayCommand(() =>
+            {
+                Cleanup();
+                NetworkService.Instance.Disconnect();
+                _navigationStore.CurrentViewModel = new LoginViewModel(_navigationStore);
+            });
+
             ExitCommand = new RelayCommand(() =>
             {
                 Cleanup();
-                Application.Current.Shutdown(); // OnExit에서 연결 해제·정리 수행
+                Application.Current.Shutdown();
+            });
+
+            GoToWaitingCommand = new RelayCommand(() =>
+            {
+                Cleanup();
+                _navigationStore.CurrentViewModel = new WaitingViewModel(_navigationStore, Student);
+            });
+
+            GoToPrepCommand = new RelayCommand(() =>
+            {
+                Cleanup();
+                _navigationStore.CurrentViewModel = new StudentExamViewModel(_navigationStore, Student);
             });
         }
 
-        // 서버 연결이 끊겼을 때 UI 상태를 갱신 (네이티브 스레드에서 호출됨)
+        // 서버 연결이 끊겼을 때 UI 상태 갱신 (네이티브 스레드에서 호출됨)
         private void OnServerDisconnected(DisconnectReason reason)
         {
             var dispatcher = Application.Current?.Dispatcher;
@@ -127,7 +123,6 @@ namespace StudentUI.ViewModel
             dispatcher.BeginInvoke(() => IsConnected = false);
         }
 
-        // 화면을 떠날 때 타이머·이벤트 구독을 정리
         private void Cleanup()
         {
             _clockTimer.Stop();

@@ -21,10 +21,19 @@ namespace StudentUI.View.StudentExamView
             InitializeComponent();
         }
 
+        // 화면 전환에 의한 닫힘이면 true — 이때는 종료 확인창을 띄우지 않는다.
+        public bool IsNavigating { get; set; }
+
         // 창을 닫으면 앱이 그대로 종료되고 수신한 시험 파일 상태도 사라지므로,
-        // 시험 중 실수로 닫는 것을 막기 위해 한 번 확인한다.
+        // 사용자가 직접 닫을 때만(전환이 아닐 때) 실수 방지 확인을 한 번 한다.
         protected override void OnClosing(CancelEventArgs e)
         {
+            if (IsNavigating)
+            {
+                base.OnClosing(e);
+                return;
+            }
+
             var answer = MessageBox.Show(
                 "시험 화면을 닫으면 프로그램이 종료됩니다.\n정말 종료하시겠습니까?",
                 "종료 확인", MessageBoxButton.YesNo, MessageBoxImage.Warning);

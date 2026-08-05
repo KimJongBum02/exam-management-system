@@ -65,6 +65,13 @@ namespace StudentUI
                     DataContext = examVM
                 };
             }
+            else if (_navigationStore.CurrentViewModel is ExamProgressViewModel progressVM)
+            {
+                nextWindow = new StudentUI.View.ExamProgressView.ExamProgressWindow()
+                {
+                    DataContext = progressVM
+                };
+            }
 
             if (nextWindow != null)
             {
@@ -76,6 +83,9 @@ namespace StudentUI
                 {
                     // 네비게이션에 의한 닫힘이므로 종료 핸들러를 먼저 떼어낸다
                     oldWindow.Closed -= OnCurrentWindowClosed;
+                    // 화면 전환에 의한 닫힘은 종료 확인창을 띄우지 않도록 표시한다
+                    if (oldWindow is StudentUI.View.StudentExamView.StudentExamWindow examWindow)
+                        examWindow.IsNavigating = true;
                     oldWindow.Close();
                 }
 
