@@ -14,6 +14,7 @@ namespace StudentUI.ViewModel
 {
     public class StudentExamViewModel : INotifyPropertyChanged
     {
+        private readonly NavigationStore _navigationStore;
 
         public Student Student { get; set; } = new Student();
 
@@ -34,8 +35,13 @@ namespace StudentUI.ViewModel
         public ICommand ExtractCommand { get; }
         public ICommand OpenExtractFolderCommand { get; }
 
-        public StudentExamViewModel(Student student)
+        // 교수 PC 시험 흐름 연결 전까지, 대기/시작 화면을 오가며 테스트하기 위한 임시 전환
+        public ICommand GoToWaitingCommand { get; }
+        public ICommand GoToStartedCommand { get; }
+
+        public StudentExamViewModel(NavigationStore navigationStore, Student student)
         {
+            _navigationStore = navigationStore;
             Student = student;
 
             IsConnected = NetworkService.Instance.IsConnected;
@@ -48,6 +54,18 @@ namespace StudentUI.ViewModel
             OpenExtractFolderCommand = new RelayCommand(
                 () => Process.Start("explorer.exe", ExamFile.ExtractFolder),
                 () => ExamFile.IsExtracted);
+
+            GoToWaitingCommand = new RelayCommand(() =>
+            {
+                NetworkService.Instance.Disconnected -= OnServerDisconnected;
+                _navigationStore.CurrentViewModel = new WaitingViewModel(_navigationStore, Student);
+            });
+
+            GoToStartedCommand = new RelayCommand(() =>
+            {
+                NetworkService.Instance.Disconnected -= OnServerDisconnected;
+                _navigationStore.CurrentViewModel = new ExamProgressViewModel(_navigationStore, Student);
+            });
         }
 
         // 서버 연결이 끊겼을 때 UI 상태를 갱신 (네이티브 스레드에서 호출됨)
