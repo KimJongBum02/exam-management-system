@@ -22,8 +22,7 @@ namespace NetworkLib
         LoginResponse           = 2,
         Heartbeat               = 3,
         Disconnect              = 4,
-        AttendanceCheckRequest  = 10,
-        AttendanceCheckResponse = 11,
+
         ExamPhaseChange         = 20,
         ExamStatusUpdate        = 21,
         CheatingAlert           = 22,

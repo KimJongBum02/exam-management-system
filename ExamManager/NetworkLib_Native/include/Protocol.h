@@ -20,8 +20,7 @@ enum class PacketType : uint32_t
     Disconnect               = 4,
 
     // 출결 (10~19)
-    AttendanceCheckRequest   = 10,
-    AttendanceCheckResponse  = 11,
+
 
     // 시험 제어 (20~29)
     ExamPhaseChange          = 20,
@@ -122,20 +121,7 @@ struct DisconnectPayload
     char reason[128];
 };
 
-// ─── 출결 관련 ────────────────────────────────────────────────────
-struct AttendanceCheckRequestPayload
-{
-    char     checkId[37];    // UUID 문자열 (36 + null)
-    char     message[256];
-    uint32_t timeoutSeconds;
-};
 
-struct AttendanceCheckResponsePayload
-{
-    char checkId[37];
-    char studentId[16];
-    char studentName[64];
-};
 
 // ─── 시험 제어 ────────────────────────────────────────────────────
 struct ExamPhaseChangePayload
