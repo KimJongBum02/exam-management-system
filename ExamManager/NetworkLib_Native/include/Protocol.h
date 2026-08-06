@@ -22,6 +22,10 @@ enum class PacketType : uint32_t
     // 출결 (10~19)
 
 
+    // 채팅 (60~69)
+    ChatBroadcast            = 60,  // 교수 → 전체 학생
+    ChatDirect               = 61,  // 교수 → 특정 학생
+    ChatFromStudent          = 62,  // 학생 → 교수
     // 시험 제어 (20~29)
     ExamPhaseChange          = 20,
     ExamStatusUpdate         = 21,
@@ -243,6 +247,24 @@ struct CommandAckPayload
     uint32_t commandType; // PacketType
     uint8_t  success;
     char     message[256];
+};
+
+// ─── 채팅 ────────────────────────────────────────────────────────────
+struct ChatBroadcastPayload
+{
+    char message[512];   // 교수가 전체에게 보내는 메시지
+};
+
+struct ChatDirectPayload
+{
+    char message[512];   // 교수가 특정 학생에게 보내는 메시지
+};
+
+struct ChatFromStudentPayload
+{
+    char message[512];   // 학생이 교수에게 보내는 메시지
+    // 발신자 정보는 ProfessorServer의 onPacketReceived 콜백에서
+    // sessionId / studentId / studentName 으로 자동 제공됩니다.
 };
 
 #pragma pack(pop)

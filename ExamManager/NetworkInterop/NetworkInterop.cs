@@ -37,6 +37,12 @@ namespace NetworkLib
         QuizQuestion            = 50,
         QuizAnswer              = 51,
         QuizResult              = 52,
+
+        // 채팅
+        ChatBroadcast           = 60,  // 교수 → 전체 학생
+        ChatDirect              = 61,  // 교수 → 특정 학생
+        ChatFromStudent         = 62,  // 학생 → 교수
+
         CommandAck              = 100,
     }
 
@@ -159,6 +165,9 @@ namespace NetworkLib
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Server_SendToSession    ([MarshalAs(UnmanagedType.LPUTF8Str)] string sessionId, PacketType type, byte[] payload, uint payloadLen);
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Server_BroadcastFile    ([MarshalAs(UnmanagedType.LPUTF8Str)] string filePath, [MarshalAs(UnmanagedType.LPUTF8Str)] string archivePassword);
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Server_SendFileToSession([MarshalAs(UnmanagedType.LPUTF8Str)] string sessionId, [MarshalAs(UnmanagedType.LPUTF8Str)] string filePath, [MarshalAs(UnmanagedType.LPUTF8Str)] string archivePassword);
+        // 채팅
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Server_BroadcastChat    ([MarshalAs(UnmanagedType.LPUTF8Str)] string message);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Server_SendChatToSession([MarshalAs(UnmanagedType.LPUTF8Str)] string sessionId, [MarshalAs(UnmanagedType.LPUTF8Str)] string message);
 
         // 클라이언트
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Client_Create();
@@ -174,6 +183,8 @@ namespace NetworkLib
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Client_SetOnError          (NetworkErrorCallback         cb);
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Client_SendPacket(PacketType type, byte[] payload, uint payloadLen);
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Client_SendFile  ([MarshalAs(UnmanagedType.LPUTF8Str)] string filePath, [MarshalAs(UnmanagedType.LPUTF8Str)] string archivePassword);
+        // 채팅
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Client_SendChat  ([MarshalAs(UnmanagedType.LPUTF8Str)] string message);
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -238,7 +249,17 @@ namespace NetworkLib
 
             _onConnected    = (sid, stid, name, ip)     => StudentConnected?.Invoke(sid, stid, name, ip);
             _onDisconnected = (sid, stid, name, reason) => StudentDisconnected?.Invoke(sid, stid, name, reason);
-            _onPacket       = (sid, stid, name, t, p, l) => PacketReceived?.Invoke(sid, stid, name, t, p, l);
+        // ── 임시 수신 확인 코드 (테스트용 — UI 완성 후 제거) ─────────────
+        _onPacket = (sid, stid, name, t, p, l) =>
+        {
+            if (t == PacketType.ChatFromStudent)
+            {
+                string msg = Marshal.PtrToStringUTF8(p) ?? "(빈 메시지)";
+                System.Diagnostics.Debug.WriteLine(
+                    $"[채팅 수신-교수] {stid}({name}): {msg}");
+            }
+            PacketReceived?.Invoke(sid, stid, name, t, p, l);
+        };
             _onFileReceived = (tid, senderId, fn, tp, sz, pw) => FileReceived?.Invoke(tid, senderId, fn, tp, sz, pw);
             _onFileProgress = (tid, fn, pct) => FileProgress?.Invoke(tid, fn, pct);
             _onFileError    = (tid, msg)     => FileError?.Invoke(tid, msg);
@@ -266,6 +287,15 @@ namespace NetworkLib
 
         public void SendFileToSession(string sessionId, string filePath, string archivePassword = "")
             => NativeNetwork.NL_Server_SendFileToSession(sessionId, filePath, archivePassword);
+
+        // ── 채팅 전송 ────────────────────────────────────────────────────
+        /// <summary>전체 학생에게 채팅 메시지를 전송합니다.</summary>
+        public bool BroadcastChat(string message)
+            => NativeNetwork.NL_Server_BroadcastChat(message) == 1;
+
+        /// <summary>특정 학생에게 채팅 메시지를 전송합니다.</summary>
+        public bool SendChatToSession(string sessionId, string message)
+            => NativeNetwork.NL_Server_SendChatToSession(sessionId, message) == 1;
 
         public void Dispose() => Stop();
     }
@@ -297,7 +327,17 @@ namespace NetworkLib
 
             _onConnected    = (ip, port) => Connected?.Invoke(ip, port);
             _onDisconnected = reason     => Disconnected?.Invoke(reason);
-            _onPacket       = (t, p, l)  => PacketReceived?.Invoke(t, p, l);
+            // ── 임시 수신 확인 코드 (테스트용 — UI 완성 후 제거) ─────────────
+            _onPacket = (t, p, l) =>
+            {
+                if (t == PacketType.ChatBroadcast || t == PacketType.ChatDirect)
+                {
+                    string msg = Marshal.PtrToStringUTF8(p) ?? "(빈 메시지)";
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[채팅 수신-학생] ({t}): {msg}");
+                }
+                PacketReceived?.Invoke(t, p, l);
+            };
             _onFileReceived = (tid, sid, fn, tp, sz, pw) => FileReceived?.Invoke(tid, sid, fn, tp, sz, pw);
             _onFileProgress = (tid, fn, pct) => FileProgress?.Invoke(tid, fn, pct);
             _onFileError    = (tid, msg)     => FileError?.Invoke(tid, msg);
@@ -321,6 +361,11 @@ namespace NetworkLib
 
         public void SendFile(string filePath, string archivePassword = "")
             => NativeNetwork.NL_Client_SendFile(filePath, archivePassword);
+
+        // ── 채팅 전송 ────────────────────────────────────────────────────
+        /// <summary>교수에게 채팅 메시지를 전송합니다.</summary>
+        public bool SendChat(string message)
+            => NativeNetwork.NL_Client_SendChat(message) == 1;
 
         public void Dispose() => Disconnect();
     }

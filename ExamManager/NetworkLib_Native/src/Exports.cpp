@@ -247,3 +247,34 @@ NL_API int NL_Client_SendFile(const char* filePath, const char* archivePassword)
     if (!g_client) return -1;
     return g_client->SendFile(filePath, archivePassword ? archivePassword : "") ? 1 : 0;
 }
+
+// ══════════════════════════════════════════════════════════════════════
+//  채팅 API
+// ══════════════════════════════════════════════════════════════════════
+
+NL_API int NL_Server_BroadcastChat(const char* message)
+{
+    if (!g_server || !message) return -1;
+    ChatBroadcastPayload p{};
+    strncpy_s(p.message, message, _TRUNCATE);
+    return g_server->Broadcast(PacketType::ChatBroadcast,
+        reinterpret_cast<const uint8_t*>(&p), sizeof(p));
+}
+
+NL_API int NL_Server_SendChatToSession(const char* sessionId, const char* message)
+{
+    if (!g_server || !sessionId || !message) return -1;
+    ChatDirectPayload p{};
+    strncpy_s(p.message, message, _TRUNCATE);
+    return g_server->SendToSession(sessionId, PacketType::ChatDirect,
+        reinterpret_cast<const uint8_t*>(&p), sizeof(p));
+}
+
+NL_API int NL_Client_SendChat(const char* message)
+{
+    if (!g_client || !message) return -1;
+    ChatFromStudentPayload p{};
+    strncpy_s(p.message, message, _TRUNCATE);
+    return g_client->SendPacket(PacketType::ChatFromStudent,
+        reinterpret_cast<const uint8_t*>(&p), sizeof(p)) ? 1 : 0;
+}
