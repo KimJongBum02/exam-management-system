@@ -42,6 +42,9 @@ namespace StudentUI.Service
 
         public void SendFile(string filePath, string archivePassword = "") => _client?.SendFile(filePath, archivePassword);
 
+        // ── 채팅 ──────────────────────────────────────────────────────────
+        public bool SendChat(string message) => _client?.SendChat(message) ?? false;
+
         public void Dispose()
         {
             _client?.Dispose();

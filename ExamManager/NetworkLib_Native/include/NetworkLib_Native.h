@@ -124,8 +124,18 @@ NL_API void NL_Client_SetOnError       (NL_OnNetworkError       cb);
 /// <summary>교수 서버에 패킷을 전송합니다.</summary>
 NL_API int  NL_Client_SendPacket(uint32_t packetType, const uint8_t* payload, uint32_t payloadLen);
 
-/// <summary>
-/// 교수 서버에 파일을 전송합니다 (비동기).
+/// <summary>교수 서버에 파일을 전송합니다 (비동기).
 /// 학생이 시험 파일을 제출할 때 사용합니다.
 /// </summary>
 NL_API int  NL_Client_SendFile  (const char* filePath, const char* archivePassword);
+
+// ── 채팅 전송 ─────────────────────────────────────────────────────────
+
+/// <summary>전체 학생에게 채팅 메시지를 전송합니다 (교수 전용).</summary>
+NL_API int  NL_Server_BroadcastChat    (const char* message);
+
+/// <summary>특정 학생에게 채팅 메시지를 전송합니다 (교수 전용).</summary>
+NL_API int  NL_Server_SendChatToSession(const char* sessionId, const char* message);
+
+/// <summary>교수 서버에 채팅 메시지를 전송합니다 (학생 전용).</summary>
+NL_API int  NL_Client_SendChat         (const char* message);

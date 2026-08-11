@@ -74,6 +74,10 @@ namespace ProfessorUI.Service
 
         public void SendFileToSession(string sessionId, string filePath, string archivePassword = "") => _server?.SendFileToSession(sessionId, filePath, archivePassword);
 
+        // ── 채팅 ──────────────────────────────────────────────────────────
+        public bool BroadcastChat(string message)    => _server?.BroadcastChat(message)    ?? false;
+        public bool SendChatToSession(string sessionId, string message) => _server?.SendChatToSession(sessionId, message) ?? false;
+
         public void Dispose()
         {
             _server?.Dispose();
