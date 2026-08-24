@@ -1,6 +1,7 @@
 using ProfessorUI.Service;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Linq;
 
 namespace ProfessorUI.ViewModel
 {
@@ -15,6 +16,8 @@ namespace ProfessorUI.ViewModel
         // 🎯 우측에 무엇을 보여줄지 결정하는 프로퍼티
         public object? RightPaneViewModel { get; private set; }
 
+        // 🎯 채팅 뷰모델 싱글턴 (상태 유지용)
+        private readonly ChatViewModel _sharedChatViewModel;
 
         // (기존 네비게이션 관련 코드들...)
         public SidebarViewModel SidebarViewModel { get; }
@@ -35,10 +38,50 @@ namespace ProfessorUI.ViewModel
             // 🎯 주입받은 Store를 프로퍼티에 연결
             LayoutStore = layoutStore;
             LayoutStore.PropertyChanged += OnLayoutStorePropertyChanged;
+            
+            // 🎯 채팅 뷰모델 미리 생성 (싱글턴)
+            _sharedChatViewModel = new ChatViewModel();
+
+            // LayoutStore의 이벤트에 반응하여 특정 탭 열기 연동
+            LayoutStore.ChatOpenedForStudent += OnChatOpenedForStudent;
+
+            // 학생 스토어 변경 시 채팅 열기 커맨드 연동
+            StudentStore.Instance.Students.CollectionChanged += (s, e) =>
+            {
+                if (e.NewItems != null)
+                {
+                    foreach (StudentItemViewModel item in e.NewItems)
+                    {
+                        item.RequestOpenChat = (sessionId, name) => LayoutStore.OpenChatForStudent(sessionId, name);
+                    }
+                }
+            };
+            // 이미 등록된 학생들에 대해서도 초기화
+            foreach (var item in StudentStore.Instance.Students)
+            {
+                item.RequestOpenChat = (sessionId, name) => LayoutStore.OpenChatForStudent(sessionId, name);
+            }
 
             SidebarViewModel = new SidebarViewModel(navigationStore);
             // 2. 여기서 초기화합니다.
             MonitorVM = new MonitorViewModel(DashBoardCardVM, CurrentTimeVM);
+        }
+
+        private void OnChatOpenedForStudent(string sessionId, string studentName)
+        {
+            // 채팅 탭 활성화 로직
+            var tab = _sharedChatViewModel.Tabs.FirstOrDefault(t => t.SessionId == sessionId);
+            if (tab == null)
+            {
+                tab = new ChatTabItem { TabName = studentName, SessionId = sessionId };
+                _sharedChatViewModel.Tabs.Add(tab);
+            }
+            _sharedChatViewModel.SelectedTab = tab;
+            
+            if (!LayoutStore.IsChatOpen)
+            {
+                LayoutStore.ToggleChat();
+            }
         }
 
         private void OnLayoutStorePropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -46,8 +89,8 @@ namespace ProfessorUI.ViewModel
             if (e.PropertyName == nameof(LayoutStore.IsChatOpen) ||
                 e.PropertyName == nameof(LayoutStore.IsNotificationOpen))
             {
-                // 열려있는 상태에 따라 뷰모델 생성
-                if (LayoutStore.IsChatOpen) RightPaneViewModel = new ChatViewModel();
+                // 열려있는 상태에 따라 뷰모델 생성/매핑
+                if (LayoutStore.IsChatOpen) RightPaneViewModel = _sharedChatViewModel;
                 else if (LayoutStore.IsNotificationOpen) RightPaneViewModel = new NotificationViewModel();
                 else RightPaneViewModel = null;
 

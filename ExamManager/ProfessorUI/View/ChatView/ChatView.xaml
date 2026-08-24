@@ -1,35 +1,127 @@
-﻿<UserControl x:Class="ProfessorUI.View.ChatView.ChatView"
+<UserControl x:Class="ProfessorUI.View.ChatView.ChatView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             DataContext="{Binding DataContext.ChatVM, RelativeSource={RelativeSource AncestorType=Window}}">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <UserControl.Resources>
+        <!-- 안 읽음 뱃지 숨김 처리를 위한 Converter -->
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
+
     <Grid Background="White">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="60"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="60"/>
-        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <!-- 탭 목록 (마스터) -->
+            <ColumnDefinition Width="150"/>
+            <!-- 구분선 -->
+            <ColumnDefinition Width="1"/>
+            <!-- 채팅 내역 (디테일) -->
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
 
-        <Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
-            <Grid Margin="20,0">
-                <TextBlock Text="💬 채팅방" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+        <!-- 좌측: 채팅 대상 목록 (마스터) -->
+        <ListBox Grid.Column="0" ItemsSource="{Binding Tabs}" SelectedItem="{Binding SelectedTab}" 
+                 BorderThickness="0" Background="#F8FAFC" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Grid Margin="5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <!-- 탭 이름 -->
+                        <TextBlock Grid.Column="0" Text="{Binding TabName}" TextTrimming="CharacterEllipsis" FontSize="13" VerticalAlignment="Center"/>
+                        
+                        <!-- 안 읽은 메시지 뱃지 -->
+                        <Border Grid.Column="1" Background="#EF4444" CornerRadius="10" MinWidth="20" Height="20" 
+                                Visibility="{Binding HasUnread, Converter={StaticResource BoolToVis}}" 
+                                HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5,0,0,0">
+                            <TextBlock Text="{Binding UnreadCount}" Foreground="White" FontSize="10" FontWeight="Bold" 
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" Margin="4,0"/>
+                        </Border>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+            <!-- 리스트박스 아이템 스타일 (선택 효과 등) -->
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="Padding" Value="5,10"/>
+                    <Setter Property="Cursor" Value="Hand"/>
+                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                    <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="#E0E7FF"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </ListBox.ItemContainerStyle>
+        </ListBox>
 
-          
-            </Grid>
-        </Border>
+        <!-- 중앙 구분선 -->
+        <Border Grid.Column="1" Background="#E2E8F0"/>
 
-        <ScrollViewer Grid.Row="1" Margin="10">
-            <TextBlock Text="채팅 내역이 없습니다." Foreground="#94A3B8" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,20"/>
-        </ScrollViewer>
+        <!-- 우측: 대화창 (디테일) -->
+        <Grid Grid.Column="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="50"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="60"/>
+            </Grid.RowDefinitions>
 
-        <Border Grid.Row="2" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="10">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBox Grid.Column="0" Background="#F1F5F9" BorderThickness="0" Padding="10" VerticalContentAlignment="Center" Text="메시지 입력..."/>
-                <Button Grid.Column="1" Content="전송" Background="#1A56DB" Foreground="White" Width="60" Margin="10,0,0,0" Cursor="Hand" BorderThickness="0"/>
-            </Grid>
-        </Border>
+            <!-- 헤더 -->
+            <Border Grid.Row="0" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Background="#F8FAFC" Padding="15,0">
+                <TextBlock Text="{Binding SelectedTab.TabName}" FontSize="15" FontWeight="Bold" VerticalAlignment="Center"/>
+            </Border>
+
+            <!-- 메시지 목록 -->
+            <ScrollViewer Grid.Row="1" Margin="10" VerticalScrollBarVisibility="Auto">
+                <Grid>
+                    <!-- 선택된 탭이 없을 때 안내 문구 -->
+                    <TextBlock Text="채팅 대상을 선택하세요." Foreground="#94A3B8" HorizontalAlignment="Center" VerticalAlignment="Center" 
+                               Visibility="{Binding SelectedTab, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}"/>
+
+                    <ItemsControl ItemsSource="{Binding SelectedTab.Messages}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,5">
+                                    <TextBlock Text="{Binding SenderName}" FontSize="11" Foreground="#94A3B8" Margin="0,0,0,2"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Background="#F1F5F9" CornerRadius="8" Padding="10,8" MaxWidth="220" HorizontalAlignment="Left">
+                                            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="12"/>
+                                        </Border>
+                                        <TextBlock Grid.Column="1" Text="{Binding DisplayTime}" FontSize="10" Foreground="#CBD5E1" 
+                                                   VerticalAlignment="Bottom" Margin="5,0,0,0"/>
+                                    </Grid>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </ScrollViewer>
+
+            <!-- 입력 영역 -->
+            <Border Grid.Row="2" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="10" Background="White">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBox Grid.Column="0" Text="{Binding InputMessage, UpdateSourceTrigger=PropertyChanged}" 
+                             Background="#F1F5F9" BorderThickness="0" Padding="10" VerticalContentAlignment="Center">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding SendMessageCommand}"/>
+                        </TextBox.InputBindings>
+                    </TextBox>
+                    
+                    <Button Grid.Column="1" Content="전송" Command="{Binding SendMessageCommand}" 
+                            Background="#1A56DB" Foreground="White" Width="60" Margin="10,0,0,0" Cursor="Hand" BorderThickness="0"/>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>
