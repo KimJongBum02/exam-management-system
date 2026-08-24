@@ -49,8 +49,40 @@
                     <TextBlock Text="💬 채팅" FontSize="13" FontWeight="Bold" Foreground="#1A1A2E"/>
                 </Border>
                 <ScrollViewer MaxHeight="140" VerticalScrollBarVisibility="Auto">
-                    <TextBlock Text="채팅 내역이 없습니다." Foreground="#94A3B8"
-                               HorizontalAlignment="Center" Margin="0,20"/>
+                    <Grid>
+                        <!-- 내용이 없을 때 텍스트 표시 -->
+                        <TextBlock Text="채팅 내역이 없습니다." Foreground="#94A3B8"
+                                   HorizontalAlignment="Center" Margin="0,20"
+                                   Visibility="{Binding ChatVM.Messages.Count, FallbackValue=Visible}"/>
+
+                        <!-- 메시지 리스트 바인딩 -->
+                        <ItemsControl ItemsSource="{Binding ChatVM.Messages}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="5">
+                                        <TextBlock Text="{Binding SenderName}" FontSize="10" Foreground="#94A3B8" Margin="0,0,0,2"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border x:Name="MsgBorder" Background="#F1F5F9" CornerRadius="6" Padding="8,6" MaxWidth="180" HorizontalAlignment="Left">
+                                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="11" Foreground="#1E293B"/>
+                                            </Border>
+                                            <TextBlock Grid.Column="1" Text="{Binding DisplayTime}" FontSize="9" Foreground="#CBD5E1" 
+                                                       VerticalAlignment="Bottom" Margin="5,0,0,0"/>
+                                        </Grid>
+                                    </StackPanel>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding IsMine}" Value="True">
+                                            <Setter TargetName="MsgBorder" Property="Background" Value="#DBEAFE"/>
+                                            <Setter TargetName="MsgBorder" Property="HorizontalAlignment" Value="Right"/>
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
                 </ScrollViewer>
                 <Border BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="8">
                     <Grid>
@@ -58,9 +90,13 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBox Grid.Column="0" Background="White" BorderBrush="#E2E8F0" BorderThickness="1"
-                                 Padding="8" VerticalContentAlignment="Center" FontSize="11"/>
-                        <Button Grid.Column="1" Content="전송" Background="#1A56DB" Foreground="White"
+                        <TextBox Grid.Column="0" Text="{Binding ChatVM.InputMessage, UpdateSourceTrigger=PropertyChanged}" Background="White" BorderBrush="#E2E8F0" BorderThickness="1"
+                                 Padding="8" VerticalContentAlignment="Center" FontSize="11">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter" Command="{Binding ChatVM.SendMessageCommand}"/>
+                            </TextBox.InputBindings>
+                        </TextBox>
+                        <Button Grid.Column="1" Content="전송" Command="{Binding ChatVM.SendMessageCommand}" Background="#1A56DB" Foreground="White"
                                 Width="48" Margin="6,0,0,0" Cursor="Hand" BorderThickness="0" FontSize="11"/>
                     </Grid>
                 </Border>

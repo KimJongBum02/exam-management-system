@@ -22,6 +22,9 @@ namespace StudentUI.ViewModel
 
         public string StudentInfo => $"{Student.StudentNumber} {Student.StudentName}";
 
+        // 채팅 (싱글턴 뷰모델 공유)
+        public SharedChatViewModel ChatVM => SharedChatViewModel.Instance;
+
         // ── 현재 시각 (교수 PC가 시험 시간을 보내기 전까지는 시계로 표시) ──
         private string _currentTime = string.Empty;
         public string CurrentTime

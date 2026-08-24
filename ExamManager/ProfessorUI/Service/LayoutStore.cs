@@ -1,4 +1,4 @@
-﻿using ProfessorUI.ViewModel;
+using ProfessorUI.ViewModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input; // 💡 커맨드 사용을 위해 필요
@@ -35,12 +35,21 @@ namespace ProfessorUI.Service
         public ICommand ToggleNotificationCommand { get; }
         public ICommand CloseRightPaneCommand { get; }
 
+        // 특정 학생의 채팅창을 열기 위한 이벤트
+        public event System.Action<string, string>? ChatOpenedForStudent;
+
         public LayoutStore()
         {
             // 💡 생성자 시점에 메서드들을 커맨드로 랩핑합니다. (프로젝트 내 RelayCommand 사용)
             ToggleChatCommand = new RelayCommand(o => ToggleChat());
             ToggleNotificationCommand = new RelayCommand(o => ToggleNotification());
             CloseRightPaneCommand = new RelayCommand(o => CloseRightPane());
+        }
+
+        public void OpenChatForStudent(string sessionId, string studentName)
+        {
+            // 이벤트 발생 -> MainViewModel에서 받아서 탭을 활성화/생성함
+            ChatOpenedForStudent?.Invoke(sessionId, studentName);
         }
 
         public void ToggleChat()

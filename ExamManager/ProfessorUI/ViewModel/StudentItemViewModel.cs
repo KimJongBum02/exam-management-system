@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -34,6 +34,19 @@ namespace ProfessorUI.ViewModel
 
         // 개별 승인 명령 바인딩용
         public System.Windows.Input.ICommand? ApproveSingleCommand { get; set; }
+
+        // 🎯 1:1 채팅 열기 커맨드 및 요청 콜백
+        public System.Action<string, string>? RequestOpenChat { get; set; }
+        public System.Windows.Input.ICommand? OpenChatCommand { get; set; }
+
+        public StudentItemViewModel()
+        {
+            // 초기화 시점에 커맨드 등록 (Service/RelayCommand 사용을 가정)
+            OpenChatCommand = new RelayCommand(o =>
+            {
+                RequestOpenChat?.Invoke(SessionId, Name);
+            });
+        }
 
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? name = null)

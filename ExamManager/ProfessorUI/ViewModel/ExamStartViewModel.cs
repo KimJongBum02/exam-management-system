@@ -1,4 +1,4 @@
-﻿using ProfessorUI.Service;
+using ProfessorUI.Service;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
@@ -42,8 +42,8 @@ namespace ProfessorUI.ViewModel
             ExamState.IsExamStarted = true;
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string name = null)
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string? name = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }

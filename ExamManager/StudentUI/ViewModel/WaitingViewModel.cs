@@ -22,6 +22,9 @@ namespace StudentUI.ViewModel
         // 시험 파일 수신 상태 (파일은 대기 중에 도착하므로 이 화면에서도 보여준다)
         public ExamFileStore ExamFile => ExamFileStore.Instance;
 
+        // 채팅 (싱글턴 뷰모델 공유)
+        public SharedChatViewModel ChatVM => SharedChatViewModel.Instance;
+
         // ── 1. 현재 시각 표시 ──
         private string _currentTime = string.Empty;
         public string CurrentTime
