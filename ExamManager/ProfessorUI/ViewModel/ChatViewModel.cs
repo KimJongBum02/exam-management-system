@@ -93,10 +93,16 @@ namespace ProfessorUI.ViewModel
         {
             if (type == PacketType.ChatFromStudent)
             {
-                string message = Marshal.PtrToStringUTF8(payload) ?? "";
-                
+                // 페이로드 길이로 읽기를 제한한다 (종료 문자가 없는 패킷이 와도 버퍼 밖을 읽지 않도록)
+                if (payload == IntPtr.Zero || payloadLen == 0) return;
+                string message = (Marshal.PtrToStringUTF8(payload, (int)payloadLen) ?? "").Split('\0')[0];
+
                 // UI 스레드에서 처리
-                Application.Current.Dispatcher.Invoke(() =>
+                // 동기 Invoke는 종료 중 수신 스레드를 붙잡아 앱이 멈추므로 BeginInvoke를 쓴다.
+                var dispatcher = Application.Current?.Dispatcher;
+                if (dispatcher == null || dispatcher.HasShutdownStarted) return;
+
+                dispatcher.BeginInvoke(() =>
                 {
                     // 해당 학생의 탭이 있는지 확인
                     var tab = Tabs.FirstOrDefault(t => t.SessionId == sessionId);
