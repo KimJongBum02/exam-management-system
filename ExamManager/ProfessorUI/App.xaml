@@ -8,6 +8,7 @@
              xmlns:program="clr-namespace:ProfessorUI.View.ProgramControlView"
              xmlns:attendance="clr-namespace:ProfessorUI.View.AttenandceView"
              xmlns:viewmodels="clr-namespace:ProfessorUI.ViewModel"
+             xmlns:quiz="clr-namespace:ProfessorUI.View.QuizView"
              >
     <Application.Resources>
         <!-- 앱 전체 기본 글꼴 — 글꼴을 바꿀 때는 이 줄과 csproj의 Resource 항목만 수정하면 된다 -->
@@ -32,6 +33,10 @@
         
         <DataTemplate DataType="{x:Type viewmodels:AttendanceMainViewModel}">
             <attendance:StudentListView/>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type viewmodels:OXQuizViewModel}">
+            <quiz:OXQuizView/>
         </DataTemplate>
 
         <!-- 나머지 ViewModel-View 매핑도 동일하게 추가 -->

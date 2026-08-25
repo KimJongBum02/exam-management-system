@@ -1,0 +1,143 @@
+<UserControl x:Class="ProfessorUI.View.QuizView.OXQuizView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ProfessorUI.View.QuizView"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <local:CategoryToColorConverter x:Key="CategoryToColor"/>
+        <CollectionViewSource x:Key="GroupedQuizzes" Source="{Binding QuizList}">
+            <CollectionViewSource.GroupDescriptions>
+                <PropertyGroupDescription PropertyName="Category" />
+            </CollectionViewSource.GroupDescriptions>
+        </CollectionViewSource>
+    </UserControl.Resources>
+    
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="3*"/>
+            <ColumnDefinition Width="10"/>
+            <ColumnDefinition Width="7*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 좌측: 문제 목록 (빠른 선택) -->
+        <Border Grid.Column="0" Background="White" BorderBrush="#5C6AC4" BorderThickness="1" CornerRadius="16" Padding="10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20" VerticalAlignment="Center">
+                    <TextBlock Text="빠른 선택 (문제 목록)" FontWeight="Bold" FontSize="20"/>
+                </StackPanel>
+                
+                <ListView Grid.Row="1" ItemsSource="{Binding Source={StaticResource GroupedQuizzes}}" SelectedItem="{Binding SelectedQuiz}" BorderThickness="0">
+                    <ListView.GroupStyle>
+                        <GroupStyle>
+                            <GroupStyle.HeaderTemplate>
+                                <DataTemplate>
+                                    <Border Background="{Binding Name, Converter={StaticResource CategoryToColor}, ConverterParameter=Background}" 
+                                            BorderBrush="{Binding Name, Converter={StaticResource CategoryToColor}, ConverterParameter=Border}" 
+                                            BorderThickness="1.5" CornerRadius="3" Margin="0,5,0,0">
+                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" Padding="5,3" Foreground="#333333"/>
+                                    </Border>
+                                </DataTemplate>
+                            </GroupStyle.HeaderTemplate>
+                        </GroupStyle>
+                    </ListView.GroupStyle>
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="0,5">
+                                <StackPanel Orientation="Horizontal">
+                                    <Grid Visibility="{Binding IsIncomplete, Converter={StaticResource BoolToVis}}" Margin="0,0,5,0" Width="14" Height="14" VerticalAlignment="Center">
+                                        <Polygon Points="7,0 14,14 0,14" Stroke="Red" StrokeThickness="1.5" Fill="Transparent"/>
+                                        <TextBlock Text="!" Foreground="Red" FontWeight="Bold" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,2,0,0"/>
+                                    </Grid>
+                                    <TextBlock Text="{Binding Question}" FontSize="14" TextWrapping="Wrap" MaxWidth="200" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock FontSize="11" Margin="19,0,0,0">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="Gray"/>
+                                            <Setter Property="Text" Value="{Binding Answer, StringFormat='정답: {0}'}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Answer}" Value="{x:Null}">
+                                                    <Setter Property="Text" Value="정답: (미선택)" />
+                                                    <Setter Property="Foreground" Value="Red" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Answer}" Value="True">
+                                                    <Setter Property="Text" Value="정답: O" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Answer}" Value="False">
+                                                    <Setter Property="Text" Value="정답: X" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Grid>
+        </Border>
+
+        <!-- 우측: 문제 작성 및 전송 -->
+        <Border Grid.Column="2" Background="White" BorderBrush="#5C6AC4" BorderThickness="1" CornerRadius="16" Padding="20">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="O/X 문제 만들기" FontWeight="Bold" FontSize="20" VerticalAlignment="Center"/>
+                    <Button Grid.Column="1" Content="새 문제 작성" Command="{Binding NewCommand}" Width="100" Height="28" Background="#E0E0E0" FontSize="13" FontWeight="Bold"/>
+                </Grid>
+
+                <StackPanel Grid.Row="1" Margin="0,0,0,15">
+                    <TextBlock Text="카테고리" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <ComboBox ItemsSource="{Binding Categories}" Text="{Binding CurrentCategory}" IsEditable="True" Padding="5" FontSize="14" BorderBrush="#5C6AC4" BorderThickness="1.5"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="2" Margin="0,0,0,15">
+                    <TextBlock Text="문제 내용" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <TextBox Text="{Binding CurrentQuestion, UpdateSourceTrigger=PropertyChanged}" Height="100" TextWrapping="Wrap" AcceptsReturn="True" Padding="5" FontSize="14"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="3" Margin="0,0,0,20">
+                    <TextBlock Text="정답 선택" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <RadioButton Content="O" FontSize="40" Margin="0,0,40,0"
+                                     IsChecked="{Binding IsOSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <RadioButton Content="X" FontSize="40"
+                                     IsChecked="{Binding IsXSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                </StackPanel>
+                
+                <TextBlock Grid.Row="4" Text="{Binding FeedbackMessage}" 
+                           Foreground="Green" FontWeight="Bold" FontSize="16" 
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Visibility="{Binding IsFeedbackVisible, Converter={StaticResource BoolToVis}}"/>
+
+                <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                    <Button Content="삭제" Command="{Binding DeleteCommand}" Width="80" Height="40" Margin="0,0,10,0" Background="#FF6B6B" Foreground="White" FontWeight="Bold" FontSize="14"/>
+                    <Button Content="목록에 저장" Command="{Binding SaveCommand}" Width="120" Height="40" Margin="0,0,10,0" Background="#BAFFC9" Foreground="#333333" FontWeight="Bold" FontSize="14"/>
+                    <Button Content="학생들에게 전송" Command="{Binding SubmitCommand}" Width="140" Height="40" Background="#5C6AC4" Foreground="White" FontWeight="Bold" FontSize="14"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

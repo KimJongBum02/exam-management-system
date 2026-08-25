@@ -17,7 +17,7 @@ namespace ProfessorUI.ViewModel
         private readonly ExaminationMainViewModel _examinationMainViewModel;
         private readonly ProgramControlMainViewModel _programControlMainViewModel;
         private readonly AttendanceMainViewModel _attendanceMainViewModel;
-        // private readonly QuizViewModel _quizViewModel;
+        private readonly OXQuizViewModel _quizViewModel;
 
         private int _selectedIndex;
         public int SelectedIndex
@@ -43,7 +43,7 @@ namespace ProfessorUI.ViewModel
             _examinationMainViewModel = new ExaminationMainViewModel();
             _programControlMainViewModel = new ProgramControlMainViewModel();
             _attendanceMainViewModel = new AttendanceMainViewModel();
-            // _quizViewModel = new QuizViewModel();
+            _quizViewModel = new OXQuizViewModel();
 
             // ⭐ 앱이 처음 켜질 때 현재 인덱스(0번 = 현황판) 화면을 즉시 띄우도록 호출!
             NavigateToSelectedMenu();
@@ -70,9 +70,9 @@ namespace ProfessorUI.ViewModel
                 case 4: // 시험 시작/종료 (⭐ 이 부분 주석을 풀고 새 뷰모델을 연결합니다!)
                     _navigationStore.CurrentViewModel = _examinationMainViewModel;
                     break;
-                    //case 5:
-                    //    _navigationStore.CurrentViewModel = new QuizViewModel();
-                    //    break;
+                case 5:
+                    _navigationStore.CurrentViewModel = new OXQuizViewModel();
+                    break;
             }
         }
         public event PropertyChangedEventHandler? PropertyChanged;
