@@ -45,6 +45,10 @@ namespace ProfessorUI.Service
         public event Action<string, string, int>? FileProgress;
         public event Action<string, string>? FileError;
 
+        // 교수 → 학생 파일 전송 진행률/오류 (sessionId, studentId, transferId, fileName/message, ...)
+        public event Action<string, string, string, string, int>? SendProgress;
+        public event Action<string, string, string, string>? SendError;
+
         public NetworkService(int port = 9000)
         {
             // NetworkLibrary 초기화는 앱 수명 동안 한 번만 필요합니다.
@@ -58,6 +62,8 @@ namespace ProfessorUI.Service
             _server.FileReceived += (tid, senderId, fn, tp, sz, pw) => FileReceived?.Invoke(tid, senderId, fn, tp, sz, pw);
             _server.FileProgress += (tid, fn, pct) => FileProgress?.Invoke(tid, fn, pct);
             _server.FileError += (tid, msg) => FileError?.Invoke(tid, msg);
+            _server.SendProgress += (sid, stid, tid, fn, pct) => SendProgress?.Invoke(sid, stid, tid, fn, pct);
+            _server.SendError += (sid, stid, tid, msg) => SendError?.Invoke(sid, stid, tid, msg);
         }
 
         public bool StartServer() => _server?.Start() ?? false;
@@ -72,7 +78,8 @@ namespace ProfessorUI.Service
 
         public void BroadcastFile(string filePath, string archivePassword = "") => _server?.BroadcastFile(filePath, archivePassword);
 
-        public void SendFileToSession(string sessionId, string filePath, string archivePassword = "") => _server?.SendFileToSession(sessionId, filePath, archivePassword);
+        // 전송을 시작했으면 true. 해당 세션이 없으면 false.
+        public bool SendFileToSession(string sessionId, string filePath, string archivePassword = "") => _server?.SendFileToSession(sessionId, filePath, archivePassword) ?? false;
 
         // ── 채팅 ──────────────────────────────────────────────────────────
         public bool BroadcastChat(string message)    => _server?.BroadcastChat(message)    ?? false;

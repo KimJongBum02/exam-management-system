@@ -28,6 +28,10 @@ namespace ProfessorUI.ViewModel
         // 서버가 부여한 세션 식별자 (접속 종료·개별 전송 매핑용)
         public string SessionId { get; set; } = string.Empty;
 
+        // 지금 실제로 접속돼 있는지.
+        // 접속이 끊겨도 SessionId는 남아 있으므로, 전송 가능 여부는 이 값으로 판단한다.
+        public bool IsConnected { get; set; }
+
         public bool IsSelected { get => _isSelected; set { _isSelected = value; OnPropertyChanged(); } }
         public bool IsFileReceived { get => _isFileReceived; set { _isFileReceived = value; OnPropertyChanged(); } }
         public bool IsApproved { get => _isApproved; set { _isApproved = value; OnPropertyChanged(); } }

@@ -31,6 +31,7 @@ namespace ProfessorUI.Service
                 existing.Name = name;
                 existing.Ip = ip;
                 existing.Status = "대기";
+                existing.IsConnected = true;
             }
             else
             {
@@ -40,7 +41,8 @@ namespace ProfessorUI.Service
                     StudentId = studentId,
                     Name = name,
                     Ip = ip,
-                    Status = "대기"
+                    Status = "대기",
+                    IsConnected = true
                 });
             }
         }
@@ -50,7 +52,10 @@ namespace ProfessorUI.Service
         {
             var student = Students.FirstOrDefault(s => s.SessionId == sessionId);
             if (student != null)
+            {
                 student.Status = "미접속";
+                student.IsConnected = false;
+            }
         }
 
         // 파일 수신 완료 응답 처리: 해당 학번 학생을 '수신완료'로 표시
