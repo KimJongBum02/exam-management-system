@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -15,9 +16,8 @@ namespace StudentUI.Service
     {
         public static ExamFileStore Instance { get; } = new ExamFileStore();
 
-        // 압축 해제 위치 (바탕화면\ExamFiles 고정)
-        public string ExtractFolder { get; } = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "ExamFiles");
+        // 압축 해제 위치 (C:\Exam 고정 — 압축 해제할 때 없으면 만들어진다)
+        public string ExtractFolder { get; } = @"C:\Exam";
 
         private string _archivePath = string.Empty; // 수신된 .7z 임시 경로
         private string _password = string.Empty;    // 교수 PC가 함께 보낸 암호
@@ -207,10 +207,28 @@ namespace StudentUI.Service
 
                 IsExtracted = true;
                 StatusText = $"압축 해제 완료 · 파일 {ExtractedFiles.Count}개";
+
+                OpenExtractFolder(); // 학생이 따로 찾지 않도록 해제된 폴더를 바로 띄운다
             }
             else
             {
                 StatusText = $"압축 해제 실패 (코드 {code}) — 압축 해제 버튼을 다시 눌러 주세요.";
+            }
+        }
+
+        // 압축 해제 폴더를 탐색기로 연다.
+        // 해제 전에 눌러도 빈 폴더가 열리도록 없으면 만든다
+        // (explorer.exe는 없는 경로를 받으면 엉뚱하게 문서 폴더를 연다).
+        public void OpenExtractFolder()
+        {
+            try
+            {
+                Directory.CreateDirectory(ExtractFolder);
+                Process.Start("explorer.exe", ExtractFolder);
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"폴더 열기 실패: {ex.Message} — {ExtractFolder} 를 직접 열어 주세요.";
             }
         }
 
