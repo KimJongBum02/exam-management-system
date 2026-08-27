@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Windows;
@@ -51,9 +50,9 @@ namespace StudentUI.ViewModel
                 async () => await ExamFile.ExtractAsync(),
                 () => ExamFile.CanExtract);
 
-            OpenExtractFolderCommand = new RelayCommand(
-                () => Process.Start("explorer.exe", ExamFile.ExtractFolder),
-                () => ExamFile.IsExtracted);
+            // 압축 해제 뒤 탐색기가 자동으로 열리지만, 학생이 창을 닫았거나
+            // 자동 열기가 실패한 경우를 위해 언제든 다시 열 수 있게 둔다.
+            OpenExtractFolderCommand = new RelayCommand(() => ExamFile.OpenExtractFolder());
 
             GoToWaitingCommand = new RelayCommand(() =>
             {
