@@ -1,9 +1,11 @@
+using NetworkLib;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -31,6 +33,23 @@ namespace StudentUI.Service
             NetworkService.Instance.FileProgress += OnFileProgress;
             NetworkService.Instance.FileReceived += OnFileReceived;
             NetworkService.Instance.FileError += OnFileError;
+            NetworkService.Instance.PacketReceived += OnPacketReceived;
+        }
+
+        // 교수 PC가 '시험 시작'을 누르면 오는 명령 — 받은 파일을 자동으로 풀고 해제 폴더를 띄운다.
+        private void OnPacketReceived(PacketType type, IntPtr payload, uint payloadLen)
+        {
+            if (type != PacketType.ExtractArchive) return;
+
+            Post(async () =>
+            {
+                if (CanExtract)
+                    await ExtractAsync();   // 해제가 끝나면 ExtractAsync가 폴더를 연다
+                else if (IsExtracted)
+                    OpenExtractFolder();    // 이미 풀려 있으면 폴더만 다시 띄운다
+                else if (!IsReceived)
+                    StatusText = "시험이 시작됐지만 아직 시험 파일을 받지 못했습니다. 교수님께 재배포를 요청해 주세요.";
+            });
         }
 
         // ── 바인딩용 상태 ──
@@ -224,6 +243,11 @@ namespace StudentUI.Service
             try
             {
                 Directory.CreateDirectory(ExtractFolder);
+
+                // 포그라운드 전환 권한을 explorer에 넘긴 뒤 띄운다.
+                // 이게 없으면 Windows가 포그라운드 앱(학생 UI)을 보호해서,
+                // 탐색기 창이 뒤에 열리고 작업표시줄에서 깜빡이기만 한다.
+                AllowSetForegroundWindow(ASFW_ANY);
                 Process.Start("explorer.exe", ExtractFolder);
             }
             catch (Exception ex)
@@ -231,6 +255,13 @@ namespace StudentUI.Service
                 StatusText = $"폴더 열기 실패: {ex.Message} — {ExtractFolder} 를 직접 열어 주세요.";
             }
         }
+
+        // 다른 프로세스가 자기 창을 포그라운드로 올릴 수 있게 허용한다.
+        // ASFW_ANY = 모든 프로세스에 허용 (다음 포그라운드 전환까지만 유효).
+        private const int ASFW_ANY = -1;
+
+        [DllImport("user32.dll")]
+        private static extern bool AllowSetForegroundWindow(int dwProcessId);
 
         // 새로 받은 패키지를 시험 폴더에 최상위 항목 단위로 반영한다.
         //   같은 이름이 있으면 → 직전 배포가 만든 파일만 지우고 새 것으로 덮는다 (학생 답안은 보존)
