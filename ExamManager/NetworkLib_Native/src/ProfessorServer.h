@@ -21,6 +21,12 @@ public:
     FileProgressCb onFileProgress;
     FileErrorCb    onFileError;
 
+    // 파일 전송(교수→학생) 콜백 — 어느 학생에게 보내는 중인지 세션 정보를 함께 넘긴다
+    std::function<void(const std::string& sessionId, const std::string& studentId,
+                       const std::string& transferId, const std::string& fileName, int percent)> onSendProgress;
+    std::function<void(const std::string& sessionId, const std::string& studentId,
+                       const std::string& transferId, const std::string& message)>               onSendError;
+
     // ─────────────────────────────────────────────────────────────
     explicit ProfessorServer(int port);
     ~ProfessorServer();

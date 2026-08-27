@@ -51,14 +51,18 @@ int __stdcall FC_CompressEncrypt(
     if (!sevenZaPath || !sourcePath || !outputArchive || !password)
         return -1;
 
-    // 7za a -t7z -mhe=on -p"암호" -y "출력.7z" "원본"
+    // 7za a -t7z -mx1 -mhe=on -p"암호" -y "출력.7z" "원본"
     //   a       : 아카이브에 추가
     //   -t7z    : 7z 포맷
+    //   -mx1    : 압축 레벨 (기본값 -mx5 는 너무 느리다)
+    //             133MB DLL 기준 실측: -mx5 = 59초/36.9MB, -mx1 = 2초/42.9MB.
+    //             배포 대기 시간을 줄이는 쪽이 이득이라 속도를 택한다.
+    //             (-mmt 멀티스레드는 이 조건에서 효과가 없어 넣지 않는다)
     //   -mhe=on : 헤더 암호화 (파일명까지 숨김)
     //   -p      : 암호 (AES-256)
     //   -y      : 모든 질문에 yes
     std::wstring cmd = Quote(sevenZaPath);
-    cmd += L" a -t7z -mhe=on -p";
+    cmd += L" a -t7z -mx1 -mhe=on -p";
     cmd += Quote(password);
     cmd += L" -y ";
     cmd += Quote(outputArchive);

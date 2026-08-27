@@ -253,10 +253,10 @@ int ProfessorServer::BroadcastFile(const std::string& filePath, const std::strin
                             session->sendMutex,
                             filePath,
                             password,
-                            [this](const std::string& tid, const std::string& fn, int pct)
-                            { if (onFileProgress) onFileProgress(tid.c_str(), fn.c_str(), pct); },
-                            [this](const std::string& tid, const std::string& msg)
-                            { if (onFileError) onFileError(tid.c_str(), msg.c_str()); });
+                            [this, session](const std::string& tid, const std::string& fn, int pct)
+                            { if (onSendProgress) onSendProgress(session->sessionId, session->studentId, tid, fn, pct); },
+                            [this, session](const std::string& tid, const std::string& msg)
+                            { if (onSendError) onSendError(session->sessionId, session->studentId, tid, msg); });
                     });
             }
             for (auto& t : threads) t.join();
@@ -282,10 +282,10 @@ int ProfessorServer::SendFileToSession(
                 session->sock,
                 session->sendMutex,
                 filePath, password,
-                [this](const std::string& tid, const std::string& fn, int pct)
-                { if (onFileProgress) onFileProgress(tid.c_str(), fn.c_str(), pct); },
-                [this](const std::string& tid, const std::string& msg)
-                { if (onFileError) onFileError(tid.c_str(), msg.c_str()); });
+                [this, session](const std::string& tid, const std::string& fn, int pct)
+                { if (onSendProgress) onSendProgress(session->sessionId, session->studentId, tid, fn, pct); },
+                [this, session](const std::string& tid, const std::string& msg)
+                { if (onSendError) onSendError(session->sessionId, session->studentId, tid, msg); });
         }).detach();
 
     return 1;

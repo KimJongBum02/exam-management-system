@@ -3,6 +3,41 @@
 #include "PacketIO.h"
 
 // ══════════════════════════════════════════════════════════════════════
+//  와이어에서 온 데이터를 다루는 헬퍼
+//
+//  패킷의 문자 배열은 고정 길이일 뿐 종료 문자가 보장되지 않습니다.
+//  그대로 std::string 으로 만들면 수신 버퍼 밖까지 읽어 프로세스가 죽습니다.
+// ══════════════════════════════════════════════════════════════════════
+
+// 고정 길이 문자 배열을 배열 밖으로 나가지 않고 문자열로 만든다
+static std::string FixedToString(const char* field, size_t maxLen)
+{
+    size_t len = 0;
+    while (len < maxLen && field[len] != '\0') len++;
+    return std::string(field, len);
+}
+
+// 원격이 보낸 이름에서 경로 요소를 제거해 파일 이름만 남긴다.
+// ("..\..\" 같은 값이 섞여 있으면 임시 폴더 밖에 파일을 쓸 수 있다)
+static std::string SanitizeFileName(const std::string& name)
+{
+    size_t pos = name.find_last_of("\\/:");
+    std::string base = (pos == std::string::npos) ? name : name.substr(pos + 1);
+
+    // 파일 이름에 쓸 수 없는 문자는 밑줄로 바꾼다
+    for (char& c : base)
+        if (c == '<' || c == '>' || c == '"' || c == '|' || c == '?' || c == '*' ||
+            static_cast<unsigned char>(c) < 0x20)
+            c = '_';
+
+    // 이름이 통째로 사라졌거나 점만 남은 경우의 대비책
+    if (base.empty() || base.find_first_not_of('.') == std::string::npos)
+        base = "received";
+
+    return base;
+}
+
+// ══════════════════════════════════════════════════════════════════════
 //  SHA-256 계산 (Windows CNG — BCrypt API)
 // ══════════════════════════════════════════════════════════════════════
 std::string ComputeSHA256(const std::string& filePath)
@@ -125,12 +160,19 @@ bool FileTransferSender::SendFile(
 
     if (!SendPacket(sock, sendMtx, PacketType::FileTransferStart,
                     &startPayload, sizeof(startPayload)))
+    {
+        if (errorCb) errorCb(transferId, "전송 시작 패킷을 보내지 못했습니다");
         return false;
+    }
 
     // ── 2단계: 파일을 청크 단위로 전송 ───────────────────────────
     hFile = CreateFileA(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ,
                         nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (hFile == INVALID_HANDLE_VALUE) return false;
+    if (hFile == INVALID_HANDLE_VALUE)
+    {
+        if (errorCb) errorCb(transferId, "파일을 다시 열 수 없습니다: " + filePath);
+        return false;
+    }
 
     std::vector<uint8_t> chunkBuf(sizeof(NlFileChunkHeader) + FILE_CHUNK_SIZE);
     uint32_t chunkIndex = 0;
@@ -151,6 +193,7 @@ bool FileTransferSender::SendFile(
                         chunkBuf.data(), totalPayloadLen))
         {
             CloseHandle(hFile);
+            if (errorCb) errorCb(transferId, "전송이 중단되었습니다 (연결 끊김)");
             return false;
         }
 
@@ -170,7 +213,10 @@ bool FileTransferSender::SendFile(
 
     if (!SendPacket(sock, sendMtx, PacketType::FileTransferComplete,
                     &completePayload, sizeof(completePayload)))
+    {
+        if (errorCb) errorCb(transferId, "전송 완료 패킷을 보내지 못했습니다");
         return false;
+    }
 
     if (progressCb) progressCb(transferId, fileName, 100);
     return true;
@@ -188,18 +234,23 @@ void FileTransferReceiver::HandleStart(
     if (payloadLen < sizeof(FileTransferStartPayload)) return;
     const auto* p = reinterpret_cast<const FileTransferStartPayload*>(payload);
 
-    // 임시 파일 경로 생성
+    // 와이어에서 온 문자열은 길이를 제한해 읽는다
+    std::string transferId = FixedToString(p->transferId, sizeof(p->transferId));
+    std::string fileName   = FixedToString(p->fileName,   sizeof(p->fileName));
+
+    // 임시 파일 경로 생성 — 경로에 들어가는 값은 파일 이름만 남기고 정리한다
     char tempDir[MAX_PATH];
     GetTempPathA(MAX_PATH, tempDir);
-    std::string tempPath = std::string(tempDir) + "NL_" + p->transferId + "_" + p->fileName;
+    std::string tempPath = std::string(tempDir)
+        + "NL_" + SanitizeFileName(transferId) + "_" + SanitizeFileName(fileName);
 
     FileReceiveContext ctx;
-    ctx.transferId      = p->transferId;
+    ctx.transferId      = transferId;
     ctx.senderId        = senderId;
-    ctx.fileName        = p->fileName;
+    ctx.fileName        = fileName;
     ctx.tempPath        = tempPath;
-    ctx.sha256Hash      = p->sha256Hash;
-    ctx.archivePassword = p->archivePassword;
+    ctx.sha256Hash      = FixedToString(p->sha256Hash,      sizeof(p->sha256Hash));
+    ctx.archivePassword = FixedToString(p->archivePassword, sizeof(p->archivePassword));
     ctx.totalSize       = p->totalSize;
     ctx.totalChunks     = p->totalChunks;
     ctx.receivedChunks  = 0;
@@ -209,12 +260,12 @@ void FileTransferReceiver::HandleStart(
                             CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (ctx.hFile == INVALID_HANDLE_VALUE)
     {
-        if (onFileError) onFileError(p->transferId, "임시 파일 생성 실패: " + tempPath);
+        if (onFileError) onFileError(transferId, "임시 파일 생성 실패: " + tempPath);
         return;
     }
 
     std::lock_guard<std::mutex> lock(contextsMutex_);
-    contexts_[p->transferId] = std::move(ctx);
+    contexts_[transferId] = std::move(ctx);
 }
 
 void FileTransferReceiver::HandleChunk(const uint8_t* payload, uint32_t payloadLen)
@@ -226,15 +277,17 @@ void FileTransferReceiver::HandleChunk(const uint8_t* payload, uint32_t payloadL
 
     if (payloadLen < sizeof(NlFileChunkHeader) + dataSize) return;
 
+    std::string transferId = FixedToString(hdr->transferId, sizeof(hdr->transferId));
+
     std::lock_guard<std::mutex> lock(contextsMutex_);
-    auto it = contexts_.find(hdr->transferId);
+    auto it = contexts_.find(transferId);
     if (it == contexts_.end()) return;
 
     FileReceiveContext& ctx = it->second;
     DWORD written = 0;
     if (!WriteFile(ctx.hFile, data, dataSize, &written, nullptr))
     {
-        AbortTransfer(hdr->transferId, "청크 파일 쓰기 실패");
+        AbortTransfer(transferId, "청크 파일 쓰기 실패");
         return;
     }
 
@@ -252,7 +305,7 @@ void FileTransferReceiver::HandleComplete(const uint8_t* payload, uint32_t paylo
     const auto* p = reinterpret_cast<const FileTransferCompletePayload*>(payload);
 
     std::lock_guard<std::mutex> lock(contextsMutex_);
-    auto it = contexts_.find(p->transferId);
+    auto it = contexts_.find(FixedToString(p->transferId, sizeof(p->transferId)));
     if (it == contexts_.end()) return;
 
     FileReceiveContext ctx = std::move(it->second);

@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Windows;
 using System.Windows.Input;
 using ProfessorUI.Service;
 
@@ -37,6 +38,10 @@ namespace ProfessorUI.ViewModel
             get => _statusText;
             set { _statusText = value; OnPropertyChanged(); }
         }
+
+        // 전송을 시작한 세션 ID (수신 완료 응답이 오면 비운다).
+        // 같은 세션에 중복 전송하는 것을 막는 용도 — 학생이 재접속하면 세션이 바뀌어 자연히 풀린다.
+        public string? SendingSessionId { get; set; }
 
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? name = null)
@@ -99,6 +104,39 @@ namespace ProfessorUI.ViewModel
 
             StudentStore.Instance.Students.CollectionChanged += OnStoreStudentsChanged;
             StudentStore.Instance.FileReceivedConfirmed += OnFileReceivedConfirmed;
+
+            // 전송 진행률·실패를 학생 행에 반영
+            NetworkService.Instance.SendProgress += OnSendProgress;
+            NetworkService.Instance.SendError += OnSendError;
+        }
+
+        // 전송 진행률 (네이티브 스레드에서 올라온다)
+        private void OnSendProgress(string sessionId, string studentId, string transferId, string fileName, int percent) => PostToUi(() =>
+        {
+            var row = Students.FirstOrDefault(s => s.StudentId == studentId);
+            if (row == null || row.SendingSessionId != sessionId) return;
+
+            row.ProgressValue = percent;
+            row.StatusText = percent >= 100 ? "전송 완료" : $"전송 중 {percent}%";
+        });
+
+        // 전송 실패 (네이티브 스레드에서 올라온다)
+        private void OnSendError(string sessionId, string studentId, string transferId, string message) => PostToUi(() =>
+        {
+            var row = Students.FirstOrDefault(s => s.StudentId == studentId);
+            if (row == null || row.SendingSessionId != sessionId) return;
+
+            row.SendingSessionId = null; // 실패했으므로 재전송을 다시 허용한다
+            row.ProgressValue = 0;
+            row.StatusText = "전송 실패";
+        });
+
+        // 콜백은 네이티브 스레드에서 올라오므로 UI 스레드로 넘겨 처리한다.
+        private static void PostToUi(Action action)
+        {
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher == null || dispatcher.HasShutdownStarted) return;
+            dispatcher.BeginInvoke(action);
         }
 
         // static 상태 변경 시 호출되는 이벤트 핸들러
@@ -147,6 +185,7 @@ namespace ProfessorUI.ViewModel
             var row = Students.FirstOrDefault(s => s.StudentId == studentId);
             if (row != null)
             {
+                row.SendingSessionId = null; // 전송이 끝났으므로 재배포를 다시 허용한다
                 row.ProgressValue = 100;
                 row.StatusText = "수신완료";
             }
@@ -187,8 +226,9 @@ namespace ProfessorUI.ViewModel
             int sentCount = 0;
             foreach (var student in selectedStudents)
             {
+                // 접속이 끊겨도 SessionId는 남으므로 SessionId 유무로 판단하면 안 된다
                 var connected = StudentStore.Instance.Students
-                    .FirstOrDefault(s => s.StudentId == student.StudentId && !string.IsNullOrEmpty(s.SessionId));
+                    .FirstOrDefault(s => s.StudentId == student.StudentId && s.IsConnected);
 
                 if (connected == null)
                 {
@@ -196,9 +236,18 @@ namespace ProfessorUI.ViewModel
                     continue;
                 }
 
-                NetworkService.Instance.SendFileToSession(
-                    connected.SessionId, FileDeployState.PackagePath!, FileDeployState.Password ?? "");
+                // 버튼을 두 번 눌러도 같은 세션에 같은 파일을 겹쳐 보내지 않는다
+                if (student.SendingSessionId == connected.SessionId)
+                    continue;
 
+                if (!NetworkService.Instance.SendFileToSession(
+                        connected.SessionId, FileDeployState.PackagePath!, FileDeployState.Password ?? ""))
+                {
+                    student.StatusText = "전송 실패";
+                    continue;
+                }
+
+                student.SendingSessionId = connected.SessionId;
                 student.ProgressValue = 0;
                 student.StatusText = "전송 중";
                 sentCount++;

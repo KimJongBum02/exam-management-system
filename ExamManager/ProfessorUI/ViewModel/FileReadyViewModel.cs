@@ -112,12 +112,27 @@ namespace ProfessorUI.ViewModel
 
             string examId = "Exam_" + DateTime.Now.ToString("yyyyMMdd_HHmm");
             string packageDir = @"C:\Exam";
-            Directory.CreateDirectory(packageDir);
             string output = Path.Combine(packageDir, examId + ".7z");
 
-            // 선택 파일들을 스테이징 폴더로 묶어 7za로 압축+암호화 (백그라운드 실행)
-            string? password = await Task.Run(() =>
-                ExamPackager.Package(SelectedFilePaths, output));
+            string? password;
+            try
+            {
+                Directory.CreateDirectory(packageDir);
+
+                // 선택 파일들을 스테이징 폴더로 묶어 7za로 압축+암호화 (백그라운드 실행)
+                password = await Task.Run(() =>
+                    ExamPackager.Package(SelectedFilePaths, output));
+            }
+            catch (Exception ex)
+            {
+                // 배포가 진행 중이면 이전 아카이브가 잠겨 삭제되지 않는 등으로 실패할 수 있다.
+                // 이 메서드는 async void 라서 여기서 잡지 않으면 앱이 그대로 종료된다.
+                CurrentStatusMessage = "실패";
+                _isProcessing = false;
+                System.Windows.MessageBox.Show(
+                    $"압축/암호화 실패: {ex.Message}\n배포가 진행 중이면 끝난 뒤 다시 시도해 주세요.", "오류");
+                return;
+            }
 
             if (password != null)
             {
@@ -131,15 +146,6 @@ namespace ProfessorUI.ViewModel
                 FileDeployState.PackagePath = output;
                 FileDeployState.Password = password;
                 FileDeployState.IsFilePrepared = true;
-
-                // [테스트용] 압축 직후 같은 암호로 해제까지 수행
-                string restoreDir = @"C:\Exam\restored";
-                bool extracted = await Task.Run(() =>
-                    ExamPackager.Extract(output, restoreDir, password));
-
-                System.Windows.MessageBox.Show(
-                    $"압축 완료: {output}\n암호: {password}\n해제: {(extracted ? $"성공 → {restoreDir}" : "실패")}",
-                    "테스트 결과");
             }
             else
             {

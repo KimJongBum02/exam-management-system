@@ -9,7 +9,7 @@ namespace ProfessorUI.Service
     //   "어떻게 압축할지(7za 실행)"      → FileControl.dll (C++)
     internal static class ExamPackager
     {
-        private const string PackageFolderName = "ExamFiles"; // 해제 시 생길 루트 폴더명
+        private const string PackageFolderName = "ExamFiles"; // 선택 항목을 모을 스테이징 폴더명
 
         // 성공 시 사용된 랜덤 암호 반환(배포 시 전송용), 실패 시 null
         public static string? Package(IReadOnlyList<string> sourceItems, string outputArchive)
@@ -37,28 +37,27 @@ namespace ProfessorUI.Service
                 // 2) 시험별 랜덤 암호 생성
                 string password = GeneratePassword();
 
-                // 3) DLL 호출: 스테이징 폴더 → 암호 걸린 .7z
-                int code = FileControlService.FC_CompressEncrypt(sevenZa, stagingContent, outputArchive, password);
+                // 3) 같은 경로에 이전 아카이브가 남아 있으면 먼저 지운다.
+                //    7za의 'a'는 기존 아카이브에 "추가"하는데, -mhe=on 이라 이전 암호로 잠긴
+                //    헤더를 새 암호로는 열지 못해 그대로 실패한다(같은 파일 재배포 시 발생).
+                if (File.Exists(outputArchive))
+                    File.Delete(outputArchive);
+
+                // 4) DLL 호출: 스테이징 폴더의 "내용물" → 암호 걸린 .7z
+                //    폴더째 넣으면 학생 쪽에서 ExamFiles\ExamFiles\... 로 한 겹 더 들어간다.
+                int code = FileControlService.FC_CompressEncrypt(
+                    sevenZa, Path.Combine(stagingContent, "*"), outputArchive, password);
 
                 return code == 0 ? password : null;
             }
             finally
             {
-                // 4) 스테이징 폴더 정리 (성공/실패 무관)
+                // 5) 스테이징 폴더 정리 (성공/실패 무관)
                 if (Directory.Exists(stagingRoot))
                     Directory.Delete(stagingRoot, true);
             }
 
 
-        }
-
-        // [테스트용] .7z를 같은 암호로 해제 → outputFolder 에 복원. 성공 시 true
-        public static bool Extract(string archivePath, string outputFolder, string password)
-        {
-            string sevenZa = Path.Combine(AppContext.BaseDirectory, "7za.exe");
-            Directory.CreateDirectory(outputFolder);
-            int code = FileControlService.FC_ExtractDecrypt(sevenZa, archivePath, outputFolder, password);
-            return code == 0;
         }
 
         // .NET에는 폴더 깊은 복사가 없어 직접 재귀 복사

@@ -122,6 +122,22 @@ namespace NetworkLib
         [MarshalAs(UnmanagedType.LPUTF8Str)] string transferId,
         [MarshalAs(UnmanagedType.LPUTF8Str)] string message);
 
+    // 교수 → 학생 파일 전송 진행률/오류. 어느 학생에게 보내는 중인지 함께 전달된다.
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate void SendProgressCallback(
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string sessionId,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string studentId,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string transferId,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string fileName,
+        int percent);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate void SendErrorCallback(
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string sessionId,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string studentId,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string transferId,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string message);
+
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public delegate void ClientConnectedCallback(
         [MarshalAs(UnmanagedType.LPUTF8Str)] string serverIp,
@@ -161,6 +177,8 @@ namespace NetworkLib
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Server_SetOnFileReceived       (FileReceivedCallback        cb);
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Server_SetOnFileProgress       (FileProgressCallback        cb);
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Server_SetOnFileError          (FileErrorCallback           cb);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Server_SetOnSendProgress      (SendProgressCallback        cb);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Server_SetOnSendError         (SendErrorCallback           cb);
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Server_Broadcast        (PacketType type, byte[] payload, uint payloadLen);
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Server_SendToSession    ([MarshalAs(UnmanagedType.LPUTF8Str)] string sessionId, PacketType type, byte[] payload, uint payloadLen);
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Server_BroadcastFile    ([MarshalAs(UnmanagedType.LPUTF8Str)] string filePath, [MarshalAs(UnmanagedType.LPUTF8Str)] string archivePassword);
@@ -235,6 +253,8 @@ namespace NetworkLib
         private FileReceivedCallback?        _onFileReceived;
         private FileProgressCallback?        _onFileProgress;
         private FileErrorCallback?           _onFileError;
+        private SendProgressCallback?        _onSendProgress;
+        private SendErrorCallback?           _onSendError;
 
         public event Action<string, string, string, string>?        StudentConnected;
         public event Action<string, string, string, DisconnectReason>? StudentDisconnected;
@@ -242,6 +262,10 @@ namespace NetworkLib
         public event Action<string, string, string, string, long, string>?    FileReceived;
         public event Action<string, string, int>?                   FileProgress;
         public event Action<string, string>?                        FileError;
+        /// <summary>교수 → 학생 전송 진행률 (sessionId, studentId, transferId, fileName, percent)</summary>
+        public event Action<string, string, string, string, int>?   SendProgress;
+        /// <summary>교수 → 학생 전송 오류 (sessionId, studentId, transferId, message)</summary>
+        public event Action<string, string, string, string>?        SendError;
 
         public ProfessorServer(int port = 9000)
         {
@@ -263,6 +287,8 @@ namespace NetworkLib
             _onFileReceived = (tid, senderId, fn, tp, sz, pw) => FileReceived?.Invoke(tid, senderId, fn, tp, sz, pw);
             _onFileProgress = (tid, fn, pct) => FileProgress?.Invoke(tid, fn, pct);
             _onFileError    = (tid, msg)     => FileError?.Invoke(tid, msg);
+            _onSendProgress = (sid, stid, tid, fn, pct) => SendProgress?.Invoke(sid, stid, tid, fn, pct);
+            _onSendError    = (sid, stid, tid, msg)     => SendError?.Invoke(sid, stid, tid, msg);
 
             NativeNetwork.NL_Server_SetOnStudentConnected   (_onConnected);
             NativeNetwork.NL_Server_SetOnStudentDisconnected(_onDisconnected);
@@ -270,6 +296,8 @@ namespace NetworkLib
             NativeNetwork.NL_Server_SetOnFileReceived       (_onFileReceived);
             NativeNetwork.NL_Server_SetOnFileProgress       (_onFileProgress);
             NativeNetwork.NL_Server_SetOnFileError          (_onFileError);
+            NativeNetwork.NL_Server_SetOnSendProgress       (_onSendProgress);
+            NativeNetwork.NL_Server_SetOnSendError          (_onSendError);
         }
 
         public bool Start()                => NativeNetwork.NL_Server_Start() == 1;
@@ -285,8 +313,9 @@ namespace NetworkLib
         public void BroadcastFile(string filePath, string archivePassword = "")
             => NativeNetwork.NL_Server_BroadcastFile(filePath, archivePassword);
 
-        public void SendFileToSession(string sessionId, string filePath, string archivePassword = "")
-            => NativeNetwork.NL_Server_SendFileToSession(sessionId, filePath, archivePassword);
+        /// <summary>전송을 시작했으면 true. 해당 세션이 없으면 false.</summary>
+        public bool SendFileToSession(string sessionId, string filePath, string archivePassword = "")
+            => NativeNetwork.NL_Server_SendFileToSession(sessionId, filePath, archivePassword) == 1;
 
         // ── 채팅 전송 ────────────────────────────────────────────────────
         /// <summary>전체 학생에게 채팅 메시지를 전송합니다.</summary>

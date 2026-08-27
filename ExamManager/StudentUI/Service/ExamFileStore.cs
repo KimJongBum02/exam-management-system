@@ -81,6 +81,11 @@ namespace StudentUI.Service
         // 압축 해제로 복원된 파일 목록 (해제 폴더 기준 상대 경로)
         public ObservableCollection<string> ExtractedFiles { get; } = new ObservableCollection<string>();
 
+        // 직전 해제가 만들어 놓은 파일 목록 (해제 폴더 기준 상대 경로).
+        // 재배포 때 지워도 되는 파일을 이 목록으로 판별한다 — 학생이 저장한 답안은 여기에 없으므로 보존된다.
+        // (ExtractedFiles 는 화면 표시용이라 새 전송이 시작되면 비워지므로 따로 보관한다)
+        private List<string> _lastExtracted = new List<string>();
+
         // ── 수신 이벤트 (네이티브 스레드에서 호출됨) ──
         private void OnFileProgress(string transferId, string fileName, int percent) => Post(() =>
         {
@@ -114,10 +119,23 @@ namespace StudentUI.Service
         // (이렇게 하지 않으면 재배포된 파일을 받고도 IsExtracted가 true로 남아 다시 해제할 수 없다)
         private void BeginNewTransfer(string transferId)
         {
+            // 이전 전송이 남긴 임시 .7z는 더 이상 쓰지 않으므로 지운다.
+            // (재배포할 때마다 %TEMP%에 사본이 쌓이는 것을 막는다)
+            DeleteArchive();
+
             _transferId = transferId;
             IsReceived = false;
             IsExtracted = false;
             ExtractedFiles.Clear();
+        }
+
+        // 수신된 임시 .7z를 지운다. 실패해도 기능에는 영향이 없으므로 무시한다.
+        private void DeleteArchive()
+        {
+            if (string.IsNullOrEmpty(_archivePath)) return;
+
+            try { File.Delete(_archivePath); } catch (Exception) { }
+            _archivePath = string.Empty;
         }
 
         private void OnFileError(string transferId, string message) => Post(() =>
@@ -138,6 +156,9 @@ namespace StudentUI.Service
             string password = _password;
             string outputFolder = ExtractFolder;
 
+            var previous = _lastExtracted;
+            var delivered = new List<string>();
+
             int code;
             try
             {
@@ -145,7 +166,25 @@ namespace StudentUI.Service
                 code = await Task.Run(() =>
                 {
                     Directory.CreateDirectory(outputFolder);
-                    return FileControlService.FC_ExtractDecrypt(sevenZa, archive, outputFolder, password);
+
+                    // 시험 폴더에 바로 풀지 않고 임시 폴더에 푼 뒤 항목 단위로 옮긴다.
+                    // 바로 풀면 이번 배포에서 빠진 파일이 이전 배포분으로 남는다.
+                    string staging = Path.Combine(Path.GetTempPath(), "ExamExtract_" + Guid.NewGuid().ToString("N"));
+                    try
+                    {
+                        Directory.CreateDirectory(staging);
+
+                        int rc = FileControlService.FC_ExtractDecrypt(sevenZa, archive, staging, password);
+                        if (rc != 0) return rc;
+
+                        MergeIntoExamFolder(staging, outputFolder, previous, delivered);
+                        return 0;
+                    }
+                    finally
+                    {
+                        if (Directory.Exists(staging))
+                            Directory.Delete(staging, true);
+                    }
                 });
             }
             catch (Exception ex)
@@ -159,7 +198,13 @@ namespace StudentUI.Service
 
             if (code == 0)
             {
-                LoadExtractedFiles(outputFolder);
+                DeleteArchive(); // 해제까지 끝났으면 임시 .7z는 필요 없다
+                _lastExtracted = delivered;
+
+                ExtractedFiles.Clear();
+                foreach (string rel in delivered)
+                    ExtractedFiles.Add(rel);
+
                 IsExtracted = true;
                 StatusText = $"압축 해제 완료 · 파일 {ExtractedFiles.Count}개";
             }
@@ -169,19 +214,47 @@ namespace StudentUI.Service
             }
         }
 
-        // 해제된 파일을 화면에 보여주기 위해 목록을 읽어온다
-        private void LoadExtractedFiles(string outputFolder)
+        // 새로 받은 패키지를 시험 폴더에 최상위 항목 단위로 반영한다.
+        //   같은 이름이 있으면 → 직전 배포가 만든 파일만 지우고 새 것으로 덮는다 (학생 답안은 보존)
+        //   같은 이름이 없으면 → 기존 항목은 그대로 둔다 (A·B 배포 후 C만 따로 배포하는 경우)
+        private static void MergeIntoExamFolder(
+            string staging, string target, List<string> previous, List<string> delivered)
         {
-            ExtractedFiles.Clear();
-            try
+            foreach (string entry in Directory.GetFileSystemEntries(staging))
             {
-                foreach (string path in Directory.GetFiles(outputFolder, "*", SearchOption.AllDirectories))
-                    ExtractedFiles.Add(Path.GetRelativePath(outputFolder, path));
+                string name = Path.GetFileName(entry);
+
+                // 이 항목 아래에서 직전 배포가 만든 파일만 지운다.
+                // 이번 패키지에서 빠진 파일은 여기서 정리되고, 학생이 저장한 파일은 목록에 없어 남는다.
+                foreach (string rel in previous)
+                {
+                    if (!rel.Split(Path.DirectorySeparatorChar)[0].Equals(name, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    string old = Path.Combine(target, rel);
+                    if (File.Exists(old)) File.Delete(old);
+                }
+
+                string dest = Path.Combine(target, name);
+                if (Directory.Exists(entry))
+                    CopyDirectory(entry, dest);
+                else
+                    File.Copy(entry, dest, true);
             }
-            catch (Exception)
-            {
-                // 목록 표시는 부가 정보이므로 실패해도 해제 자체는 성공으로 둔다
-            }
+
+            // 이번 배포가 전달한 파일 목록 (staging 기준 상대 경로 = 시험 폴더 기준 상대 경로)
+            foreach (string path in Directory.GetFiles(staging, "*", SearchOption.AllDirectories))
+                delivered.Add(Path.GetRelativePath(staging, path));
+        }
+
+        // .NET에는 폴더 깊은 복사가 없어 직접 재귀 복사
+        private static void CopyDirectory(string source, string dest)
+        {
+            Directory.CreateDirectory(dest);
+            foreach (string file in Directory.GetFiles(source))
+                File.Copy(file, Path.Combine(dest, Path.GetFileName(file)), true);
+            foreach (string dir in Directory.GetDirectories(source))
+                CopyDirectory(dir, Path.Combine(dest, Path.GetFileName(dir)));
         }
 
         // 네이티브 스레드에서 온 알림을 UI 스레드로 넘긴다

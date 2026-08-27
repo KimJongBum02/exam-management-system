@@ -33,6 +33,12 @@ typedef void(__cdecl* NL_OnFileReceived)       (const char* transferId, const ch
 typedef void(__cdecl* NL_OnFileProgress)       (const char* transferId, const char* fileName,  int percent);
 typedef void(__cdecl* NL_OnFileError)          (const char* transferId, const char* message);
 
+// 교수 → 학생 파일 전송 진행률/오류.
+// 위 NL_OnFileProgress 와 달리 "어느 학생에게 보내는 중인지" 를 함께 넘긴다.
+// (한 번에 여러 학생에게 전송하므로 세션 정보가 없으면 진행률을 화면에 매핑할 수 없다)
+typedef void(__cdecl* NL_OnSendProgress)       (const char* sessionId, const char* studentId, const char* transferId, const char* fileName, int percent);
+typedef void(__cdecl* NL_OnSendError)          (const char* sessionId, const char* studentId, const char* transferId, const char* message);
+
 // 클라이언트 → C# 콜백
 typedef void(__cdecl* NL_OnClientConnected)    (const char* serverIp, int port);
 typedef void(__cdecl* NL_OnClientDisconnected) (int reason);
@@ -69,6 +75,8 @@ NL_API void NL_Server_SetOnPacketReceived     (NL_OnPacketReceived      cb);
 NL_API void NL_Server_SetOnFileReceived       (NL_OnFileReceived        cb);
 NL_API void NL_Server_SetOnFileProgress       (NL_OnFileProgress        cb);
 NL_API void NL_Server_SetOnFileError          (NL_OnFileError           cb);
+NL_API void NL_Server_SetOnSendProgress       (NL_OnSendProgress        cb);
+NL_API void NL_Server_SetOnSendError          (NL_OnSendError           cb);
 
 // ── 패킷 전송 ────────────────────────────────────────────────────────
 

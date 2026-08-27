@@ -114,6 +114,26 @@ NL_API void NL_Server_SetOnFileError(NL_OnFileError cb)
         : nullptr;
 }
 
+NL_API void NL_Server_SetOnSendProgress(NL_OnSendProgress cb)
+{
+    if (!g_server) return;
+    if (!cb) { g_server->onSendProgress = nullptr; return; }
+    g_server->onSendProgress =
+        [cb](const std::string& sid, const std::string& stid,
+             const std::string& tid, const std::string& fn, int pct)
+        { cb(sid.c_str(), stid.c_str(), tid.c_str(), fn.c_str(), pct); };
+}
+
+NL_API void NL_Server_SetOnSendError(NL_OnSendError cb)
+{
+    if (!g_server) return;
+    if (!cb) { g_server->onSendError = nullptr; return; }
+    g_server->onSendError =
+        [cb](const std::string& sid, const std::string& stid,
+             const std::string& tid, const std::string& msg)
+        { cb(sid.c_str(), stid.c_str(), tid.c_str(), msg.c_str()); };
+}
+
 // ── 패킷 전송 ────────────────────────────────────────────────────────
 
 NL_API int NL_Server_Broadcast(uint32_t packetType, const uint8_t* payload, uint32_t payloadLen)
