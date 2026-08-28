@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 #include <thread>
 #include <atomic>
 #include <mutex>
@@ -18,6 +19,7 @@ using DetectCallback = std::function<void(int type, const std::wstring& processN
 // matchName은 확장자를 뗀 이름("notepad", 리스트 비교 전용)이다.
 // path와 originalName은 이름 위조 탐지용이며, 얻지 못하면 빈 문자열이다.
 // (시스템 프로세스는 경로를, 버전 리소스가 없는 파일은 originalName을 얻을 수 없다)
+// isNew는 감시 시작(= 시험 시작) 이후에 실행된 프로세스라는 뜻이다.
 struct ProcessInfo
 {
     std::wstring name;
@@ -25,6 +27,7 @@ struct ProcessInfo
     std::wstring path;
     std::wstring originalName;  // 버전 리소스의 OriginalFilename, 확장자 제거된 상태
     DWORD pid;
+    bool isNew;
 };
 
 class ProcessMonitor
@@ -46,6 +49,7 @@ private:
 
     std::vector<ProcessInfo> GetRunningProcesses();
     bool IsInList(const std::wstring& name, const std::vector<std::wstring>& list);
+    bool IsBlacklisted(const ProcessInfo& proc, const std::vector<std::wstring>& blacklist);
 
 private:
     // 확장자를 뗀 상태로 보관한다(Set*list에서 정규화).
@@ -60,6 +64,13 @@ private:
     std::mutex m_callbackMutex;
 
     DWORD m_myPid;
+
+    // 감시를 시작한 시각(= 시험 시작 시각). 이보다 나중에 생성된 프로세스를 신규로 본다.
+    // 시작 시점의 PID 목록을 따로 보관하지 않으므로 PID 재사용에 영향받지 않는다.
+    FILETIME m_startTime;
+
+    // 신규 프로세스 알림 중복 방지용: 이미 보고한 PID
+    std::set<DWORD> m_reportedNew;
 
     // 경로 → OriginalFilename(확장자 제거) 캐시.
     // 버전 리소스 조회는 디스크를 읽으므로 매 검사(500ms)마다 하면 부하가 크다.

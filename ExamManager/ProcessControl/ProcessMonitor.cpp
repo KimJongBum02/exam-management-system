@@ -17,22 +17,25 @@ static std::wstring StripExtension(const std::wstring& name)
     return name.substr(0, dot);
 }
 
-// PID로 실행 파일의 전체 경로를 얻는다.
-// System, Registry 같은 시스템 프로세스는 열 수 없으므로 빈 문자열이 정상 결과다.
-static std::wstring QueryImagePath(DWORD pid)
+// PID로 실행 파일의 전체 경로와 프로세스 생성 시각을 얻는다.
+// 핸들을 두 번 열지 않도록 한 번에 처리한다.
+// System, Registry 같은 시스템 프로세스는 열 수 없으므로 실패가 정상 결과이며,
+// 이때 path는 빈 문자열, creation은 건드리지 않고 false를 돌려준다.
+static bool QueryProcessDetail(DWORD pid, std::wstring& path, FILETIME& creation)
 {
     HANDLE h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
-    if (!h) return std::wstring();
+    if (!h) return false;
 
     wchar_t buffer[MAX_PATH];
     DWORD size = MAX_PATH;
-    std::wstring path;
-
     if (QueryFullProcessImageNameW(h, 0, buffer, &size))
         path.assign(buffer, size);
 
+    FILETIME exitTime, kernelTime, userTime;
+    bool gotCreation = GetProcessTimes(h, &creation, &exitTime, &kernelTime, &userTime) != FALSE;
+
     CloseHandle(h);
-    return path;
+    return gotCreation;
 }
 
 // 실행 파일의 버전 리소스에서 OriginalFilename을 읽어 확장자를 뗀 채 돌려준다.
@@ -126,6 +129,12 @@ void ProcessMonitor::Start()
     m_running = true;
     m_prevRunningWhitelist.clear();
     m_prevRunningBlacklist.clear();
+    m_reportedNew.clear();
+
+    // 이 시각이 신규 판정의 기준선이다. 스레드를 띄우기 전에 찍어야
+    // 첫 검사와 기준선 사이에 실행된 프로세스를 놓치지 않는다.
+    GetSystemTimeAsFileTime(&m_startTime);
+
     m_monitorThread = std::thread(&ProcessMonitor::MonitorThreadFunc, this);
 }
 
@@ -165,7 +174,9 @@ std::vector<ProcessInfo> ProcessMonitor::GetRunningProcesses()
 
             // 비교용 이름도 여기서 한 번만 만들어 둔다(프로세스당 1회).
             std::wstring name = pe.szExeFile;
-            std::wstring path = QueryImagePath(pe.th32ProcessID);
+            std::wstring path;
+            FILETIME creation = {};
+            bool gotCreation = QueryProcessDetail(pe.th32ProcessID, path, creation);
 
             // 경로 조회는 커널 호출이라 매번 해도 싸지만, OriginalFilename은
             // 디스크를 읽으므로 경로를 키로 캐시한다. 처음 보는 파일일 때만 실제로 읽는다.
@@ -179,7 +190,12 @@ std::vector<ProcessInfo> ProcessMonitor::GetRunningProcesses()
                 originalName = cached->second;
             }
 
-            running.push_back({ name, StripExtension(name), path, originalName, pe.th32ProcessID });
+            // 생성 시각을 못 얻으면 신규로 보지 않는다. 핸들을 못 여는 건 SYSTEM 권한
+            // 프로세스뿐이고, 이를 신규로 처리하면 시험 중 시작되는 윈도우 서비스가
+            // 전부 오탐으로 올라온다. 학생이 띄운 프로세스는 항상 열 수 있다.
+            bool isNew = gotCreation && CompareFileTime(&creation, &m_startTime) > 0;
+
+            running.push_back({ name, StripExtension(name), path, originalName, pe.th32ProcessID, isNew });
         } while (Process32NextW(snapshot, &pe));
     }
 
@@ -197,6 +213,15 @@ bool ProcessMonitor::IsInList(const std::wstring& name, const std::vector<std::w
         }
     }
     return false;
+}
+
+// 파일명과 OriginalFilename 중 하나만 걸려도 차단 대상으로 본다. 파일명을 바꿔도
+// OriginalFilename은 남으므로, cheat.exe로 위장한 notepad도 여기서 잡힌다.
+// 종료 판정과 신규 보고 제외가 같은 기준을 써야 하므로 함수로 묶는다.
+bool ProcessMonitor::IsBlacklisted(const ProcessInfo& proc, const std::vector<std::wstring>& blacklist)
+{
+    return IsInList(proc.matchName, blacklist)
+        || (!proc.originalName.empty() && IsInList(proc.originalName, blacklist));
 }
 
 void ProcessMonitor::CheckOnce()
@@ -224,13 +249,7 @@ void ProcessMonitor::CheckOnce()
     {
         // 리스트와 비교할 때만 정규화된 이름을 쓴다.
         // 아래 currentBlacklist는 스냅샷끼리의 비교라 원본 이름 그대로 다뤄도 일관된다.
-        //
-        // 파일명과 OriginalFilename 중 하나만 걸려도 차단한다. 파일명을 바꿔도
-        // OriginalFilename은 남으므로, cheat.exe로 위장한 notepad도 여기서 잡힌다.
-        bool blocked = IsInList(proc.matchName, blacklist)
-                    || (!proc.originalName.empty() && IsInList(proc.originalName, blacklist));
-
-        if (blocked)
+        if (IsBlacklisted(proc, blacklist))
         {
             // PID를 이미 알고 있으므로 재스냅샷 없이 바로 종료
             HANDLE h = OpenProcess(PROCESS_TERMINATE, FALSE, proc.pid);
@@ -274,4 +293,19 @@ void ProcessMonitor::CheckOnce()
     }
 
     m_prevRunningWhitelist = currentWhitelist;
+
+    // ===== 3. 어느 목록에도 없는 신규 프로세스 → 콜백 =====
+    // 블랙리스트는 '알려진 것'만 막으므로, 목록에 없는 프로그램은 그대로 통과한다.
+    // 시험 시작 후 새로 실행됐다는 사실 자체를 근거로 삼아 이 구멍을 메운다.
+    // 종료하지 않고 알리기만 한다. 판단은 교수 몫이다.
+    for (const auto& proc : running)
+    {
+        if (!proc.isNew) continue;
+        if (IsBlacklisted(proc, blacklist)) continue;        // 이미 type 0으로 보고됨
+        if (IsInList(proc.matchName, whitelist)) continue;   // 시험에 필요한 프로그램
+        if (m_reportedNew.count(proc.pid)) continue;         // PID당 한 번만 알린다
+
+        m_reportedNew.insert(proc.pid);
+        if (cb) cb(2, proc.name);  // type 2 = 목록에 없는 신규 프로세스
+    }
 }

@@ -30,7 +30,8 @@ namespace StudentUI.Service
         private CheatCallbackDelegate? _cheatCallback;
 
         // C# 이벤트로 노출
-        // type: 0 = 블랙리스트 프로세스 실행 시도, 1 = 필수 화이트리스트 프로세스 강제 종료됨
+        // type: 0 = 블랙리스트 프로세스 실행 시도, 1 = 필수 화이트리스트 프로세스 강제 종료됨,
+        //       2 = 목록에 없는 프로세스가 시험 시작 이후 실행됨 (종료되지 않음, 교수 확인 필요)
         public event Action<int, string>? CheatDetected;
 
         public ProcessControlService()
