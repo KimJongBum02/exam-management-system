@@ -124,6 +124,11 @@ void ProcessMonitor::SetDetectCallback(DetectCallback callback)
 
 void ProcessMonitor::Start()
 {
+    // 잠그지 않으면 두 호출이 동시에 아래 if를 통과할 수 있다.
+    // 그러면 감시 스레드가 2개 뜨고, 아직 살아있는 thread 객체를 덮어쓰면서
+    // std::terminate로 앱이 즉사한다. (시험 시작 버튼 중복 클릭 등)
+    std::lock_guard<std::mutex> lock(m_stateMutex);
+
     if (m_running) return;
 
     m_running = true;
@@ -140,7 +145,17 @@ void ProcessMonitor::Start()
 
 void ProcessMonitor::Stop()
 {
-    m_running = false;
+    // Start와 같은 자물쇠를 써서 시작/중지가 서로 엉키지 않게 한다.
+    std::lock_guard<std::mutex> lock(m_stateMutex);
+
+    {
+        // m_wakeMutex를 잡고 바꿔야 한다. 안 그러면 감시 스레드가 조건을 확인한 뒤
+        // 잠들기 직전에 알림이 지나가 버려서, 결국 500ms를 다 기다리게 된다.
+        std::lock_guard<std::mutex> wake(m_wakeMutex);
+        m_running = false;
+    }
+    m_wakeCv.notify_all();
+
     if (m_monitorThread.joinable())
     {
         m_monitorThread.join();
@@ -152,7 +167,12 @@ void ProcessMonitor::MonitorThreadFunc()
     while (m_running)
     {
         CheckOnce();
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+        // sleep_for와 달리 Stop이 중간에 깨울 수 있다.
+        // 그래서 UI 스레드가 최대 500ms를 기다리는 일이 없다.
+        std::unique_lock<std::mutex> lock(m_wakeMutex);
+        m_wakeCv.wait_for(lock, std::chrono::milliseconds(500),
+                          [this] { return !m_running; });
     }
 }
 

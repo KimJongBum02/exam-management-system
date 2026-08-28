@@ -58,6 +58,10 @@ namespace StudentUI.Service
 
         public bool StartMonitoring()
         {
+            // PM_Stop이 네이티브 쪽 콜백을 끊으므로, 시작할 때마다 다시 등록한다.
+            // (등록 안 하면 감시는 돌지만 알림이 하나도 안 온다)
+            if (_cheatCallback != null) PM_RegisterCallback(_cheatCallback);
+
             return PM_Start();
         }
 
