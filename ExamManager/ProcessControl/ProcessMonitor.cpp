@@ -224,6 +224,24 @@ bool ProcessMonitor::IsBlacklisted(const ProcessInfo& proc, const std::vector<st
         || (!proc.originalName.empty() && IsInList(proc.originalName, blacklist));
 }
 
+// 화이트리스트는 블랙리스트와 반대로 엄격하게 본다.
+// 차단은 의심스러우면 걸어도 되지만, 허용은 확실할 때만 줘야 하기 때문이다.
+// 특히 화이트리스트는 신규 프로세스 보고를 면제하므로, 느슨하면 허용된 이름으로
+// 위장하는 것만으로 완전 무탐지가 된다.
+//
+// 파일명과 OriginalFilename이 '둘 다' 목록으로 설명되어야 허용한다.
+// OriginalFilename이 없으면 신원을 증명하지 못한 것이므로 면제하지 않는다.
+// (리소스를 지우고 허용된 이름을 붙이는 우회를 막기 위함)
+//
+// 정상 소프트웨어도 같은 바이너리를 다른 이름으로 배포하므로
+// (git.exe → bash.exe 등) 그런 경우는 두 이름을 모두 목록에 넣으면 된다.
+bool ProcessMonitor::IsWhitelisted(const ProcessInfo& proc, const std::vector<std::wstring>& whitelist)
+{
+    return IsInList(proc.matchName, whitelist)
+        && !proc.originalName.empty()
+        && IsInList(proc.originalName, whitelist);
+}
+
 void ProcessMonitor::CheckOnce()
 {
     std::vector<ProcessInfo> running = GetRunningProcesses();
@@ -278,7 +296,7 @@ void ProcessMonitor::CheckOnce()
     std::vector<std::wstring> currentWhitelist;
     for (const auto& proc : running)
     {
-        if (IsInList(proc.matchName, whitelist))
+        if (IsWhitelisted(proc, whitelist))
         {
             currentWhitelist.push_back(proc.name);
         }
@@ -302,7 +320,7 @@ void ProcessMonitor::CheckOnce()
     {
         if (!proc.isNew) continue;
         if (IsBlacklisted(proc, blacklist)) continue;        // 이미 type 0으로 보고됨
-        if (IsInList(proc.matchName, whitelist)) continue;   // 시험에 필요한 프로그램
+        if (IsWhitelisted(proc, whitelist)) continue;        // 시험에 필요한 프로그램
         if (m_reportedNew.count(proc.pid)) continue;         // PID당 한 번만 알린다
 
         m_reportedNew.insert(proc.pid);

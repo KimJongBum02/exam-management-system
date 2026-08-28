@@ -50,6 +50,7 @@ private:
     std::vector<ProcessInfo> GetRunningProcesses();
     bool IsInList(const std::wstring& name, const std::vector<std::wstring>& list);
     bool IsBlacklisted(const ProcessInfo& proc, const std::vector<std::wstring>& blacklist);
+    bool IsWhitelisted(const ProcessInfo& proc, const std::vector<std::wstring>& whitelist);
 
 private:
     // 확장자를 뗀 상태로 보관한다(Set*list에서 정규화).
