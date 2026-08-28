@@ -61,6 +61,9 @@ private:
     std::atomic<bool> m_running;
     std::thread m_monitorThread;
 
+    // Start/Stop이 동시에 들어와도 한 번에 하나만 실행되게 한다.
+    std::mutex m_stateMutex;
+
     DetectCallback m_detectCallback;
     std::mutex m_callbackMutex;
 

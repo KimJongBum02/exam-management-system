@@ -124,6 +124,11 @@ void ProcessMonitor::SetDetectCallback(DetectCallback callback)
 
 void ProcessMonitor::Start()
 {
+    // 잠그지 않으면 두 호출이 동시에 아래 if를 통과할 수 있다.
+    // 그러면 감시 스레드가 2개 뜨고, 아직 살아있는 thread 객체를 덮어쓰면서
+    // std::terminate로 앱이 즉사한다. (시험 시작 버튼 중복 클릭 등)
+    std::lock_guard<std::mutex> lock(m_stateMutex);
+
     if (m_running) return;
 
     m_running = true;
@@ -140,6 +145,9 @@ void ProcessMonitor::Start()
 
 void ProcessMonitor::Stop()
 {
+    // Start와 같은 자물쇠를 써서 시작/중지가 서로 엉키지 않게 한다.
+    std::lock_guard<std::mutex> lock(m_stateMutex);
+
     m_running = false;
     if (m_monitorThread.joinable())
     {
