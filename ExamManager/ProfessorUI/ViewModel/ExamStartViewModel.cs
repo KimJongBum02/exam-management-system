@@ -1,4 +1,6 @@
+using NetworkLib;
 using ProfessorUI.Service;
+using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
@@ -34,9 +36,12 @@ namespace ProfessorUI.ViewModel
 
         private void ExecuteStartExam(object obj)
         {
+            // 접속 중인 모든 학생 PC에 압축 해제 명령을 보낸다.
+            // (학생 쪽에서 해제가 끝나면 해제 폴더가 탐색기로 열린다)
+            // 알림창보다 먼저 보내야 교수가 확인을 누를 때까지 학생이 기다리지 않는다.
+            NetworkService.Instance.Broadcast(PacketType.ExtractArchive, Array.Empty<byte>());
+
             MessageBox.Show("시험을 시작합니다!", "알림");
-            // 여기에 실제 시험 시작 로직(학생 PC 압축 해제 명령 등) 추가
-            // TODO: 나중에 여기에 '학생 PC 압축 해제 명령' 네트워크 코드 추가
 
             // 시험 시작! (이 코드가 실행되면 2, 3단계가 깨어납니다)
             ExamState.IsExamStarted = true;
