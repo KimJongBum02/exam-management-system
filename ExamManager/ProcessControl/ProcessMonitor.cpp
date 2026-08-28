@@ -4,6 +4,8 @@
 #include <tlhelp32.h>
 #include <chrono>
 
+#pragma comment(lib, "version.lib")
+
 // 파일명에서 마지막 확장자 하나를 제거한다.
 // 교수 UI는 .NET Process.ProcessName(확장자 없음)을 보내지만 스냅샷은
 // szExeFile(확장자 포함)을 주므로, 양쪽을 같은 규칙으로 맞춰야 매칭된다.
@@ -13,6 +15,69 @@ static std::wstring StripExtension(const std::wstring& name)
     size_t dot = name.rfind(L'.');
     if (dot == std::wstring::npos) return name;
     return name.substr(0, dot);
+}
+
+// PID로 실행 파일의 전체 경로를 얻는다.
+// System, Registry 같은 시스템 프로세스는 열 수 없으므로 빈 문자열이 정상 결과다.
+static std::wstring QueryImagePath(DWORD pid)
+{
+    HANDLE h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+    if (!h) return std::wstring();
+
+    wchar_t buffer[MAX_PATH];
+    DWORD size = MAX_PATH;
+    std::wstring path;
+
+    if (QueryFullProcessImageNameW(h, 0, buffer, &size))
+        path.assign(buffer, size);
+
+    CloseHandle(h);
+    return path;
+}
+
+// 실행 파일의 버전 리소스에서 OriginalFilename을 읽어 확장자를 뗀 채 돌려준다.
+// 이 값은 컴파일 시점에 박히므로 파일 이름을 바꿔도 따라 변하지 않는다.
+// 버전 리소스가 아예 없는 실행 파일이 흔하므로 빈 문자열도 정상 결과다.
+//
+// FILE_VER_GET_NEUTRAL이 반드시 필요하다. 이 플래그가 없으면 MUI(다국어 리소스)
+// 리다이렉션이 일어나 System32\ko-KR\ping.exe.mui 쪽 값을 읽고,
+// OriginalFilename이 "ping.exe.mui"로 나와 매칭에 실패한다.
+static std::wstring QueryOriginalName(const std::wstring& path)
+{
+    if (path.empty()) return std::wstring();
+
+    DWORD ignored = 0;
+    DWORD size = GetFileVersionInfoSizeExW(FILE_VER_GET_NEUTRAL, path.c_str(), &ignored);
+    if (size == 0) return std::wstring();
+
+    std::vector<BYTE> data(size);
+    if (!GetFileVersionInfoExW(FILE_VER_GET_NEUTRAL, path.c_str(), 0, size, data.data()))
+        return std::wstring();
+
+    // 문자열 블록은 언어/코드페이지별로 나뉘어 있어, 번역 테이블을 먼저 읽어야
+    // 조회할 경로를 만들 수 있다. 첫 번째로 값이 나오는 언어를 쓴다.
+    struct LangCodePage { WORD language; WORD codePage; };
+    LangCodePage* translations = nullptr;
+    UINT translationBytes = 0;
+
+    if (!VerQueryValueW(data.data(), L"\\VarFileInfo\\Translation",
+                        reinterpret_cast<void**>(&translations), &translationBytes))
+        return std::wstring();
+
+    for (UINT i = 0; i < translationBytes / sizeof(LangCodePage); i++)
+    {
+        wchar_t subBlock[64];
+        swprintf_s(subBlock, L"\\StringFileInfo\\%04x%04x\\OriginalFilename",
+                   translations[i].language, translations[i].codePage);
+
+        wchar_t* value = nullptr;
+        UINT valueLen = 0;
+
+        if (VerQueryValueW(data.data(), subBlock, reinterpret_cast<void**>(&value), &valueLen) && valueLen > 0)
+            return StripExtension(std::wstring(value, wcsnlen(value, valueLen)));
+    }
+
+    return std::wstring();
 }
 
 ProcessMonitor::ProcessMonitor()
@@ -100,7 +165,21 @@ std::vector<ProcessInfo> ProcessMonitor::GetRunningProcesses()
 
             // 비교용 이름도 여기서 한 번만 만들어 둔다(프로세스당 1회).
             std::wstring name = pe.szExeFile;
-            running.push_back({ name, StripExtension(name), pe.th32ProcessID });
+            std::wstring path = QueryImagePath(pe.th32ProcessID);
+
+            // 경로 조회는 커널 호출이라 매번 해도 싸지만, OriginalFilename은
+            // 디스크를 읽으므로 경로를 키로 캐시한다. 처음 보는 파일일 때만 실제로 읽는다.
+            std::wstring originalName;
+            if (!path.empty())
+            {
+                auto cached = m_originalNameCache.find(path);
+                if (cached == m_originalNameCache.end())
+                    cached = m_originalNameCache.emplace(path, QueryOriginalName(path)).first;
+
+                originalName = cached->second;
+            }
+
+            running.push_back({ name, StripExtension(name), path, originalName, pe.th32ProcessID });
         } while (Process32NextW(snapshot, &pe));
     }
 
@@ -145,7 +224,13 @@ void ProcessMonitor::CheckOnce()
     {
         // 리스트와 비교할 때만 정규화된 이름을 쓴다.
         // 아래 currentBlacklist는 스냅샷끼리의 비교라 원본 이름 그대로 다뤄도 일관된다.
-        if (IsInList(proc.matchName, blacklist))
+        //
+        // 파일명과 OriginalFilename 중 하나만 걸려도 차단한다. 파일명을 바꿔도
+        // OriginalFilename은 남으므로, cheat.exe로 위장한 notepad도 여기서 잡힌다.
+        bool blocked = IsInList(proc.matchName, blacklist)
+                    || (!proc.originalName.empty() && IsInList(proc.originalName, blacklist));
+
+        if (blocked)
         {
             // PID를 이미 알고 있으므로 재스냅샷 없이 바로 종료
             HANDLE h = OpenProcess(PROCESS_TERMINATE, FALSE, proc.pid);
