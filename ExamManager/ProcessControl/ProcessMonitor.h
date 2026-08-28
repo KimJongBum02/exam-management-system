@@ -7,6 +7,7 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
+#include <condition_variable>
 #include <functional>
 
 // 콜백: (종류, 프로세스 이름)
@@ -63,6 +64,10 @@ private:
 
     // Start/Stop이 동시에 들어와도 한 번에 하나만 실행되게 한다.
     std::mutex m_stateMutex;
+
+    // 검사 간격(500ms) 대기를 중간에 깨우기 위한 것. Stop이 즉시 반응하게 해준다.
+    std::condition_variable m_wakeCv;
+    std::mutex m_wakeMutex;
 
     DetectCallback m_detectCallback;
     std::mutex m_callbackMutex;
