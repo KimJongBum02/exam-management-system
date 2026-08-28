@@ -13,9 +13,12 @@ using DetectCallback = std::function<void(int type, const std::wstring& processN
 
 // 실행 중 프로세스 1개 (이름 + PID)
 // PID를 함께 보관해, 블랙리스트 종료 시 스냅샷을 다시 뜨지 않도록 한다.
+// name은 원본 파일명("notepad.exe", 표시/콜백용),
+// matchName은 확장자를 뗀 이름("notepad", 리스트 비교 전용)이다.
 struct ProcessInfo
 {
     std::wstring name;
+    std::wstring matchName;
     DWORD pid;
 };
 
@@ -40,6 +43,7 @@ private:
     bool IsInList(const std::wstring& name, const std::vector<std::wstring>& list);
 
 private:
+    // 확장자를 뗀 상태로 보관한다(Set*list에서 정규화).
     std::vector<std::wstring> m_blacklist;
     std::vector<std::wstring> m_whitelist;
     std::mutex m_listMutex;
