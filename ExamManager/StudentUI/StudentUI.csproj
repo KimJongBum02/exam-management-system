@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -55,6 +55,15 @@
     <None Include="$(SolutionDir)7za.exe" Condition="Exists('$(SolutionDir)7za.exe')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>7za.exe</Link>
+    </None>
+  </ItemGroup>
+  <!-- 프로세스 감시용 ProcessControl.dll 복사 -->
+  <!-- 이게 없으면 감시를 켜는 순간 DllNotFoundException 이 난다 -->
+  <ItemGroup>
+    <None Include="$(SolutionDir)x64\$(Configuration)\ProcessControl.dll"
+          Condition="Exists('$(SolutionDir)x64\$(Configuration)\ProcessControl.dll')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>ProcessControl.dll</Link>
     </None>
   </ItemGroup>
 

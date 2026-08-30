@@ -8,6 +8,8 @@
 //   3. 아래 클래스를 통해 서버/클라이언트를 초기화
 
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -67,12 +69,97 @@ namespace NetworkLib
         Absent           = 7,
     }
 
+    // 부정행위 유형 (Protocol.h의 CheatingAlertType enum과 동일한 값)
+    public enum CheatingAlertType : uint
+    {
+        BlacklistedProcessLaunched = 0,
+        NetworkAccessAttempt       = 1,
+        UnauthorizedProcess        = 2,
+        ManualReport               = 3,
+        RequiredProcessTerminated  = 4,   // 시험에 필요한 프로그램을 학생이 강제 종료함
+    }
+
     public enum DisconnectReason : int
     {
         ClientDisconnected = 0,
         HeartbeatTimeout   = 1,
         NetworkError       = 2,
         ServerShutdown     = 3,
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  ProcessListUpdate(40) 페이로드 — 교수가 배포하는 프로세스 감시 목록
+    //
+    //  목록 개수가 정해져 있지 않아 구조체로 못 만든다. Protocol.h에 정의된 형식:
+    //    [uint32 화이트리스트 개수][uint32 블랙리스트 개수]
+    //    화이트리스트 문자열들: 각 [uint16 길이][길이만큼의 UTF-8 바이트]
+    //    블랙리스트 문자열들:   각 [uint16 길이][길이만큼의 UTF-8 바이트]
+    //
+    //  보내는 쪽(교수)과 읽는 쪽(학생)이 형식을 따로 구현하면 어긋나기 쉬우므로,
+    //  두 프로젝트가 공유하는 이 파일에 한 벌만 둔다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class ProcessListPayload
+    {
+        public static byte[] Encode(IReadOnlyList<string> whitelist, IReadOnlyList<string> blacklist)
+        {
+            using var stream = new MemoryStream();
+            using var writer = new BinaryWriter(stream);
+
+            writer.Write((uint)whitelist.Count);
+            writer.Write((uint)blacklist.Count);
+
+            foreach (string name in whitelist) WriteString(writer, name);
+            foreach (string name in blacklist) WriteString(writer, name);
+
+            writer.Flush();
+            return stream.ToArray();
+        }
+
+        // 네이티브 버퍼를 해석한다. 형식이 깨져 있으면 false를 돌려준다.
+        // (실패했을 때 목록을 반쯤 채운 채로 쓰면 감시가 헐거워지므로 호출한 쪽에서 통째로 버려야 한다)
+        public static bool TryDecode(IntPtr payload, uint payloadLen,
+                                     out List<string> whitelist, out List<string> blacklist)
+        {
+            whitelist = new List<string>();
+            blacklist = new List<string>();
+
+            // 최소한 개수 두 개(4+4바이트)는 있어야 한다
+            if (payload == IntPtr.Zero || payloadLen < 8) return false;
+
+            byte[] buffer = new byte[payloadLen];
+            Marshal.Copy(payload, buffer, 0, (int)payloadLen);
+
+            int offset = 0;
+            uint whiteCount = BitConverter.ToUInt32(buffer, offset); offset += 4;
+            uint blackCount = BitConverter.ToUInt32(buffer, offset); offset += 4;
+
+            return TryReadStrings(buffer, ref offset, whiteCount, whitelist)
+                && TryReadStrings(buffer, ref offset, blackCount, blacklist);
+        }
+
+        private static void WriteString(BinaryWriter writer, string value)
+        {
+            byte[] utf8 = Encoding.UTF8.GetBytes(value);
+            writer.Write((ushort)utf8.Length);
+            writer.Write(utf8);
+        }
+
+        // 읽기 전에 매번 남은 크기를 확인한다.
+        // 길이 값을 그대로 믿으면 손상된 패킷 하나로 버퍼 밖을 읽게 된다.
+        private static bool TryReadStrings(byte[] buffer, ref int offset, uint count, List<string> target)
+        {
+            for (uint i = 0; i < count; i++)
+            {
+                if (offset + 2 > buffer.Length) return false;
+                int length = BitConverter.ToUInt16(buffer, offset);
+                offset += 2;
+
+                if (offset + length > buffer.Length) return false;
+                target.Add(Encoding.UTF8.GetString(buffer, offset, length));
+                offset += length;
+            }
+            return true;
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════
