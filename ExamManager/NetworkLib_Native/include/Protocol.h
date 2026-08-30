@@ -82,6 +82,7 @@ enum class CheatingAlertType : uint32_t
     NetworkAccessAttempt       = 1,
     UnauthorizedProcess        = 2,
     ManualReport               = 3,
+    RequiredProcessTerminated  = 4,   // 시험에 필요한 프로그램을 학생이 강제 종료함
 };
 
 // ─── 연결 해제 사유 ────────────────────────────────────────────────

@@ -54,6 +54,12 @@ namespace ProfessorUI
                 {
                     PostToUi(() => Service.StudentStore.Instance.MarkFileReceived(studentId));
                 }
+                else if (type == PacketType.CheatingAlert)
+                {
+                    // 누가 보냈는지는 로그인 때 등록된 세션 정보로 알 수 있으므로 페이로드에서 읽지 않는다.
+                    System.Diagnostics.Debug.WriteLine($"[부정행위] {studentId} {name} — {ReadAlertDescription(payload, len)}");
+                    PostToUi(() => Service.StudentStore.Instance.MarkCheatingDetected(studentId));
+                }
             };
 
             if (!network.StartServer())
@@ -81,6 +87,20 @@ namespace ProfessorUI
         {
             if (payload == IntPtr.Zero || len < 4) return StudentStatus.NotConnected;
             return (StudentStatus)(uint)System.Runtime.InteropServices.Marshal.ReadInt32(payload);
+        }
+
+        // 부정행위 알림 패킷에서 설명 문구만 꺼낸다.
+        // CheatingAlertPayload = [studentId 16][studentName 64][alertType 4][description 256]
+        private static string ReadAlertDescription(IntPtr payload, uint len)
+        {
+            const int DescriptionOffset = 84;
+            if (payload == IntPtr.Zero || len <= DescriptionOffset) return "(내용 없음)";
+
+            // 남은 길이만큼만 읽어 버퍼 밖으로 나가지 않도록 하고, 빈 칸(널)은 잘라낸다.
+            int available = (int)len - DescriptionOffset;
+            string text = System.Runtime.InteropServices.Marshal.PtrToStringUTF8(
+                              payload + DescriptionOffset, available) ?? "";
+            return text.Split('\0')[0];
         }
 
         // 프로그램 종료 시 서버를 멈추고 네이티브 리소스를 정리한다.

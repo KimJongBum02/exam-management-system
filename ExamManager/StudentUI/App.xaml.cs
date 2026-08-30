@@ -30,6 +30,10 @@ namespace StudentUI
             // 파일 수신 상태 저장소 구독 시작 (대기 화면에서 도착한 파일도 놓치지 않도록 앱 시작 시점에)
             Service.ExamFileStore.Instance.Start();
 
+            // 프로세스 감시 구독 시작 — 여기서는 구독만 하고,
+            // 실제 감시는 교수가 시험 시작을 눌러 압축 해제가 끝난 뒤에 켜진다.
+            Service.ExamMonitorService.Instance.Start();
+
             // ── 시험 파일을 수신하면 교수 PC로 '수신 완료' 응답을 보낸다 ──
             // 실제 접속/로그인 패킷 전송은 IP 입력 후 LoginViewModel.CompleteLogin 에서 수행한다.
             // 수신 사실은 대기 화면·시험 준비 화면이 ExamFileStore를 통해 표시하므로 별도 알림창은 띄우지 않는다.
@@ -104,6 +108,8 @@ namespace StudentUI
         // (정리하지 않으면 종료 중 네이티브 콜백이 CLR로 들어와 오류가 발생한다)
         protected override void OnExit(ExitEventArgs e)
         {
+            // 감시를 먼저 멈춘다. 네트워크를 먼저 닫으면 적발 보고가 갈 곳을 잃는다.
+            try { Service.ExamMonitorService.Instance.Dispose(); } catch { }
             try { Service.NetworkService.Instance.Dispose(); } catch { }
             base.OnExit(e);
         }

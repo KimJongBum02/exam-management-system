@@ -36,6 +36,11 @@ namespace StudentUI.Service
             NetworkService.Instance.PacketReceived += OnPacketReceived;
         }
 
+        // 시험 시작 명령의 처리(압축 해제·폴더 열기)가 모두 끝나면 알린다.
+        // 프로세스 감시는 이 신호를 받고 켜야 한다 — 먼저 켜면 압축 해제에 쓰는
+        // 7za.exe와 탐색기가 '시험 중 새로 실행된 프로그램'으로 적발된다.
+        public event Action? ExamStartHandled;
+
         // 교수 PC가 '시험 시작'을 누르면 오는 명령 — 받은 파일을 자동으로 풀고 해제 폴더를 띄운다.
         private void OnPacketReceived(PacketType type, IntPtr payload, uint payloadLen)
         {
@@ -49,6 +54,9 @@ namespace StudentUI.Service
                     OpenExtractFolder();    // 이미 풀려 있으면 폴더만 다시 띄운다
                 else if (!IsReceived)
                     StatusText = "시험이 시작됐지만 아직 시험 파일을 받지 못했습니다. 교수님께 재배포를 요청해 주세요.";
+
+                // 해제 성공 여부와 관계없이 시험은 시작된 것이므로 감시는 켠다
+                ExamStartHandled?.Invoke();
             });
         }
 
