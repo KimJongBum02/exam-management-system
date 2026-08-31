@@ -1,8 +1,10 @@
-﻿using ProfessorUI.Service;
+using NetworkLib; // ExamPhase 사용을 위해 추가
+using ProfessorUI.Service;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Windows;
 using System.Windows.Input;
 
 namespace ProfessorUI.ViewModel
@@ -15,7 +17,6 @@ namespace ProfessorUI.ViewModel
         public ICommand ApproveSingleCommand { get; }
         public ICommand ApproveSelectedCommand { get; }
 
-        // ⭐ 일괄 선택 / 해제를 위한 프로퍼티
         private bool _isAllSelected;
         public bool IsAllSelected
         {
@@ -25,7 +26,6 @@ namespace ProfessorUI.ViewModel
                 _isAllSelected = value;
                 OnPropertyChanged();
 
-                // 리스트에 있는 모든 학생의 체크 상태를 한 번에 변경
                 foreach (var student in Students)
                 {
                     student.IsSelected = value;
@@ -41,19 +41,29 @@ namespace ProfessorUI.ViewModel
             ExamState.StateChanged += () => OnPropertyChanged(nameof(IsContainerEnabled));
         }
 
+        // 개별 승인 처리
         private void ExecuteApproveSingle(object obj)
         {
-            if (obj is StudentItemViewModel student && student.IsFileReceived)
+            if (obj is StudentItemViewModel student && student.IsAnswerSubmitted)
             {
                 student.IsApproved = true;
                 student.Status = "종료";
             }
+
+            // 단일 승인 후 모든 학생이 승인되었는지 확인
+            CheckAndResetIfAllApproved();
         }
 
+        // 선택 항목 일괄 승인 처리
         private void ExecuteApproveSelected(object obj)
         {
-            // .ToList()로 명확히 뽑아서 바인딩 충돌 방지
-            var targets = Students.Where(s => s.IsSelected && s.IsFileReceived && !s.IsApproved).ToList();
+            var targets = Students.Where(s => s.IsSelected && s.IsAnswerSubmitted && !s.IsApproved).ToList();
+
+            if (!targets.Any())
+            {
+                MessageBox.Show("승인할 대상이 선택되지 않았거나, 수집 완료된 항목이 없습니다.", "알림", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
 
             foreach (var student in targets)
             {
@@ -61,8 +71,45 @@ namespace ProfessorUI.ViewModel
                 student.Status = "종료";
             }
 
-            // 일괄 승인 후 전체선택 체크박스 해제
-            IsAllSelected = false;
+            // 일괄 승인 후 체크박스 해제
+            _isAllSelected = false;
+            OnPropertyChanged(nameof(IsAllSelected));
+
+            // 일괄 승인 후에도 '모든 학생이 승인되었는지' 검사 후 리셋
+            CheckAndResetIfAllApproved();
+        }
+
+        // 모든 학생의 승인이 끝났는지 확인하는 메서드
+        private void CheckAndResetIfAllApproved()
+        {
+            // 학생 목록이 존재하고, 목록 내 모든 학생(Students)의 IsApproved가 true일 때만 초기화
+            if (Students.Count > 0 && Students.All(s => s.IsApproved))
+            {
+                MessageBox.Show("모든 학생의 승인이 완료되어 시험 상태를 초기화합니다.", "안내", MessageBoxButton.OK, MessageBoxImage.Information);
+                ResetAllState();
+            }
+        }
+
+        // 모든 상태 초기화 메서드
+        private void ResetAllState()
+        {
+            // 1. 전체 선택 체크박스 해제
+            _isAllSelected = false;
+            OnPropertyChanged(nameof(IsAllSelected));
+
+            // 2. 모든 학생 개별 상태 초기화
+            foreach (var student in Students)
+            {
+                student.IsSelected = false;
+                student.IsFileReceived = false;
+                student.IsAnswerSubmitted = false;
+                student.IsApproved = false;
+                student.Status = "대기";
+            }
+
+            // 3. 전역 시험 상태 초기화 
+            // ExamPhase.Waiting(0)으로 바꾸면 IsExamStarted(>= InProgress)가 false가 됩니다.
+            ExamState.CurrentPhase = ExamPhase.Waiting;
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
