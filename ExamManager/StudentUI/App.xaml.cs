@@ -34,6 +34,8 @@ namespace StudentUI
             // 실제 감시는 교수가 시험 시작을 눌러 압축 해제가 끝난 뒤에 켜진다.
             Service.ExamMonitorService.Instance.Start();
 
+            // 시험 남은 시간 구독 시작 — 교수가 시험 시작을 누르면 세기 시작한다.
+            Service.ExamTimeStore.Instance.Start();
             // 답안 제출 구독 시작 — 교수의 수집 요청을 기다린다.
             Service.AnswerSubmitService.Instance.Start();
 
@@ -70,13 +72,6 @@ namespace StudentUI
                 nextWindow = new StudentUI.View.StudentExamView.StudentExamWindow()
                 {
                     DataContext = examVM
-                };
-            }
-            else if (_navigationStore.CurrentViewModel is ExamProgressViewModel progressVM)
-            {
-                nextWindow = new StudentUI.View.ExamProgressView.ExamProgressWindow()
-                {
-                    DataContext = progressVM
                 };
             }
 

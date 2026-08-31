@@ -63,7 +63,6 @@ namespace StudentUI.ViewModel
 
         public ICommand LogoutCommand { get; }
         public ICommand TestExamCommand { get; }
-        public ICommand TestExamStartCommand { get; }
         public ICommand ExitCommand { get; }
 
         public WaitingViewModel(NavigationStore navigationStore, Student student)
@@ -100,12 +99,6 @@ namespace StudentUI.ViewModel
                 _navigationStore.CurrentViewModel = new StudentExamViewModel(_navigationStore, student);
             });
 
-            // 교수 PC의 시험 시작 명령 연결 전까지, 시험 시작 상태 화면을 확인하기 위한 임시 진입
-            TestExamStartCommand = new RelayCommand(() =>
-            {
-                Cleanup();
-                _navigationStore.CurrentViewModel = new ExamProgressViewModel(_navigationStore, student);
-            });
 
             ToggleNotificationCommand = new RelayCommand(() =>
             {

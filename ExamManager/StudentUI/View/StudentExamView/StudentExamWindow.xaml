@@ -4,6 +4,7 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:local="clr-namespace:StudentUI.View.StudentExamView"
+      xmlns:shared="clr-namespace:StudentUI.View.Shared"
       mc:Ignorable="d" 
       Background="#F5F5F5"
       FontFamily="{StaticResource AppFont}"
@@ -25,12 +26,14 @@
                 <local:StudentExamState Grid.Column="2" VerticalAlignment="Stretch"/>
             </Grid>
 
-            <!-- 교수 PC 시험 흐름 연결 전까지 화면 전환 확인용 임시 버튼 -->
+            <!-- 교수와 주고받는 알림·채팅. 시험 내내 이 화면에 머무르므로 여기에 둔다. -->
+            <shared:NotificationChatPanel Margin="0,12,0,0"/>
+
+            <!-- 대기 화면으로 되돌아가는 임시 버튼. 교수 명령으로는 되돌아갈 일이 없어,
+                 개발 중 화면을 다시 보기 위해서만 남겨 둔다. -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0">
                 <Button Command="{Binding GoToWaitingCommand}" Content="시험 대기 화면으로 전환"
                         Background="#E0E0E0" BorderThickness="0" Padding="12,6" Cursor="Hand" FontSize="12"/>
-                <Button Command="{Binding GoToStartedCommand}" Content="시험 시작 화면으로 전환"
-                        Background="#E0E0E0" BorderThickness="0" Padding="12,6" Cursor="Hand" FontSize="12" Margin="10,0,0,0"/>
             </StackPanel>
         </StackPanel>
     </ScrollViewer>

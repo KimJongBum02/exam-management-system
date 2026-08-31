@@ -43,6 +43,15 @@ namespace ProfessorUI.ViewModel
                 PacketType.ProcessListUpdate,
                 ProcessListPayload.Encode(ProgramControlStore.WhiteList, ProgramControlStore.BlackList));
 
+            // 시험이 시작됐음을 알린다. 학생은 이 신호를 받고 진행 화면으로 넘어가며
+            // 남은 시간 카운트다운을 시작한다.
+            //
+            // 압축 해제 명령보다 먼저 보내야 한다. 해제에 걸리는 시간은 PC마다 다른데,
+            // 해제가 끝난 뒤에 보내면 학생마다 시험 시작 시각이 어긋난다.
+            NetworkService.Instance.Broadcast(
+                PacketType.ExamPhaseChange,
+                ExamPhasePayload.Encode(ExamPhase.InProgress, "시험이 시작되었습니다."));
+
             // 접속 중인 모든 학생 PC에 압축 해제 명령을 보낸다.
             // (학생 쪽에서 해제가 끝나면 해제 폴더가 탐색기로 열린다)
             // 알림창보다 먼저 보내야 교수가 확인을 누를 때까지 학생이 기다리지 않는다.
