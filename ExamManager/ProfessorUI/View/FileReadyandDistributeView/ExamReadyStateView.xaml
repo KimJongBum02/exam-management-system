@@ -23,15 +23,15 @@
                     </Grid>
 
                     <!-- 타이틀 및 설명 -->
-                    <TextBlock Text="준비상태 강제전환" FontSize="24" FontWeight="Bold" Foreground="#1E1B4B" Margin="0,0,0,8"/>
-                    <TextBlock Text="현재 상태를 강제로 초기화하여 시험 준비 상태로 변경합니다." FontSize="14" Foreground="#64748B" Margin="0,0,0,24"/>
+                    <TextBlock Text="시험 준비 상태로 전환" FontSize="24" FontWeight="Bold" Foreground="#1E1B4B" Margin="0,0,0,8"/>
+                    <TextBlock Text="학생 PC를 대기 화면에서 시험 준비 화면으로 넘깁니다." FontSize="14" Foreground="#64748B" Margin="0,0,0,24"/>
 
                     <!-- 안내 박스 -->
                     <Border Background="#F8FAFC" BorderBrush="#F1F5F9" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,24">
                         <StackPanel>
                             <TextBlock Text="주의 사항" FontSize="14" FontWeight="Bold" Foreground="#475569" Margin="0,0,0,8"/>
-                            <TextBlock Text="• 진행 중인 시험 정보 및 감시 프로세스가 즉시 중단될 수 있습니다." FontSize="12" Foreground="#64748B" Margin="0,0,0,4" TextWrapping="Wrap"/>
-                            <TextBlock Text="• 예외 상황 발생 시에만 강제 전환을 진행해 주세요." FontSize="12" Foreground="#94A3B8" TextWrapping="Wrap"/>
+                            <TextBlock Text="• 파일 배포보다 먼저 눌러야 학생이 파일 도착을 볼 수 있습니다." FontSize="12" Foreground="#64748B" Margin="0,0,0,4" TextWrapping="Wrap"/>
+                            <TextBlock Text="• 접속 중인 학생 전체에게 전달됩니다." FontSize="12" Foreground="#94A3B8" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>

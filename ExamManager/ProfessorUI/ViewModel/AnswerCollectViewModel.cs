@@ -37,6 +37,14 @@ public class AnswerCollectViewModel : INotifyPropertyChanged
         var result = MessageBox.Show("시험을 종료하시겠습니까?\n종료 후 답안 수집이 가능해집니다.", "시험 종료 확인", MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (result == MessageBoxResult.Yes)
         {
+            // 학생 PC에 시험이 끝났음을 알린다. 학생은 이 신호를 받고 프로세스 감시를 멈춘다.
+            // 이걸 보내지 않으면 시험이 끝나도 학생 PC에서 메모장이 계속 강제 종료되고,
+            // 답안 수집 때 압축에 쓰는 7za.exe가 부정행위로 적발된다.
+            // 알림창보다 먼저 보내야 교수가 확인을 누를 때까지 학생이 기다리지 않는다.
+            NetworkService.Instance.Broadcast(
+                PacketType.ExamPhaseChange,
+                ExamPhasePayload.Encode(ExamPhase.SubmitRequested, "시험이 종료되었습니다."));
+
             // 시험 단계를 SubmitRequested(3)로 변경 -> StateChanged 이벤트 자동 발생
             // -> IsExamEnded가 true가 되어 버튼이 비활성화된다
             ExamState.CurrentPhase = ExamPhase.SubmitRequested;

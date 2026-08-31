@@ -89,7 +89,6 @@
             <Button Grid.Row="4" Command="{Binding TestExamCommand}" Content="시험 준비 화면으로 전환" Margin="0,8,0,0" Background="#E0E0E0" BorderThickness="0" Padding="5" Cursor="Hand" FontSize="11"/>
 
             <!-- Row 5: 시작 화면 전환 버튼 -->
-            <Button Grid.Row="5" Command="{Binding TestExamStartCommand}" Content="시험 시작 화면으로 전환" Margin="0,6,0,0" Background="#E0E0E0" BorderThickness="0" Padding="5" Cursor="Hand" FontSize="11"/>
 
             <!-- Row 6: 공용 알림/채팅 버튼 + 펼침 패널 (맨 하단) -->
             <shared:NotificationChatPanel Grid.Row="6"/>

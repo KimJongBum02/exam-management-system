@@ -63,7 +63,6 @@ namespace StudentUI.ViewModel
 
         public ICommand LogoutCommand { get; }
         public ICommand TestExamCommand { get; }
-        public ICommand TestExamStartCommand { get; }
         public ICommand ExitCommand { get; }
 
         public WaitingViewModel(NavigationStore navigationStore, Student student)
@@ -75,6 +74,10 @@ namespace StudentUI.ViewModel
             // 이후 서버가 끊기면(교수 PC 종료 등) 실시간으로 '미연결'로 갱신한다.
             IsConnected = NetworkService.Instance.IsConnected;
             NetworkService.Instance.Disconnected += OnServerDisconnected;
+
+            // 교수가 '시험 준비 상태로 전환'을 누르면 준비 화면으로 넘어간다.
+            // 학생이 직접 화면을 넘기던 임시 버튼(TestExamCommand)을 대체하는 경로다.
+            NetworkService.Instance.PacketReceived += OnPacketReceived;
 
             // 시계 타이머 (1초 간격)
             UpdateTime();
@@ -96,12 +99,6 @@ namespace StudentUI.ViewModel
                 _navigationStore.CurrentViewModel = new StudentExamViewModel(_navigationStore, student);
             });
 
-            // 교수 PC의 시험 시작 명령 연결 전까지, 시험 시작 상태 화면을 확인하기 위한 임시 진입
-            TestExamStartCommand = new RelayCommand(() =>
-            {
-                Cleanup();
-                _navigationStore.CurrentViewModel = new ExamProgressViewModel(_navigationStore, student);
-            });
 
             ToggleNotificationCommand = new RelayCommand(() =>
             {
@@ -122,6 +119,29 @@ namespace StudentUI.ViewModel
             });
         }
 
+        // 교수 PC의 시험 단계 알림 (네이티브 스레드에서 호출됨)
+        private void OnPacketReceived(PacketType type, IntPtr payload, uint payloadLen)
+        {
+            if (type != PacketType.ExamPhaseChange) return;
+
+            // 형식이 깨졌거나 모르는 단계면 무시한다.
+            if (!ExamPhasePayload.TryDecode(payload, payloadLen, out ExamPhase phase)) return;
+            if (phase != ExamPhase.Ready) return;
+
+            // 화면 전환은 UI 스레드에서만 할 수 있다.
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher == null || dispatcher.HasShutdownStarted) return;
+
+            dispatcher.BeginInvoke(() =>
+            {
+                // 신호가 두 번 와도 화면을 두 번 만들지 않는다.
+                if (_navigationStore.CurrentViewModel != this) return;
+
+                Cleanup();
+                _navigationStore.CurrentViewModel = new StudentExamViewModel(_navigationStore, Student);
+            });
+        }
+
         // 서버 연결이 끊겼을 때 UI 상태를 갱신 (네이티브 스레드에서 호출됨)
         private void OnServerDisconnected(DisconnectReason reason)
         {
@@ -135,6 +155,7 @@ namespace StudentUI.ViewModel
         {
             _clockTimer.Stop();
             NetworkService.Instance.Disconnected -= OnServerDisconnected;
+            NetworkService.Instance.PacketReceived -= OnPacketReceived;
         }
 
         private void UpdateTime()
