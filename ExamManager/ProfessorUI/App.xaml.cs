@@ -62,6 +62,11 @@ namespace ProfessorUI
                 }
             };
 
+            // 답안 수집 구독 시작 — 학생이 보낸 답안을 저장하고 확인 회신을 보낸다.
+            Service.AnswerCollectService.Instance.Start();
+            Service.AnswerCollectService.Instance.AnswerCollected += (studentId, savedPath) =>
+                PostToUi(() => Service.StudentStore.Instance.MarkAnswerSubmitted(studentId));
+
             if (!network.StartServer())
                 MessageBox.Show("서버 시작에 실패했습니다. 포트 9000을 확인해 주세요.");
             // ───────────────────────────────────
