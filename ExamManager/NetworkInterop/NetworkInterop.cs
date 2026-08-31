@@ -205,6 +205,107 @@ namespace NetworkLib
     }
 
     // ══════════════════════════════════════════════════════════════════
+    //  ExamSubmitRequest(34) 페이로드 — 교수가 보내는 답안 제출 요청
+    //
+    //  Protocol.h의 ExamSubmitRequestPayload와 같은 형식(고정 396바이트):
+    //    [char folderName[260]][char archivePassword[128]][int64 deadline]
+    //
+    //  folderName은 비워 보낸다. 학생마다 시험 폴더 경로가 다를 수 있어
+    //  교수가 지정할 수 없고, 학생이 자기 해제 폴더를 압축하면 되기 때문이다.
+    //  deadline(마감시각)은 아직 쓰지 않아 0으로 보낸다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class ExamSubmitPayload
+    {
+        private const int FolderNameSize = 260;
+        private const int PasswordSize   = 128;
+        public  const int Size           = FolderNameSize + PasswordSize + 8;   // 396
+
+        public static byte[] Encode(string folderName, string archivePassword, long deadline = 0)
+        {
+            byte[] payload = new byte[Size];
+            WriteFixedString(payload, 0,               folderName,      FolderNameSize);
+            WriteFixedString(payload, FolderNameSize,  archivePassword, PasswordSize);
+            BitConverter.GetBytes(deadline).CopyTo(payload, FolderNameSize + PasswordSize);
+            return payload;
+        }
+
+        public static bool TryDecode(IntPtr payload, uint payloadLen,
+                                     out string folderName, out string archivePassword, out long deadline)
+        {
+            folderName = "";
+            archivePassword = "";
+            deadline = 0;
+            if (payload == IntPtr.Zero || payloadLen < Size) return false;
+
+            byte[] buffer = new byte[Size];
+            Marshal.Copy(payload, buffer, 0, Size);
+
+            folderName      = ReadFixedString(buffer, 0,              FolderNameSize);
+            archivePassword = ReadFixedString(buffer, FolderNameSize, PasswordSize);
+            deadline        = BitConverter.ToInt64(buffer, FolderNameSize + PasswordSize);
+            return true;
+        }
+
+        // 고정 칸에 UTF-8로 채워 넣는다. 남는 칸은 0으로 남아 문자열 끝 표시가 된다.
+        internal static void WriteFixedString(byte[] target, int offset, string value, int size)
+        {
+            byte[] text = Encoding.UTF8.GetBytes(value);
+            Array.Copy(text, 0, target, offset, Math.Min(text.Length, size - 1));
+        }
+
+        // 고정 칸에서 0(문자열 끝)이 나올 때까지만 읽는다.
+        internal static string ReadFixedString(byte[] buffer, int offset, int size)
+        {
+            int length = 0;
+            while (length < size && buffer[offset + length] != 0) length++;
+            return Encoding.UTF8.GetString(buffer, offset, length);
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  CommandAck(100) 페이로드 — 명령을 잘 처리했는지 알려주는 회신
+    //
+    //  Protocol.h의 CommandAckPayload와 같은 형식(고정 261바이트):
+    //    [uint32 commandType][uint8 success][char message[256]]
+    //
+    //  답안 제출에서 이 회신이 안전장치 역할을 한다.
+    //  학생은 success=1을 받은 뒤에만 시험 파일을 지운다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class CommandAckPayload
+    {
+        private const int SuccessOffset = 4;
+        private const int MessageOffset = 5;
+        private const int MessageSize   = 256;
+        public  const int Size          = MessageOffset + MessageSize;   // 261
+
+        public static byte[] Encode(PacketType commandType, bool success, string message)
+        {
+            byte[] payload = new byte[Size];
+            BitConverter.GetBytes((uint)commandType).CopyTo(payload, 0);
+            payload[SuccessOffset] = success ? (byte)1 : (byte)0;
+            ExamSubmitPayload.WriteFixedString(payload, MessageOffset, message, MessageSize);
+            return payload;
+        }
+
+        public static bool TryDecode(IntPtr payload, uint payloadLen,
+                                     out PacketType commandType, out bool success, out string message)
+        {
+            commandType = default;
+            success = false;
+            message = "";
+            if (payload == IntPtr.Zero || payloadLen < Size) return false;
+
+            byte[] buffer = new byte[Size];
+            Marshal.Copy(payload, buffer, 0, Size);
+
+            commandType = (PacketType)BitConverter.ToUInt32(buffer, 0);
+            success     = buffer[SuccessOffset] == 1;
+            message     = ExamSubmitPayload.ReadFixedString(buffer, MessageOffset, MessageSize);
+            return true;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
     //  콜백 델리게이트 (C++ 함수 포인터와 매핑)
     //  반드시 멤버 변수로 보관해서 GC 수집을 막아야 합니다.
     // ══════════════════════════════════════════════════════════════════

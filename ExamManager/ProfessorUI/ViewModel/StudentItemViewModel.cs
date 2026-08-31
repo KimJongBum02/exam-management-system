@@ -18,6 +18,7 @@ namespace ProfessorUI.ViewModel
         private bool _isSelected;
         private bool _isFileReceived = false; // 💡 기본값 false -> 무조건 "미수집"으로 시작!
         private bool _isApproved;
+        private bool _isAnswerSubmitted;
 
         public string StudentId { get => _studentId; set { _studentId = value; OnPropertyChanged(); } }
         public string Name { get => _name; set { _name = value; OnPropertyChanged(); } }
@@ -35,6 +36,12 @@ namespace ProfessorUI.ViewModel
         public bool IsSelected { get => _isSelected; set { _isSelected = value; OnPropertyChanged(); } }
         public bool IsFileReceived { get => _isFileReceived; set { _isFileReceived = value; OnPropertyChanged(); } }
         public bool IsApproved { get => _isApproved; set { _isApproved = value; OnPropertyChanged(); } }
+
+        // 이 학생의 답안을 받아 저장까지 끝냈는지.
+        // IsFileReceived와 헷갈리기 쉬운데 방향이 반대다 —
+        // 그쪽은 교수가 보낸 시험 파일을 학생이 받은 것이고, 이쪽은 학생 답안을 교수가 받은 것이다.
+        // 학생이 접속을 끊어도 이 기록은 남으므로, 나갔는지 못 냈는지 구분할 수 있다.
+        public bool IsAnswerSubmitted { get => _isAnswerSubmitted; set { _isAnswerSubmitted = value; OnPropertyChanged(); } }
 
         // 개별 승인 명령 바인딩용
         public System.Windows.Input.ICommand? ApproveSingleCommand { get; set; }

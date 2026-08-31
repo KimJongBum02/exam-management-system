@@ -70,6 +70,19 @@ namespace ProfessorUI.Service
             }
         }
 
+        // 답안 수신 처리: 해당 학번 학생을 '제출완료'로 표시
+        // 이 기록은 학생이 접속을 끊어도 남는다. 그래야 시험 끝에
+        // '제출하고 나간 학생'과 '못 내고 끊긴 학생'을 구분할 수 있다.
+        public void MarkAnswerSubmitted(string studentId)
+        {
+            var student = Students.FirstOrDefault(s => s.StudentId == studentId);
+            if (student != null)
+            {
+                student.IsAnswerSubmitted = true;
+                student.Status = "제출완료";
+            }
+        }
+
         // 부정행위 알림 처리: 해당 학번 학생을 '부정행위 감지'로 표시
         // (어떤 프로그램이었는지 자세히 보여주는 화면은 아직 없다 — 모니터링 화면 작업에서 붙일 예정)
         public void MarkCheatingDetected(string studentId)
