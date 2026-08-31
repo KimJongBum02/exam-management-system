@@ -7,12 +7,15 @@ namespace StudentUI.Service
 {
     // 교수 PC의 명령에 맞춰 프로세스 감시를 켜고, 적발 내용을 교수 PC로 되돌려 보낸다.
     //
-    // 시험 시작 때 두 가지 패킷이 순서대로 도착한다.
+    // 교수 PC에서 오는 패킷 세 가지를 순서대로 처리한다.
     //   ① ProcessListUpdate — 이번 시험의 감시 목록. 받아서 네이티브에 넣는다.
     //   ② ExtractArchive    — 시험 시작. 압축 해제가 끝난 뒤에 감시를 켠다.
+    //   ③ ExamPhaseChange   — 시험 종료. 감시를 멈춘다.
     //
     // ②에서 '해제가 끝난 뒤'가 중요하다. 감시를 먼저 켜면 압축 해제에 쓰는
     // 7za.exe가 시험 중 새로 실행된 프로그램으로 적발된다.
+    // ③도 같은 이유로 필요하다. 답안 수집도 7za.exe를 쓰므로, 감시를 멈추지 않고
+    // 답안을 걷으면 학생 전원이 부정행위로 보고된다.
     public class ExamMonitorService : IDisposable
     {
         public static ExamMonitorService Instance { get; } = new ExamMonitorService();
@@ -29,11 +32,15 @@ namespace StudentUI.Service
             ExamFileStore.Instance.ExamStartHandled += OnExamStartHandled;
         }
 
-        // ── ① 감시 목록 수신 ──
         private void OnPacketReceived(PacketType type, IntPtr payload, uint payloadLen)
         {
-            if (type != PacketType.ProcessListUpdate) return;
+            if (type == PacketType.ProcessListUpdate) ApplyProcessList(payload, payloadLen);
+            else if (type == PacketType.ExamPhaseChange) ApplyPhaseChange(payload, payloadLen);
+        }
 
+        // ── ① 감시 목록 수신 ──
+        private void ApplyProcessList(IntPtr payload, uint payloadLen)
+        {
             // 형식이 깨진 패킷은 통째로 버린다.
             // 반쯤 읽힌 목록을 적용하면 금지 프로그램이 빠진 채로 감시가 돌 수 있다.
             if (!ProcessListPayload.TryDecode(payload, payloadLen,
@@ -53,6 +60,23 @@ namespace StudentUI.Service
         private void OnExamStartHandled()
         {
             EnsureProcessControl()?.StartMonitoring();
+        }
+
+        // ── ③ 시험 종료 → 감시 중지 ──
+        // 이걸 하지 않으면 시험이 끝난 뒤에도 감시가 계속 돌아,
+        // 학생이 메모장을 켜는 것마저 강제 종료된다.
+        private void ApplyPhaseChange(IntPtr payload, uint payloadLen)
+        {
+            // 형식이 깨졌거나 모르는 단계면 무시한다.
+            // 잘못 읽고 시험 도중에 감시를 꺼버리는 것이 더 위험하다.
+            if (!ExamPhasePayload.TryDecode(payload, payloadLen, out ExamPhase phase)) return;
+
+            // 아직 시험 중이라는 알림이면 감시를 건드리지 않는다.
+            if (phase < ExamPhase.SubmitRequested) return;
+
+            // EnsureProcessControl을 쓰지 않는다 — 감시를 켠 적도 없는 PC에서
+            // 멈추자고 네이티브 DLL을 새로 불러올 이유가 없다.
+            _processControl?.StopMonitoring();
         }
 
         // 네이티브 DLL은 여기서 처음 불린다.

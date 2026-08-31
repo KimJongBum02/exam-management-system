@@ -50,8 +50,8 @@ namespace ProfessorUI.ViewModel
 
             MessageBox.Show("시험을 시작합니다!", "알림");
 
-            // 시험 시작! (이 코드가 실행되면 2, 3단계가 깨어납니다)
-            ExamState.IsExamStarted = true;
+            // 시험 시작! 단계를 올리면 2단계 카드의 '시험 종료' 버튼이 깨어납니다.
+            ExamState.CurrentPhase = ExamPhase.InProgress;
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

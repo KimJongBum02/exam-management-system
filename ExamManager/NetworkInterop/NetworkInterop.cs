@@ -163,6 +163,48 @@ namespace NetworkLib
     }
 
     // ══════════════════════════════════════════════════════════════════
+    //  ExamPhaseChange(20) 페이로드 — 교수가 알리는 시험 진행 단계
+    //
+    //  Protocol.h의 ExamPhaseChangePayload와 같은 형식(고정 260바이트):
+    //    [uint32 phase][char message[256]]
+    //
+    //  ProcessListPayload와 같은 이유로 여기에 한 벌만 둔다.
+    //  보내는 쪽(교수)과 읽는 쪽(학생)이 형식을 따로 구현하면 어긋나기 쉽다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class ExamPhasePayload
+    {
+        private const int MessageOffset = 4;
+        private const int MessageSize   = 256;
+        public  const int Size          = MessageOffset + MessageSize;   // 260
+
+        public static byte[] Encode(ExamPhase phase, string message)
+        {
+            byte[] payload = new byte[Size];
+            BitConverter.GetBytes((uint)phase).CopyTo(payload, 0);
+
+            // 메시지가 길면 잘라 담는다. 마지막 1바이트는 문자열 끝 표시로 남겨 둔다.
+            byte[] text = Encoding.UTF8.GetBytes(message);
+            Array.Copy(text, 0, payload, MessageOffset, Math.Min(text.Length, MessageSize - 1));
+
+            return payload;
+        }
+
+        // 크기가 모자라거나 모르는 단계 값이면 통째로 버린다.
+        // 단계를 잘못 읽으면 시험 도중에 감시가 꺼질 수 있어, 의심스러우면 무시하는 편이 안전하다.
+        public static bool TryDecode(IntPtr payload, uint payloadLen, out ExamPhase phase)
+        {
+            phase = ExamPhase.Waiting;
+            if (payload == IntPtr.Zero || payloadLen < Size) return false;
+
+            uint value = (uint)Marshal.ReadInt32(payload);
+            if (!Enum.IsDefined(typeof(ExamPhase), value)) return false;
+
+            phase = (ExamPhase)value;
+            return true;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
     //  콜백 델리게이트 (C++ 함수 포인터와 매핑)
     //  반드시 멤버 변수로 보관해서 GC 수집을 막아야 합니다.
     // ══════════════════════════════════════════════════════════════════
