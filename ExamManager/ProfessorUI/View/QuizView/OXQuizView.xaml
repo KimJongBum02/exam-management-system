@@ -42,7 +42,7 @@
                                 <DataTemplate>
                                     <Border Background="{Binding Name, Converter={StaticResource CategoryToColor}, ConverterParameter=Background}" 
                                             BorderBrush="{Binding Name, Converter={StaticResource CategoryToColor}, ConverterParameter=Border}" 
-                                            BorderThickness="1.5" CornerRadius="3" Margin="0,5,0,0">
+                                            BorderThickness="1.5" CornerRadius="5" Margin="0,5,0,0">
                                         <TextBlock Text="{Binding Name}" FontWeight="Bold" Padding="5,3" Foreground="#333333"/>
                                     </Border>
                                 </DataTemplate>
@@ -89,6 +89,53 @@
         <!-- 우측: 문제 작성 및 전송 -->
         <Border Grid.Column="2" Background="White" BorderBrush="#5C6AC4" BorderThickness="1" CornerRadius="16" Padding="20">
             <Grid>
+                <Grid.Resources>
+                    <!-- Button Style -->
+                    <Style TargetType="Button">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}" 
+                                            BorderBrush="{TemplateBinding BorderBrush}" 
+                                            BorderThickness="{TemplateBinding BorderThickness}" 
+                                            CornerRadius="5">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Opacity" Value="0.8"/>
+                                        </Trigger>
+                                        <Trigger Property="IsPressed" Value="True">
+                                            <Setter Property="Opacity" Value="0.6"/>
+                                        </Trigger>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter Property="Opacity" Value="0.5"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                    
+                    <!-- TextBox Style -->
+                    <Style TargetType="TextBox">
+                        <Setter Property="BorderBrush" Value="#5C6AC4"/>
+                        <Setter Property="BorderThickness" Value="1.5"/>
+                        <Setter Property="Background" Value="White"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="TextBox">
+                                    <Border x:Name="border" Background="{TemplateBinding Background}" 
+                                            BorderBrush="{TemplateBinding BorderBrush}" 
+                                            BorderThickness="{TemplateBinding BorderThickness}" 
+                                            CornerRadius="5">
+                                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Grid.Resources>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
@@ -109,7 +156,9 @@
 
                 <StackPanel Grid.Row="1" Margin="0,0,0,15">
                     <TextBlock Text="카테고리" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                    <ComboBox ItemsSource="{Binding Categories}" Text="{Binding CurrentCategory}" IsEditable="True" Padding="5" FontSize="14" BorderBrush="#5C6AC4" BorderThickness="1.5"/>
+                    <Border BorderBrush="#5C6AC4" BorderThickness="1.5" CornerRadius="5">
+                        <ComboBox ItemsSource="{Binding Categories}" Text="{Binding CurrentCategory}" IsEditable="True" Padding="5" FontSize="14" BorderThickness="0" Background="Transparent"/>
+                    </Border>
                 </StackPanel>
 
                 <StackPanel Grid.Row="2" Margin="0,0,0,15">
@@ -134,7 +183,7 @@
 
                 <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
                     <Button Content="삭제" Command="{Binding DeleteCommand}" Width="80" Height="40" Margin="0,0,10,0" Background="#FF6B6B" Foreground="White" FontWeight="Bold" FontSize="14"/>
-                    <Button Content="목록에 저장" Command="{Binding SaveCommand}" Width="120" Height="40" Margin="0,0,10,0" Background="#BAFFC9" Foreground="#333333" FontWeight="Bold" FontSize="14"/>
+                    <Button Content="목록에 저장" Command="{Binding SaveCommand}" Width="120" Height="40" Margin="0,0,10,0" Background="#90EE90" BorderThickness="1" Foreground="#333333" FontWeight="Bold" FontSize="14"/>
                     <Button Content="학생들에게 전송" Command="{Binding SubmitCommand}" Width="140" Height="40" Background="#5C6AC4" Foreground="White" FontWeight="Bold" FontSize="14"/>
                 </StackPanel>
             </Grid>
