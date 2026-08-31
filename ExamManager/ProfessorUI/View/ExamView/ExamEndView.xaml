@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="ProfessorUI.View.ExamView.ExamEndView"
+<UserControl x:Class="ProfessorUI.View.ExamView.ExamEndView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -101,7 +101,7 @@
                                                     <Style TargetType="Path">
                                                         <Setter Property="Fill" Value="#EF4444"/>
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsFileReceived}" Value="True">
+                                                            <DataTrigger Binding="{Binding IsAnswerSubmitted}" Value="True">
                                                                 <Setter Property="Fill" Value="#10B981"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
@@ -113,7 +113,7 @@
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="Text" Value="미수집"/>
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsFileReceived}" Value="True">
+                                                            <DataTrigger Binding="{Binding IsAnswerSubmitted}" Value="True">
                                                                 <Setter Property="Text" Value="수집완료"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
@@ -127,14 +127,14 @@
                                             <Button Content="승인" 
                                                     Command="{Binding DataContext.ApproveSingleCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                     CommandParameter="{Binding}"
-                                                    Background="#EEF2FF" Foreground="#4F46E5" FontWeight="Bold" FontSize="11" Padding="8,3" Cursor="Hand">
+                                                    Background="#EEF2FF" Foreground="#5C6AC4" FontWeight="Bold" FontSize="11" Padding="8,3" Cursor="Hand">
                                                 <Button.Style>
                                                     <Style TargetType="Button">
                                                         <Setter Property="Visibility" Value="Collapsed"/>
                                                         <Style.Triggers>
                                                             <MultiDataTrigger>
                                                                 <MultiDataTrigger.Conditions>
-                                                                    <Condition Binding="{Binding IsFileReceived}" Value="True"/>
+                                                                    <Condition Binding="{Binding IsAnswerSubmitted}" Value="True"/>
                                                                     <Condition Binding="{Binding IsApproved}" Value="False"/>
                                                                 </MultiDataTrigger.Conditions>
                                                                 <Setter Property="Visibility" Value="Visible"/>
