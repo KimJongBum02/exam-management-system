@@ -67,6 +67,10 @@ namespace NetworkLib
         Approved         = 5,
         CheatingDetected = 6,
         Absent           = 7,
+        // 답안은 냈으나 시험 파일 삭제에 실패한 상태.
+        // 답안 자체는 안전하지만, 다음에 그 자리에 앉는 학생이 앞사람 답안을 보게 되므로
+        // 교수가 그 PC를 직접 확인해야 한다.
+        CleanupFailed    = 8,
     }
 
     // 부정행위 유형 (Protocol.h의 CheatingAlertType enum과 동일한 값)
@@ -259,6 +263,45 @@ namespace NetworkLib
             int length = 0;
             while (length < size && buffer[offset + length] != 0) length++;
             return Encoding.UTF8.GetString(buffer, offset, length);
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  ExamStatusUpdate(21) 페이로드 — 학생이 교수에게 알리는 자기 상태
+    //
+    //  Protocol.h의 ExamStatusUpdatePayload와 같은 형식(고정 276바이트):
+    //    [char studentId[16]][uint32 status][char detail[256]]
+    //
+    //  학번 칸은 비워 보낸다 — 교수 PC는 로그인 때 등록된 세션으로 누가 보냈는지 이미 안다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class ExamStatusUpdatePayload
+    {
+        private const int StudentIdSize = 16;
+        private const int DetailOffset  = 20;
+        private const int DetailSize    = 256;
+        public  const int Size          = DetailOffset + DetailSize;   // 276
+
+        public static byte[] Encode(StudentStatus status, string detail = "")
+        {
+            byte[] payload = new byte[Size];
+            BitConverter.GetBytes((uint)status).CopyTo(payload, StudentIdSize);
+            ExamSubmitPayload.WriteFixedString(payload, DetailOffset, detail, DetailSize);
+            return payload;
+        }
+
+        public static bool TryDecode(IntPtr payload, uint payloadLen,
+                                     out StudentStatus status, out string detail)
+        {
+            status = StudentStatus.NotConnected;
+            detail = "";
+            if (payload == IntPtr.Zero || payloadLen < Size) return false;
+
+            byte[] buffer = new byte[Size];
+            Marshal.Copy(payload, buffer, 0, Size);
+
+            status = (StudentStatus)BitConverter.ToUInt32(buffer, StudentIdSize);
+            detail = ExamSubmitPayload.ReadFixedString(buffer, DetailOffset, DetailSize);
+            return true;
         }
     }
 

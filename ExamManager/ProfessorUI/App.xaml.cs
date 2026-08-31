@@ -50,9 +50,15 @@ namespace ProfessorUI
             network.PacketReceived += (sid, studentId, name, type, payload, len) =>
             {
                 if (type == PacketType.ExamStatusUpdate &&
-                    ReadStatus(payload, len) == StudentStatus.FileReceived)
+                    ExamStatusUpdatePayload.TryDecode(payload, len, out StudentStatus status, out _))
                 {
-                    PostToUi(() => Service.StudentStore.Instance.MarkFileReceived(studentId));
+                    if (status == StudentStatus.FileReceived)
+                        PostToUi(() => Service.StudentStore.Instance.MarkFileReceived(studentId));
+
+                    // 답안은 받았지만 학생 PC에 시험 파일이 남아 있다는 보고.
+                    // 그 자리에 앉는 다음 학생이 앞사람 답안을 보게 되므로 교수가 직접 확인해야 한다.
+                    else if (status == StudentStatus.CleanupFailed)
+                        PostToUi(() => Service.StudentStore.Instance.MarkCleanupFailed(studentId));
                 }
                 else if (type == PacketType.CheatingAlert)
                 {
@@ -87,12 +93,6 @@ namespace ProfessorUI
             dispatcher.BeginInvoke(action);
         }
 
-        // 학생이 보낸 상태 갱신 패킷의 payload(4바이트)를 StudentStatus로 해석
-        private static StudentStatus ReadStatus(IntPtr payload, uint len)
-        {
-            if (payload == IntPtr.Zero || len < 4) return StudentStatus.NotConnected;
-            return (StudentStatus)(uint)System.Runtime.InteropServices.Marshal.ReadInt32(payload);
-        }
 
         // 부정행위 알림 패킷에서 설명 문구만 꺼낸다.
         // CheatingAlertPayload = [studentId 16][studentName 64][alertType 4][description 256]
