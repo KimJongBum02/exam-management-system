@@ -42,7 +42,7 @@ namespace StudentUI
             // 수신 사실은 대기 화면·시험 준비 화면이 ExamFileStore를 통해 표시하므로 별도 알림창은 띄우지 않는다.
             Service.NetworkService.Instance.FileReceived += (tid, senderId, fileName, tempPath, size, pw) =>
             {
-                byte[] payload = BitConverter.GetBytes((uint)StudentStatus.FileReceived);
+                byte[] payload = ExamStatusUpdatePayload.Encode(StudentStatus.FileReceived);
                 Service.NetworkService.Instance.SendPacket(PacketType.ExamStatusUpdate, payload);
             };
         }

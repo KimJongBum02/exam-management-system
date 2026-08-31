@@ -47,15 +47,22 @@ namespace ProfessorUI.Service
             }
         }
 
-        // 학생 접속 종료: 해당 세션의 학생을 '미접속' 상태로 표시
+        // 학생 접속 종료: 답안을 냈는지에 따라 다르게 표시한다.
+        //
+        // 시험 20분 뒤부터 학생이 개별 제출하고 나가므로, 미접속에는 두 경우가 섞인다.
+        //   제출하고 정상적으로 나감  → 그대로 두면 된다
+        //   못 내고 연결이 끊김        → 교수가 찾아가 봐야 한다
+        // 둘을 구분하지 않으면 답안을 못 걷은 학생을 '나갔나 보다' 하고 넘기게 된다.
         public void MarkDisconnected(string sessionId)
         {
             var student = Students.FirstOrDefault(s => s.SessionId == sessionId);
-            if (student != null)
-            {
-                student.Status = "미접속";
-                student.IsConnected = false;
-            }
+            if (student == null) return;
+
+            student.IsConnected = false;
+
+            // 이미 제출한 학생의 상태는 덮어쓰지 않는다 (제출완료 / 정리실패를 유지).
+            if (!student.IsAnswerSubmitted)
+                student.Status = "미제출(연결 끊김)";
         }
 
         // 파일 수신 완료 응답 처리: 해당 학번 학생을 '수신완료'로 표시
@@ -81,6 +88,15 @@ namespace ProfessorUI.Service
                 student.IsAnswerSubmitted = true;
                 student.Status = "제출완료";
             }
+        }
+
+        // 정리 실패 처리: 답안은 받았으나 학생 PC에 시험 파일이 남은 상태
+        // 답안 자체는 안전하므로 IsAnswerSubmitted는 그대로 둔다.
+        public void MarkCleanupFailed(string studentId)
+        {
+            var student = Students.FirstOrDefault(s => s.StudentId == studentId);
+            if (student != null)
+                student.Status = "정리실패";
         }
 
         // 부정행위 알림 처리: 해당 학번 학생을 '부정행위 감지'로 표시

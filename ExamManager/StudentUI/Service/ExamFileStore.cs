@@ -23,6 +23,9 @@ namespace StudentUI.Service
 
         private string _archivePath = string.Empty; // 수신된 .7z 임시 경로
         private string _password = string.Empty;    // 교수 PC가 함께 보낸 암호
+
+        // 이번 시험의 암호. 답안을 제출할 때 같은 암호로 묶어야 교수가 열 수 있다.
+        public string ExamPassword => _password;
         private string _transferId = string.Empty;  // 현재 전송 식별자 (재배포 판별용)
 
         private ExamFileStore() { }

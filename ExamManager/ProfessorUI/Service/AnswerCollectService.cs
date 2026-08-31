@@ -36,10 +36,10 @@ namespace ProfessorUI.Service
         private void OnFileReceived(string transferId, string sessionId, string fileName,
                                     string tempPath, long size, string password)
         {
-            // 학생을 배포 때 등록된 세션으로 찾는다. 파일 이름에 기대지 않는다.
-            string studentId = ResolveStudentId(sessionId);
+            // 학생을 로그인 때 등록된 세션으로 찾는다. 파일 이름에 기대지 않는다.
+            (string studentId, string studentName) = ResolveStudent(sessionId);
 
-            string? savedPath = SaveAnswer(studentId, tempPath);
+            string? savedPath = SaveAnswer(studentId, studentName, tempPath);
             bool success = savedPath != null;
 
             // 저장까지 끝난 뒤에 회신한다.
@@ -56,28 +56,28 @@ namespace ProfessorUI.Service
                 AnswerCollected?.Invoke(studentId, savedPath!);
         }
 
-        // 세션 ID로 학번을 찾는다. 못 찾으면 세션 ID를 그대로 쓴다 —
-        // 이름을 몰라도 파일은 반드시 남겨야 하기 때문이다.
-        private static string ResolveStudentId(string sessionId)
+        // 세션 ID로 학번과 이름을 찾는다. 못 찾으면 세션 ID를 학번 자리에 쓴다 —
+        // 누구인지 몰라도 파일은 반드시 남겨야 하기 때문이다.
+        private static (string StudentId, string Name) ResolveStudent(string sessionId)
         {
             foreach (var student in StudentStore.Instance.Students)
             {
                 if (student.SessionId == sessionId && student.StudentId.Length > 0)
-                    return student.StudentId;
+                    return (student.StudentId, student.Name);
             }
-            return sessionId;
+            return (sessionId, "");
         }
 
         // 네이티브가 임시 폴더에 받아 둔 파일을 수집 폴더로 옮긴다.
         // 임시 파일은 언제 정리될지 모르므로 반드시 옮겨 두어야 한다.
-        private static string? SaveAnswer(string studentId, string tempPath)
+        private static string? SaveAnswer(string studentId, string studentName, string tempPath)
         {
             try
             {
                 Directory.CreateDirectory(CollectFolder);
 
                 // 같은 학생이 다시 내면 덮어쓴다. 마지막 제출이 최종본이다.
-                string savedPath = Path.Combine(CollectFolder, $"{studentId}.7z");
+                string savedPath = Path.Combine(CollectFolder, BuildFileName(studentId, studentName));
                 File.Copy(tempPath, savedPath, true);
                 return savedPath;
             }
@@ -86,6 +86,19 @@ namespace ProfessorUI.Service
                 System.Diagnostics.Debug.WriteLine($"답안을 저장하지 못했습니다: {ex.Message}");
                 return null;
             }
+        }
+
+        // 교수가 탐색기에서 바로 알아볼 수 있는 이름으로 짓는다.
+        //   202407021김종범_답안파일.7z
+        // 이름은 학생이 로그인할 때 직접 입력한 값이라 경로에 못 쓰는 문자가 섞일 수 있다.
+        // 그대로 쓰면 저장이 실패하거나 엉뚱한 폴더에 쓰게 되므로 걸러 낸다.
+        private static string BuildFileName(string studentId, string studentName)
+        {
+            string safeName = studentName;
+            foreach (char bad in Path.GetInvalidFileNameChars())
+                safeName = safeName.Replace(bad, '_');
+
+            return $"{studentId}{safeName}_답안파일.7z";
         }
     }
 }
