@@ -59,6 +59,16 @@ namespace StudentUI.ViewModel
         // 교수 PC 시험 흐름 연결 전까지, 대기/시작 화면을 오가며 테스트하기 위한 임시 전환
         public ICommand GoToWaitingCommand { get; }
 
+        // ── 실시간 시계 타이머 ──
+        private readonly System.Windows.Threading.DispatcherTimer _clockTimer;
+
+        private string _currentTime = string.Empty;
+        public string CurrentTime
+        {
+            get => _currentTime;
+            set { _currentTime = value; OnPropertyChanged(); }
+        }
+
         public StudentExamViewModel(NavigationStore navigationStore, Student student)
         {
             _navigationStore = navigationStore;
@@ -67,7 +77,17 @@ namespace StudentUI.ViewModel
             IsConnected = NetworkService.Instance.IsConnected;
             NetworkService.Instance.Disconnected += OnServerDisconnected;
 
+            // 시험 화면 진입 시 감독관 소통 패널 기본 활성화
+            IsChatOpen = true;
 
+            // 실시간 시계 초기화 및 시작
+            UpdateTime();
+            _clockTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
+            _clockTimer.Tick += (s, e) => UpdateTime();
+            _clockTimer.Start();
 
             // 압축 해제 뒤 탐색기가 자동으로 열리지만, 학생이 창을 닫았거나
             // 자동 열기가 실패한 경우를 위해 언제든 다시 열 수 있게 둔다.
@@ -93,9 +113,15 @@ namespace StudentUI.ViewModel
 
         }
 
+        private void UpdateTime()
+        {
+            CurrentTime = DateTime.Now.ToString("HH:mm:ss");
+        }
+
         // 화면을 떠날 때 구독을 정리한다.
         private void Unsubscribe()
         {
+            _clockTimer.Stop();
             NetworkService.Instance.Disconnected -= OnServerDisconnected;
         }
 

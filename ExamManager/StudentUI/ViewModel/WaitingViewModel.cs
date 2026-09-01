@@ -26,6 +26,13 @@ namespace StudentUI.ViewModel
         public SharedChatViewModel ChatVM => SharedChatViewModel.Instance;
 
         // ── 1. 현재 시각 표시 ──
+        private string _currentDate = string.Empty;
+        public string CurrentDate
+        {
+            get => _currentDate;
+            set { _currentDate = value; OnPropertyChanged(); }
+        }
+
         private string _currentTime = string.Empty;
         public string CurrentTime
         {
@@ -160,6 +167,7 @@ namespace StudentUI.ViewModel
 
         private void UpdateTime()
         {
+            CurrentDate = DateTime.Now.ToString("yyyy. MM. dd (ddd)");
             CurrentTime = DateTime.Now.ToString("HH:mm:ss");
         }
 

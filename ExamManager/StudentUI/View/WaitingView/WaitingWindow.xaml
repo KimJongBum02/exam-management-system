@@ -11,10 +11,10 @@
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ShowInTaskbar="True" ResizeMode="NoResize"
         Loaded="Window_Loaded">
-    <Border Background="White" CornerRadius="10" Margin="10"
+    <Border Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Margin="10"
             MouseLeftButtonDown="Border_MouseLeftButtonDown">
         <Border.Effect>
-            <DropShadowEffect Color="Black" Opacity="0.2" ShadowDepth="2" BlurRadius="5"/>
+            <DropShadowEffect Color="#000000" Opacity="0.08" ShadowDepth="4" BlurRadius="12"/>
         </Border.Effect>
         <Grid Margin="15,10">
             <Grid.RowDefinitions>
@@ -33,10 +33,10 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="{Binding StudentInfo}" FontWeight="Bold" FontSize="14" Foreground="#333333" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="0" Text="{Binding StudentInfo}" FontWeight="Bold" FontSize="14" Foreground="#1E293B" VerticalAlignment="Center"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Command="{Binding LogoutCommand}" Content="로그아웃" Background="Transparent" BorderThickness="0" Foreground="#D32F2F" FontSize="11" Cursor="Hand" VerticalAlignment="Center"/>
-                    <Button Command="{Binding ExitCommand}" Content="종료" Background="Transparent" BorderThickness="0" Foreground="#888888" FontSize="11" Cursor="Hand" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                    <Button Command="{Binding LogoutCommand}" Content="로그아웃" Background="Transparent" BorderThickness="0" Foreground="#EF4444" FontSize="11" FontWeight="SemiBold" Cursor="Hand" VerticalAlignment="Center"/>
+                    <Button Command="{Binding ExitCommand}" Content="종료" Background="Transparent" BorderThickness="0" Foreground="#64748B" FontSize="11" Cursor="Hand" VerticalAlignment="Center" Margin="8,0,0,0"/>
                 </StackPanel>
             </Grid>
 
@@ -46,8 +46,8 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="현재는 시험 대기 중입니다." FontSize="12" Foreground="#666666" VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="1" Text="{Binding CurrentTime}" FontSize="12" Foreground="#888888" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="0" Text="현재는 시험 대기 중입니다." FontSize="12" Foreground="#64748B" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" Text="{Binding CurrentTime}" FontSize="12" FontWeight="Bold" Foreground="#1A56DB" FontFamily="Consolas, Arial" VerticalAlignment="Center"/>
             </Grid>
 
             <!-- Row 2: 접속 상태 -->
@@ -55,16 +55,16 @@
                 <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,5,0">
                     <Ellipse.Style>
                         <Style TargetType="Ellipse">
-                            <Setter Property="Fill" Value="#E53935"/>
+                            <Setter Property="Fill" Value="#EF4444"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsConnected}" Value="True">
-                                    <Setter Property="Fill" Value="#43A047"/>
+                                    <Setter Property="Fill" Value="#16A34A"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </Ellipse.Style>
                 </Ellipse>
-                <TextBlock Text="{Binding ConnectionStatusText}" FontSize="11" Foreground="#888888" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding ConnectionStatusText}" FontSize="11" Foreground="#64748B" VerticalAlignment="Center"/>
             </StackPanel>
 
             <!-- Row 3: 시험 파일 수신 상태 -->
@@ -72,21 +72,27 @@
                 <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,5,0">
                     <Ellipse.Style>
                         <Style TargetType="Ellipse">
-                            <Setter Property="Fill" Value="#BDBDBD"/>
+                            <Setter Property="Fill" Value="#94A3B8"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding ExamFile.IsReceived}" Value="True">
-                                    <Setter Property="Fill" Value="#43A047"/>
+                                    <Setter Property="Fill" Value="#16A34A"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </Ellipse.Style>
                 </Ellipse>
-                <TextBlock Text="{Binding ExamFile.StatusText}" FontSize="11" Foreground="#888888"
+                <TextBlock Text="{Binding ExamFile.StatusText}" FontSize="11" Foreground="#64748B"
                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
             </StackPanel>
 
             <!-- Row 4: 준비 화면 전환 버튼 -->
-            <Button Grid.Row="4" Command="{Binding TestExamCommand}" Content="시험 준비 화면으로 전환" Margin="0,8,0,0" Background="#E0E0E0" BorderThickness="0" Padding="5" Cursor="Hand" FontSize="11"/>
+            <Button Grid.Row="4" Command="{Binding TestExamCommand}" Content="시험 준비 화면으로 전환" Margin="0,8,0,0" Background="#F1F5F9" Foreground="#334155" BorderThickness="0" Padding="5" Cursor="Hand" FontSize="11">
+                <Button.Resources>
+                    <Style TargetType="Border">
+                        <Setter Property="CornerRadius" Value="6"/>
+                    </Style>
+                </Button.Resources>
+            </Button>
 
             <!-- Row 5: 시작 화면 전환 버튼 -->
 

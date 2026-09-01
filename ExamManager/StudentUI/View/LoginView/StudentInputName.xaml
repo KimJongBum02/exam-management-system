@@ -9,7 +9,8 @@
     <StackPanel>
         <TextBlock Text="이름"
                    FontSize="13"
-                   Foreground="#444444"
+                   Foreground="#64748B"
+                   FontWeight="SemiBold"
                    Margin="5,0,0,6"/>
         <Grid>
             <Grid.ColumnDefinitions>
@@ -20,10 +21,10 @@
             <TextBox x:Name="StudentName"
                      Grid.Column="1"
                      FontSize="14"
-                     Foreground="#1A1A1A"
+                     Foreground="#1E293B"
                      Background="Transparent"
-                     BorderThickness="0,0,0,0.5"
-                     BorderBrush="#000000"
+                     BorderThickness="0,0,0,1"
+                     BorderBrush="#CBD5E1"
                      Padding="0,4"
                      Text="{Binding Student.StudentName, UpdateSourceTrigger=PropertyChanged}"/>
         </Grid>

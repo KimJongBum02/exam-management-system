@@ -22,6 +22,9 @@ namespace StudentUI.ViewModel
             set { _messages = value; OnPropertyChanged(); }
         }
 
+        public bool HasMessages => Messages != null && Messages.Count > 0;
+        public bool HasNoMessages => Messages == null || Messages.Count == 0;
+
         private string _inputMessage = string.Empty;
         public string InputMessage
         {
@@ -34,6 +37,11 @@ namespace StudentUI.ViewModel
         private SharedChatViewModel()
         {
             _messages = new ObservableCollection<ChatMessageModel>();
+            _messages.CollectionChanged += (s, e) =>
+            {
+                OnPropertyChanged(nameof(HasMessages));
+                OnPropertyChanged(nameof(HasNoMessages));
+            };
             SendMessageCommand = new RelayCommand(SendMessage);
 
             // 네트워크 수신 이벤트 구독
