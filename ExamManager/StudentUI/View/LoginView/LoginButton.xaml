@@ -15,17 +15,17 @@
         <Button.Template>
             <ControlTemplate TargetType="Button">
                 <Border x:Name="ButtonBorder"
-                        Background="#5C6AC4"
-                        CornerRadius="24">
+                        Background="#1A56DB"
+                        CornerRadius="10">
                     <ContentPresenter HorizontalAlignment="Center"
                                       VerticalAlignment="Center"/>
                 </Border>
                 <ControlTemplate.Triggers>
                     <Trigger Property="IsMouseOver" Value="True">
-                        <Setter TargetName="ButtonBorder" Property="Background" Value="#4C5AB4"/>
+                        <Setter TargetName="ButtonBorder" Property="Background" Value="#1D4ED8"/>
                     </Trigger>
                     <Trigger Property="IsPressed" Value="True">
-                        <Setter TargetName="ButtonBorder" Property="Background" Value="#3C4AA4"/>
+                        <Setter TargetName="ButtonBorder" Property="Background" Value="#1E40AF"/>
                     </Trigger>
                 </ControlTemplate.Triggers>
             </ControlTemplate>

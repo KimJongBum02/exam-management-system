@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="StudentUI.View.LoginView.StudentLogin"
+<UserControl x:Class="StudentUI.View.LoginView.StudentLogin"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -9,9 +9,9 @@
     <StackPanel>
         <!-- 학생 로그인 -->
         <TextBlock Text="학생 로그인"
-                   FontSize="28"
+                   FontSize="26"
                    FontWeight="Bold"
-                   Foreground="#1A1A1A"
+                   Foreground="#1E293B"
                    HorizontalAlignment="Center"/>
 
     </StackPanel>

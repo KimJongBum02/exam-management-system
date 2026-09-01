@@ -10,31 +10,47 @@
       FontFamily="{StaticResource AppFont}"
       Title="StudentExamWindow" Height="750" Width="1300">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="20">
-            <!-- 학생 정보 -->
-            <local:StudentInformation Margin="0,0,0,12"/>
-            <!-- 시험 타이머-->
-            <local:StudentTimer Margin="0,0,0,12"/>
-            <!-- 파일 수신 및 시험 응시-->
-            <Grid>
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- 상단 통합 헤더 대시보드 -->
+                <RowDefinition Height="*"/>    <!-- 메인 2단 콘텐츠 영역 -->
+                <RowDefinition Height="Auto"/> <!-- 하단 임시 전환 버튼 -->
+            </Grid.RowDefinitions>
+
+            <!-- 1. 상단 통합 헤더 대시보드 -->
+            <local:StudentInformation Grid.Row="0"/>
+
+            <!-- 2. 메인 2단 콘텐츠 영역 -->
+            <Grid Grid.Row="1">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="12"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="1.6*"/> <!-- 좌측: 시험 파일 & 문제 풀이/종료 영역 -->
+                    <ColumnDefinition Width="16"/>   <!-- 간격 -->
+                    <ColumnDefinition Width="1.1*"/> <!-- 우측: 알림 & 채팅 -->
                 </Grid.ColumnDefinitions>
-                <local:StudentFile Grid.Column="0" VerticalAlignment="Stretch"/>
-                <local:StudentExamState Grid.Column="2" VerticalAlignment="Stretch"/>
+
+                <!-- [좌측] 시험 진행 & 문제 풀이 영역 -->
+                <StackPanel Grid.Column="0">
+                    <!-- 파일 수신 및 준비 상태 카드 -->
+                    <local:StudentFile Margin="0,0,0,14"/>
+                    <!-- 문제 풀이 작업 폴더 및 시험 종료 카드 -->
+                    <local:StudentExamState/>
+                </StackPanel>
+
+                <!-- [우측] 알림 및 채팅 카드 -->
+                <shared:NotificationChatPanel Grid.Column="2"/>
             </Grid>
 
-            <!-- 교수와 주고받는 알림·채팅. 시험 내내 이 화면에 머무르므로 여기에 둔다. -->
-            <shared:NotificationChatPanel Margin="0,12,0,0"/>
-
-            <!-- 대기 화면으로 되돌아가는 임시 버튼. 교수 명령으로는 되돌아갈 일이 없어,
-                 개발 중 화면을 다시 보기 위해서만 남겨 둔다. -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0">
+            <!-- 3. 개발용 임시 화면 전환 버튼 -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
                 <Button Command="{Binding GoToWaitingCommand}" Content="시험 대기 화면으로 전환"
-                        Background="#E0E0E0" BorderThickness="0" Padding="12,6" Cursor="Hand" FontSize="12"/>
+                        Background="#F1F5F9" Foreground="#64748B" BorderThickness="0" Padding="12,6" Cursor="Hand" FontSize="12">
+                    <Button.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="6"/>
+                        </Style>
+                    </Button.Resources>
+                </Button>
             </StackPanel>
-        </StackPanel>
+        </Grid>
     </ScrollViewer>
 </Window>
