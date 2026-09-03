@@ -32,6 +32,8 @@ namespace ProfessorUI.ViewModel
         {
             OnPropertyChanged(nameof(IsStartButtonEnabled));
             OnPropertyChanged(nameof(IsContainerEnabled));
+            // 배포가 끝나면 주황색 경고가 사라져야 한다. 이 알림이 없으면 계속 떠 있는다.
+            OnPropertyChanged(nameof(WarningVisibility));
         }
 
         private void ExecuteStartExam(object obj)

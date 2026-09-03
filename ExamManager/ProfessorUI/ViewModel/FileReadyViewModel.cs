@@ -64,6 +64,21 @@ namespace ProfessorUI.ViewModel
         {
             SelectFilesCommand = new RelayCommand(ExecuteSelectFiles);
             StartProcessCommand = new RelayCommand(ExecuteStartProcess);
+
+            // 시험이 끝나 전체가 초기화되면 골라 둔 파일과 진행률도 함께 비운다.
+            FileDeployState.Cleared += ResetView;
+        }
+
+        // 화면을 파일 선택 전 상태로 되돌린다.
+        private void ResetView()
+        {
+            SelectedFilePaths.Clear();
+            SelectedFileNames.Clear();
+            SelectedFilesSummary = string.Empty;
+            CurrentStatusMessage = "대기 중...";
+            CurrentFileNameDisplay = "선택된 파일 없음";
+            ProgressValue = 0;
+            ProgressText = "0%";
         }
 
         private void ExecuteSelectFiles(object? obj)
@@ -110,7 +125,7 @@ namespace ProfessorUI.ViewModel
             ProgressValue = 0;
             ProgressText = "0%";
 
-            string examId = "Exam_" + DateTime.Now.ToString("yyyyMMdd_HHmm");
+            string examId = "Exam_" + DateTime.Now.ToString("yyyyMMdd_HHmmss");
             string packageDir = @"C:\Exam";
             string output = Path.Combine(packageDir, examId + ".7z");
 
@@ -141,11 +156,9 @@ namespace ProfessorUI.ViewModel
                 CurrentFileNameDisplay = "모든 파일 처리 완료";
                 CurrentStatusMessage = "압축 및 암호화 완료!";
 
-                // 배포 단계가 읽도록 공용 저장소에 보관
-                FileDeployState.ExamId = examId;
-                FileDeployState.PackagePath = output;
-                FileDeployState.Password = password;
-                FileDeployState.IsFilePrepared = true;
+                // 배포 단계가 읽도록 공용 저장소에 보관.
+                // 새 파일이므로 이전 배포 기록은 여기서 지워지고, 배포 목록도 다시 처음 상태가 된다.
+                FileDeployState.SetPackage(examId, output, password);
             }
             else
             {

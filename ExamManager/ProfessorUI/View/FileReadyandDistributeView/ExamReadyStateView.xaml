@@ -15,14 +15,7 @@
                 </Grid.RowDefinitions>
 
                 <StackPanel Grid.Row="0">
-                    <!-- 상단 원형 아이콘/뱃지 -->
-                    <Grid Margin="0,0,0,16">
-                        <Border HorizontalAlignment="Left" Width="36" Height="36" CornerRadius="18" Background="#5C6AC4">
-                            <TextBlock Text="!" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </Grid>
-
-                    <!-- 타이틀 및 설명 -->
+                    <!-- 타이틀 및 설명 (몇 번째 단계인지는 상단 미니 단계 표시가 알려 준다) -->
                     <TextBlock Text="시험 준비 상태로 전환" FontSize="24" FontWeight="Bold" Foreground="#1E1B4B" Margin="0,0,0,8"/>
                     <TextBlock Text="학생 PC를 대기 화면에서 시험 준비 화면으로 넘깁니다." FontSize="14" Foreground="#64748B" Margin="0,0,0,24"/>
 

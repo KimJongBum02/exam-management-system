@@ -107,9 +107,14 @@ namespace ProfessorUI.ViewModel
                 student.Status = "대기";
             }
 
-            // 3. 전역 시험 상태 초기화 
-            // ExamPhase.Waiting(0)으로 바꾸면 IsExamStarted(>= InProgress)가 false가 됩니다.
-            ExamState.CurrentPhase = ExamPhase.Waiting;
+            // 3. 준비해 둔 시험 파일과 배포 기록도 함께 비웁니다.
+            //    이걸 남겨 두면 다음 시험이 '이미 배포됨' 상태에서 시작됩니다.
+            FileDeployState.Clear();
+
+            // 4. 전역 시험 상태 초기화.
+            //    ExamPhase.Waiting(0)으로 바꾸면 IsExamStarted(>= InProgress)가 false가 되고,
+            //    단계 화면은 이 신호를 받아 첫 단계로 돌아갑니다.
+            ExamState.CompleteAndReset();
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

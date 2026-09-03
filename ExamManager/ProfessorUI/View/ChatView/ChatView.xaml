@@ -7,7 +7,7 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </UserControl.Resources>
 
-    <Grid Background="White">
+    <Grid Background="#F5F5F5">
         <Grid.ColumnDefinitions>
             <!-- 탭 목록 (마스터) -->
             <ColumnDefinition Width="150"/>
@@ -104,7 +104,7 @@
             </ScrollViewer>
 
             <!-- 입력 영역 -->
-            <Border Grid.Row="2" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="10" Background="White">
+            <Border Grid.Row="2" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="10" Background="#F5F5F5">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>

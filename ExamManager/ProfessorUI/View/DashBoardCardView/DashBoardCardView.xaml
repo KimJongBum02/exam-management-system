@@ -36,7 +36,7 @@
             </Style>
         </Grid.Resources>
 
-        <Border Grid.Column="0" Background="#F8FAFC" BorderBrush="#E2E8F0">
+        <Border Grid.Column="0" Background="White" BorderBrush="#E2E8F0">
             <StackPanel VerticalAlignment="Center">
                 <TextBlock Text="총 학생" Style="{StaticResource LabelStyle}"/>
                 <TextBlock Text="{Binding TotalStudents}" Style="{StaticResource ValueStyle}" Foreground="#1E293B"/>

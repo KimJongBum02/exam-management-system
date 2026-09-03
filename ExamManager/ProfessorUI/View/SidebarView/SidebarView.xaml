@@ -78,14 +78,10 @@
             <ListBoxItem>
                 <TextBlock Text="출결 관리" FontSize="16"/>
             </ListBoxItem>
+            <!-- 프로세스 제어 · 파일 배포 · 시험 시작/종료를 '시험' 한 메뉴로 합쳤다.
+                 안에서 7단계로 순서대로 진행한다. -->
             <ListBoxItem>
-                <TextBlock Text="프로세스 제어" FontSize="16"/>
-            </ListBoxItem>
-            <ListBoxItem>
-                <TextBlock Text="파일 배포" FontSize="16"/>
-            </ListBoxItem>
-            <ListBoxItem>
-                <TextBlock Text="시험 시작/종료" FontSize="16"/>
+                <TextBlock Text="시험" FontSize="16"/>
             </ListBoxItem>
             <ListBoxItem>
                 <TextBlock Text="OX 퀴즈" FontSize="16"/>

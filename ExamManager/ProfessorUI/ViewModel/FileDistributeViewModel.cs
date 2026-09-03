@@ -98,6 +98,12 @@ namespace ProfessorUI.ViewModel
             // ⭐ 핵심 3: static 클래스의 상태가 바뀌면 UI 전체 갱신 호출
             FileDeployState.StateChanged += OnFileDeployStateChanged;
 
+            // 새 파일이 준비되거나 시험이 끝나면 배포 목록을 처음 상태로 되돌린다.
+            // 이렇게 해야 앞 파일의 '수신완료' 표시나 중복 전송 방지 기록이 남아
+            // 다음 파일 배포를 막는 일이 없다.
+            FileDeployState.PackageChanged += ResetRows;
+            FileDeployState.Cleared += ResetRows;
+
             // 실제 접속한 학생(현황판)과 동기화
             foreach (var connected in StudentStore.Instance.Students)
                 Students.Add(CreateRow(connected));
@@ -137,6 +143,20 @@ namespace ProfessorUI.ViewModel
             var dispatcher = Application.Current?.Dispatcher;
             if (dispatcher == null || dispatcher.HasShutdownStarted) return;
             dispatcher.BeginInvoke(action);
+        }
+
+        // 학생별 전송 진행률·상태를 배포 전 상태로 되돌린다.
+        private void ResetRows()
+        {
+            foreach (var student in Students)
+            {
+                student.SendingSessionId = null;
+                student.ProgressValue = 0;
+                student.StatusText = "대기 중";
+            }
+
+            ValidationMessage = string.Empty;
+            DeployStatusMessage = "배포 대기 중";
         }
 
         // static 상태 변경 시 호출되는 이벤트 핸들러

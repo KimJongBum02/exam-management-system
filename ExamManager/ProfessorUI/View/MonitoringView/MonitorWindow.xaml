@@ -6,7 +6,7 @@
         Title="시험 현황 모니터링" Width="1300" Height="800"
         FontFamily="{StaticResource AppFont}">
 
-    <Grid Background="#F1F5F9">
+    <Grid Background="#F5F5F5">
         <Grid.RowDefinitions>
             <RowDefinition Height="AUTO" />
             <RowDefinition Height="*" />

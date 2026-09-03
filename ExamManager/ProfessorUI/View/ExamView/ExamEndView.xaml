@@ -30,33 +30,6 @@
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0" Margin="0,0,0,12">
-                <Grid Margin="0,0,0,12">
-                    <Border HorizontalAlignment="Left" Width="36" Height="36" CornerRadius="18">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Background" Value="#F1F5F9"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsContainerEnabled}" Value="True">
-                                        <Setter Property="Background" Value="#5C6AC4"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <TextBlock Text="3" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Foreground" Value="#94A3B8"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsContainerEnabled}" Value="True">
-                                            <Setter Property="Foreground" Value="White"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </Border>
-                </Grid>
-
                 <TextBlock Text="승인 후 종료" FontSize="24" FontWeight="Bold" Margin="0,0,0,6">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">

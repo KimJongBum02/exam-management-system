@@ -15,13 +15,6 @@
                 </Grid.RowDefinitions>
 
                 <StackPanel Grid.Row="0">
-                    <Grid Margin="0,0,0,16">
-                        <Border HorizontalAlignment="Left" Width="36" Height="36" CornerRadius="18" Background="#5C6AC4">
-                            <TextBlock Text="1" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        
-                    </Grid>
-
                     <TextBlock Text="파일 준비 및 암호화" FontSize="24" FontWeight="Bold" Foreground="#1E1B4B" Margin="0,0,0,8"/>
                     <TextBlock Text="배포할 파일들을 선택하면, 자동으로 암호화 및 압축을 진행합니다." FontSize="14" Foreground="#64748B" Margin="0,0,0,24"/>
 
