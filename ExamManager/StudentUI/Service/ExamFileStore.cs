@@ -173,6 +173,21 @@ namespace StudentUI.Service
             StatusText = $"파일 수신 실패: {message}";
         });
 
+        // 답안 제출이 끝나면 시험 파일이 지워지므로 상태 문구도 그에 맞게 바꾼다.
+        // 이걸 하지 않으면 제출을 마친 뒤에도 화면에 "수신 완료 100%"가 그대로 남아
+        // 학생이 제출이 안 된 줄 안다.
+        // 제출은 배경 작업에서 끝나므로, 화면 데이터는 반드시 화면 스레드로 넘겨 고친다.
+        // (ExtractedFiles 같은 목록은 다른 스레드에서 건드리면 예외가 난다)
+        public void MarkAnswerSubmitted(bool cleanupSucceeded) => Post(() =>
+        {
+            Progress = 100;
+            StatusText = cleanupSucceeded
+                ? "답안 전송 완료 · 시험 파일이 정리되었습니다"
+                : "답안 전송 완료 · 시험 파일이 남아 있습니다. 교수님께 알려 주세요";
+
+            ExtractedFiles.Clear();
+        });
+
         // ── 압축 해제 ──
         public async Task ExtractAsync()
         {

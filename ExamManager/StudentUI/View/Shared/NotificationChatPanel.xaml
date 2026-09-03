@@ -52,8 +52,44 @@
                     </StackPanel>
                 </Border>
                 <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto">
-                    <TextBlock Text="새로운 알림이 없습니다." Foreground="#94A3B8"
-                               HorizontalAlignment="Center" Margin="0,30"/>
+                    <Grid>
+                        <!-- 적발 내역이 없을 때 -->
+                        <TextBlock Text="새로운 알림이 없습니다." Foreground="#94A3B8"
+                                   HorizontalAlignment="Center" Margin="0,30">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasCheatWarnings}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <!-- 감시에 걸린 내역 (최근 것이 위) -->
+                        <ItemsControl ItemsSource="{Binding CheatWarnings}" Margin="10"
+                                      Visibility="{Binding HasCheatWarnings, Converter={StaticResource BoolToVis}}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#FEF2F2" BorderBrush="#FECACA" BorderThickness="1"
+                                            CornerRadius="8" Padding="12,10" Margin="0,0,0,8">
+                                        <StackPanel>
+                                            <Grid>
+                                                <TextBlock Text="{Binding Description}" FontSize="12" FontWeight="Bold"
+                                                           Foreground="#B91C1C" TextWrapping="Wrap" HorizontalAlignment="Left"/>
+                                                <TextBlock Text="{Binding Time}" FontSize="11" Foreground="#94A3B8"
+                                                           HorizontalAlignment="Right" VerticalAlignment="Top"/>
+                                            </Grid>
+                                            <TextBlock Text="시험 중에는 실행할 수 없습니다." FontSize="11"
+                                                       Foreground="#EF4444" Margin="0,3,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
                 </ScrollViewer>
             </StackPanel>
         </Border>

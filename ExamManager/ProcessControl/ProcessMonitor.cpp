@@ -136,6 +136,11 @@ void ProcessMonitor::Start()
     m_prevRunningBlacklist.clear();
     m_reportedNew.clear();
 
+    // 감시를 켠 직후 첫 검사는 '정리'다.
+    // 시험 전부터 켜져 있던 금지 프로그램을 끄기는 하되, 부정행위로 알리지는 않는다.
+    // (이전 목록이 비어 있어 첫 검사에서는 실행 중인 것이 전부 신규로 보인다)
+    m_firstCheck = true;
+
     // 이 시각이 신규 판정의 기준선이다. 스레드를 띄우기 전에 찍어야
     // 첫 검사와 기준선 사이에 실행된 프로세스를 놓치지 않는다.
     GetSystemTimeAsFileTime(&m_startTime);
@@ -283,6 +288,11 @@ void ProcessMonitor::CheckOnce()
     // 종료는 매 검사마다 시도하되(못 죽인 프로세스는 계속 재시도),
     // 콜백은 '없다→있다'로 새로 등장한 경우에만 발화해 500ms 반복 알림을 막는다.
     std::vector<std::wstring> currentBlacklist;
+
+    // 감시를 켠 뒤에 실행된 것만 따로 모은다.
+    // 첫 검사에서 '시험 전부터 켜져 있던 것'과 구분하는 데 쓴다.
+    std::vector<std::wstring> newlyStarted;
+
     for (const auto& proc : running)
     {
         // 리스트와 비교할 때만 정규화된 이름을 쓴다.
@@ -299,15 +309,22 @@ void ProcessMonitor::CheckOnce()
 
             if (!IsInList(proc.name, currentBlacklist))
                 currentBlacklist.push_back(proc.name);
+
+            if (proc.isNew && !IsInList(proc.name, newlyStarted))
+                newlyStarted.push_back(proc.name);
         }
     }
 
     for (const auto& name : currentBlacklist)
     {
-        if (!IsInList(name, m_prevRunningBlacklist))
-        {
-            if (cb) cb(0, name);  // type 0 = 블랙리스트 실행 (신규 등장)
-        }
+        if (IsInList(name, m_prevRunningBlacklist)) continue;   // 이미 알린 것
+
+        // 첫 검사에서는 감시를 켠 뒤에 실행된 것만 알린다.
+        // 시험 전부터 켜져 있던 금지 프로그램은 끄기는 하되 부정행위가 아니라 정리 대상이다.
+        // (두 번째 검사부터는 이전 목록과 비교하므로 이 구분이 필요 없다)
+        if (m_firstCheck && !IsInList(name, newlyStarted)) continue;
+
+        if (cb) cb(0, name);  // type 0 = 블랙리스트 실행 (신규 등장)
     }
 
     m_prevRunningBlacklist = currentBlacklist;
@@ -346,4 +363,7 @@ void ProcessMonitor::CheckOnce()
         m_reportedNew.insert(proc.pid);
         if (cb) cb(2, proc.name);  // type 2 = 목록에 없는 신규 프로세스
     }
+
+    // 첫 검사가 끝났다. 다음 검사부터는 실제 부정행위로 보고 알린다.
+    m_firstCheck = false;
 }

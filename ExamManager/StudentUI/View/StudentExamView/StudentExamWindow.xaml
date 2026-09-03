@@ -9,10 +9,14 @@
       Background="#F5F5F5"
       FontFamily="{StaticResource AppFont}"
       Title="StudentExamWindow" Height="750" Width="1300">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </Window.Resources>
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <Grid Margin="20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- 상단 통합 헤더 대시보드 -->
+                <RowDefinition Height="Auto"/> <!-- 제출 진행 상황 -->
                 <RowDefinition Height="*"/>    <!-- 메인 2단 콘텐츠 영역 -->
                 <RowDefinition Height="Auto"/> <!-- 하단 임시 전환 버튼 -->
             </Grid.RowDefinitions>
@@ -20,8 +24,17 @@
             <!-- 1. 상단 통합 헤더 대시보드 -->
             <local:StudentInformation Grid.Row="0"/>
 
+            <!-- 1-2. 답안 제출 진행 상황 (제출 중일 때만 보인다) -->
+            <StackPanel Grid.Row="1">
+                <!-- 답안 제출은 시간이 걸린다. 표시가 없으면 멈춘 줄 알고 다시 누른다. -->
+                <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="8"
+                        Padding="14,10" Margin="0,12,0,0"
+                        Visibility="{Binding IsSubmitting, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="{Binding SubmitStatus}" FontSize="13" FontWeight="SemiBold" Foreground="#1D4ED8" TextWrapping="Wrap"/>
+                </Border>
+            </StackPanel>
             <!-- 2. 메인 2단 콘텐츠 영역 -->
-            <Grid Grid.Row="1">
+            <Grid Grid.Row="2">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="1.6*"/> <!-- 좌측: 시험 파일 & 문제 풀이/종료 영역 -->
                     <ColumnDefinition Width="16"/>   <!-- 간격 -->
@@ -41,7 +54,7 @@
             </Grid>
 
             <!-- 3. 개발용 임시 화면 전환 버튼 -->
-            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
+            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
                 <Button Command="{Binding GoToWaitingCommand}" Content="시험 대기 화면으로 전환"
                         Background="#F1F5F9" Foreground="#64748B" BorderThickness="0" Padding="12,6" Cursor="Hand" FontSize="12">
                     <Button.Resources>

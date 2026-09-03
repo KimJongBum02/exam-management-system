@@ -19,6 +19,9 @@ namespace ProfessorUI.ViewModel
         // 🎯 채팅 뷰모델 싱글턴 (상태 유지용)
         private readonly ChatViewModel _sharedChatViewModel;
 
+        // 🎯 알림 뷰모델도 하나만 둔다. 매번 새로 만들면 스크롤 위치 같은 상태가 초기화된다.
+        private readonly NotificationViewModel _sharedNotificationViewModel;
+
         // (기존 네비게이션 관련 코드들...)
         public SidebarViewModel SidebarViewModel { get; }
         public DashBoardCardViewModel DashBoardCardVM { get; } = new DashBoardCardViewModel();
@@ -41,6 +44,7 @@ namespace ProfessorUI.ViewModel
             
             // 🎯 채팅 뷰모델 미리 생성 (싱글턴)
             _sharedChatViewModel = new ChatViewModel();
+            _sharedNotificationViewModel = new NotificationViewModel();
 
             // LayoutStore의 이벤트에 반응하여 특정 탭 열기 연동
             LayoutStore.ChatOpenedForStudent += OnChatOpenedForStudent;
@@ -91,7 +95,7 @@ namespace ProfessorUI.ViewModel
             {
                 // 열려있는 상태에 따라 뷰모델 생성/매핑
                 if (LayoutStore.IsChatOpen) RightPaneViewModel = _sharedChatViewModel;
-                else if (LayoutStore.IsNotificationOpen) RightPaneViewModel = new NotificationViewModel();
+                else if (LayoutStore.IsNotificationOpen) RightPaneViewModel = _sharedNotificationViewModel;
                 else RightPaneViewModel = null;
 
                 OnPropertyChanged(nameof(RightPaneViewModel));

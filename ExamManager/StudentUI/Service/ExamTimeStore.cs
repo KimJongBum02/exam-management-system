@@ -36,6 +36,18 @@ namespace StudentUI.Service
         public void Start()
         {
             NetworkService.Instance.PacketReceived += OnPacketReceived;
+
+            // 학생이 스스로 답안을 내고 나가는 경우, 교수의 종료 신호가 오지 않는다.
+            // 그래도 그 학생의 시험은 끝난 것이므로 타이머를 멈춘다.
+            AnswerSubmitService.Instance.StateChanged += (state, _) =>
+            {
+                if (state != AnswerSubmitState.Succeeded) return;
+
+                // 제출은 배경 작업에서 끝난다. 타이머는 화면 스레드에서만 다룰 수 있다.
+                var dispatcher = Application.Current?.Dispatcher;
+                if (dispatcher == null || dispatcher.HasShutdownStarted) return;
+                dispatcher.BeginInvoke(Finish);
+            };
         }
 
         // ── 바인딩용 상태 ──
@@ -68,7 +80,18 @@ namespace StudentUI.Service
         // 종료는 교수가 '시험 종료' 버튼으로 결정한다.
         public bool IsTimeUp => IsRunning && _remaining <= TimeSpan.Zero;
 
-        public string StatusText => IsTimeUp ? "시험 시간 종료" : IsRunning ? "시험 진행 중" : "시험 대기 중";
+        // 시험이 끝났는지. 멈춘 것과 끝난 것을 구분해야 문구가 "대기 중"으로 되돌아가지 않는다.
+        private bool _isFinished;
+        public bool IsFinished
+        {
+            get => _isFinished;
+            private set { _isFinished = value; OnPropertyChanged(); }
+        }
+
+        public string StatusText =>
+            IsFinished ? "시험 종료" :
+            IsTimeUp   ? "시험 시간 종료" :
+            IsRunning  ? "시험 진행 중" : "시험 대기 중";
 
         // ── 교수 신호 처리 (네이티브 스레드에서 호출됨) ──
         private void OnPacketReceived(PacketType type, IntPtr payload, uint payloadLen)
@@ -83,7 +106,7 @@ namespace StudentUI.Service
             dispatcher.BeginInvoke(() =>
             {
                 if (phase == ExamPhase.InProgress) Begin();
-                else if (phase >= ExamPhase.SubmitRequested) Stop();
+                else if (phase >= ExamPhase.SubmitRequested) Finish();
             });
         }
 
@@ -93,16 +116,19 @@ namespace StudentUI.Service
             if (IsRunning) return;
 
             _startedAt = DateTime.UtcNow;
+            IsFinished = false;
             IsRunning = true;
             Remaining = ExamDuration;
             _ticker.Start();
             OnPropertyChanged(nameof(StatusText));
         }
 
-        private void Stop()
+        // 시험이 끝났다. 교수의 종료 신호나 학생 본인의 제출 완료로 불린다.
+        private void Finish()
         {
             _ticker.Stop();
             IsRunning = false;
+            IsFinished = true;
             OnPropertyChanged(nameof(StatusText));
         }
 
