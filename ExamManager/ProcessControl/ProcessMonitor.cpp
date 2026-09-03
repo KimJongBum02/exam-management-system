@@ -260,6 +260,54 @@ bool ProcessMonitor::IsBlacklisted(const ProcessInfo& proc, const std::vector<st
 //
 // 정상 소프트웨어도 같은 바이너리를 다른 이름으로 배포하므로
 // (git.exe → bash.exe 등) 그런 경우는 두 이름을 모두 목록에 넣으면 된다.
+// 학생의 행위로 볼 수 없는 Windows 자체 구성요소.
+//
+// explorer.exe는 바탕화면과 작업표시줄 그 자체라 로그인 시점부터 항상 떠 있다.
+// 폴더를 열 때마다 새 프로세스가 잠깐 생기는데, 시험 폴더를 자동으로 띄우는 것도
+// 우리 프로그램이라 알림이 계속 쌓인다.
+//
+// 게다가 알려 봐야 막을 수 없다. 학생은 이미 떠 있는 탐색기를 쓰면 되고,
+// 그때는 새 프로세스가 생기지 않아 어차피 잡히지 않는다.
+//
+// type 2('모르는 프로그램') 판정에서만 뺀다.
+// 교수가 블랙리스트에 직접 넣었다면 그건 명시적인 의사이므로 그대로 종료한다.
+static bool IsSystemComponent(const std::wstring& matchName)
+{
+    static const wchar_t* kComponents[] = { L"explorer" };
+
+    for (const wchar_t* name : kComponents)
+        if (_wcsicmp(matchName.c_str(), name) == 0) return true;
+
+    return false;
+}
+// EnumWindows가 창을 하나씩 넘겨줄 때마다 불린다.
+// 학생이 보고 조작할 수 있는 창만 추린다.
+static BOOL CALLBACK CollectWindowOwner(HWND hwnd, LPARAM lparam)
+{
+    // 숨겨진 창은 백그라운드 프로그램이 내부 용도로 만든 것이다.
+    if (!IsWindowVisible(hwnd)) return TRUE;
+
+    // 제목이 없는 창도 대부분 보조 창이다. 학생이 쓰는 프로그램은 제목이 있다.
+    if (GetWindowTextLengthW(hwnd) == 0) return TRUE;
+
+    DWORD pid = 0;
+    GetWindowThreadProcessId(hwnd, &pid);
+    if (pid != 0)
+        reinterpret_cast<std::set<DWORD>*>(lparam)->insert(pid);
+
+    return TRUE;   // 계속 순회
+}
+
+// 지금 화면에 창을 띄우고 있는 프로세스들의 PID를 모은다.
+//
+// RuntimeBroker.exe나 backgroundTaskHost.exe처럼 Windows가 알아서 띄우는 프로세스는
+// 창이 없다. 학생이 직접 실행한 것과 구분하는 기준으로 쓴다.
+std::set<DWORD> ProcessMonitor::GetPidsWithVisibleWindow()
+{
+    std::set<DWORD> pids;
+    EnumWindows(CollectWindowOwner, reinterpret_cast<LPARAM>(&pids));
+    return pids;
+}
 bool ProcessMonitor::IsWhitelisted(const ProcessInfo& proc, const std::vector<std::wstring>& whitelist)
 {
     return IsInList(proc.matchName, whitelist)
@@ -299,6 +347,12 @@ void ProcessMonitor::CheckOnce()
         // 아래 currentBlacklist는 스냅샷끼리의 비교라 원본 이름 그대로 다뤄도 일관된다.
         if (IsBlacklisted(proc, blacklist))
         {
+            // Windows 자체 구성요소는 목록에 들어와도 종료하지 않는다.
+            // explorer.exe를 죽이면 바탕화면과 작업표시줄이 통째로 사라진다.
+            // 교수가 실수로 넣으면 학생 PC 전체가 시험 도중 화면을 잃게 되는데,
+            // 그건 어떤 경우에도 의도한 결과가 아니다.
+            if (IsSystemComponent(proc.matchName)) continue;
+
             // PID를 이미 알고 있으므로 재스냅샷 없이 바로 종료
             HANDLE h = OpenProcess(PROCESS_TERMINATE, FALSE, proc.pid);
             if (h)
@@ -353,12 +407,23 @@ void ProcessMonitor::CheckOnce()
     // 블랙리스트는 '알려진 것'만 막으므로, 목록에 없는 프로그램은 그대로 통과한다.
     // 시험 시작 후 새로 실행됐다는 사실 자체를 근거로 삼아 이 구멍을 메운다.
     // 종료하지 않고 알리기만 한다. 판단은 교수 몫이다.
+    //
+    // 단, 창이 있는 것만 본다. Windows가 알아서 띄우는 백그라운드 프로세스
+    // (RuntimeBroker.exe 등)까지 잡으면 알림이 그런 것들로 가득 차 진짜 부정행위가 묻힌다.
+    // 창 없이 도는 금지 프로그램은 블랙리스트가 창 여부와 무관하게 종료하므로 여기서 뺀다.
+    std::set<DWORD> windowedPids = GetPidsWithVisibleWindow();
+
     for (const auto& proc : running)
     {
         if (!proc.isNew) continue;
         if (IsBlacklisted(proc, blacklist)) continue;        // 이미 type 0으로 보고됨
         if (IsWhitelisted(proc, whitelist)) continue;        // 시험에 필요한 프로그램
+        if (IsSystemComponent(proc.matchName)) continue;     // Windows 자체 구성요소
         if (m_reportedNew.count(proc.pid)) continue;         // PID당 한 번만 알린다
+
+        // 창이 아직 안 떴을 수도 있으므로 여기서는 기록하지 않고 넘긴다.
+        // 다음 검사에서 창이 생기면 그때 알린다.
+        if (!windowedPids.count(proc.pid)) continue;
 
         m_reportedNew.insert(proc.pid);
         if (cb) cb(2, proc.name);  // type 2 = 목록에 없는 신규 프로세스

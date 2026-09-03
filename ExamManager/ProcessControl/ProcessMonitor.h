@@ -53,6 +53,10 @@ private:
     bool IsBlacklisted(const ProcessInfo& proc, const std::vector<std::wstring>& blacklist);
     bool IsWhitelisted(const ProcessInfo& proc, const std::vector<std::wstring>& whitelist);
 
+    // 지금 화면에 창을 띄우고 있는 프로세스들의 PID.
+    // 학생이 직접 실행해 쓰고 있는 프로그램을 가려내는 데 쓴다.
+    static std::set<DWORD> GetPidsWithVisibleWindow();
+
 private:
     // 확장자를 뗀 상태로 보관한다(Set*list에서 정규화).
     std::vector<std::wstring> m_blacklist;
