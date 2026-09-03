@@ -63,8 +63,12 @@ namespace ProfessorUI
                 else if (type == PacketType.CheatingAlert)
                 {
                     // 누가 보냈는지는 로그인 때 등록된 세션 정보로 알 수 있으므로 페이로드에서 읽지 않는다.
-                    System.Diagnostics.Debug.WriteLine($"[부정행위] {studentId} {name} — {ReadAlertDescription(payload, len)}");
-                    PostToUi(() => Service.StudentStore.Instance.MarkCheatingDetected(studentId));
+                    string description = ReadAlertDescription(payload, len);
+                    PostToUi(() =>
+                    {
+                        Service.StudentStore.Instance.MarkCheatingDetected(studentId);
+                        Service.AlertStore.Instance.Add(studentId, name, description);
+                    });
                 }
             };
 

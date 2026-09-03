@@ -171,6 +171,7 @@
             <!-- 시험종료 버튼 -->
             <Button Grid.Row="1"
                     x:Name="ExamEndButton"
+                    Command="{Binding SubmitAnswerCommand}"
                     Content="시험 종료"
                     FontSize="13"
                     FontWeight="Bold"

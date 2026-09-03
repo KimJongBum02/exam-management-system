@@ -20,6 +20,10 @@ namespace StudentUI.Service
     {
         public static ExamMonitorService Instance { get; } = new ExamMonitorService();
 
+        // 적발 내용을 학생 화면에도 알린다.
+        // 지금은 금지 프로그램이 조용히 종료되기만 해서, 학생이 이유를 모르고 계속 다시 켠다.
+        // 네이티브 감시 스레드에서 발생하므로 받는 쪽에서 화면 스레드로 넘겨야 한다.
+        public event Action<string>? CheatWarning;
         // 네이티브 감시 DLL 래퍼. 시험이 시작될 때 처음 만들어진다(EnsureProcessControl 참고).
         private ProcessControlService? _processControl;
 
@@ -102,26 +106,31 @@ namespace StudentUI.Service
             return _processControl;
         }
 
-        // ── ③ 적발 내용을 교수 PC로 보고 ──
-        // 네이티브 감시 스레드에서 불린다. 화면은 건드리지 않고 보내기만 한다.
+        // ── ③ 적발 내용을 교수 PC로 보고하고, 학생 화면에도 알린다 ──
+        // 네이티브 감시 스레드에서 불린다. 화면은 직접 건드리지 않고 알리기만 한다.
         private void OnCheatDetected(int type, string processName)
         {
-            NetworkService.Instance.SendPacket(PacketType.CheatingAlert, BuildAlertPayload(type, processName));
+            (CheatingAlertType alertType, string description) = Describe(type, processName);
+
+            NetworkService.Instance.SendPacket(PacketType.CheatingAlert, BuildAlertPayload(alertType, description));
+            CheatWarning?.Invoke(description);
         }
 
-        // Protocol.h의 CheatingAlertPayload 형식으로 만든다.
-        //   [studentId 16][studentName 64][alertType 4][description 256] = 340바이트
-        // 학번·이름 칸은 비워 둔다 — 교수 PC는 로그인 때 등록된 세션으로 누가 보냈는지 이미 안다.
-        private static byte[] BuildAlertPayload(int type, string processName)
-        {
-            // type은 ProcessControlService.CheatDetected의 종류 값이다.
-            (CheatingAlertType alertType, string description) = type switch
+        // 적발 종류를 사람이 읽을 문구로 바꾼다.
+        // 교수와 학생이 같은 문구를 보도록 여기 한 곳에서만 만든다.
+        private static (CheatingAlertType Type, string Description) Describe(int type, string processName)
+            => type switch
             {
                 0 => (CheatingAlertType.BlacklistedProcessLaunched, $"금지된 프로그램 실행: {processName}"),
                 1 => (CheatingAlertType.RequiredProcessTerminated, $"시험에 필요한 프로그램 종료: {processName}"),
                 _ => (CheatingAlertType.UnauthorizedProcess, $"목록에 없는 프로그램 실행: {processName}"),
             };
 
+        // Protocol.h의 CheatingAlertPayload 형식으로 만든다.
+        //   [studentId 16][studentName 64][alertType 4][description 256] = 340바이트
+        // 학번·이름 칸은 비워 둔다 — 교수 PC는 로그인 때 등록된 세션으로 누가 보냈는지 이미 안다.
+        private static byte[] BuildAlertPayload(CheatingAlertType alertType, string description)
+        {
             byte[] payload = new byte[340];
             BitConverter.GetBytes((uint)alertType).CopyTo(payload, 80);
 

@@ -199,11 +199,14 @@ namespace StudentUI.Service
                 if (Directory.Exists(examFolder))
                     Directory.Delete(examFolder, true);
 
-                // 성공은 따로 알리지 않는다. 교수 PC는 답안을 받은 시점에 이미 '제출완료'로 표시했다.
+                // 교수 PC에는 따로 알리지 않는다. 답안을 받은 시점에 이미 '제출완료'로 표시했다.
+                // 학생 화면은 아직 "수신 완료 100%"에 멈춰 있으므로 여기서 바꿔 준다.
+                ExamFileStore.Instance.MarkAnswerSubmitted(cleanupSucceeded: true);
             }
             catch (Exception ex)
             {
                 ReportStatus(StudentStatus.CleanupFailed, $"시험 파일을 지우지 못했습니다: {ex.Message}");
+                ExamFileStore.Instance.MarkAnswerSubmitted(cleanupSucceeded: false);
                 SetState(AnswerSubmitState.Succeeded,
                          "답안은 제출되었으나 시험 파일이 남아 있습니다. 교수님께 알려 주세요.");
             }
