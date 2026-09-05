@@ -1,0 +1,48 @@
+<Window x:Class="StudentUI.View.QuizView.QuizWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="OX 퀴즈" Height="290" Width="420"
+        FontFamily="{StaticResource AppFont}"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        WindowStartupLocation="CenterScreen" Topmost="True"
+        ShowInTaskbar="False" ResizeMode="NoResize">
+    <Border Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Margin="10"
+            MouseLeftButtonDown="Border_MouseLeftButtonDown">
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" Opacity="0.12" ShadowDepth="4" BlurRadius="14"/>
+        </Border.Effect>
+
+        <Grid Margin="22,18">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Text="OX 퀴즈" FontSize="13" FontWeight="Bold" Foreground="#64748B"
+                       Margin="0,0,0,14"/>
+
+            <!-- 문제 본문. 길어질 수 있어 남는 공간을 다 쓴다 -->
+            <TextBlock Grid.Row="1" x:Name="QuestionText" FontSize="16" Foreground="#1E293B"
+                       TextWrapping="Wrap" LineHeight="26" VerticalAlignment="Center"/>
+
+            <!-- 답 고르기 -->
+            <UniformGrid Grid.Row="2" x:Name="AnswerButtons" Columns="2" Margin="0,18,0,0">
+                <Button x:Name="AnswerO" Content="O" Click="AnswerO_Click" Margin="0,0,6,0"
+                        Height="58" FontSize="24" FontWeight="Bold" Foreground="#1E293B"
+                        Background="White" BorderBrush="#CBD5E1" BorderThickness="1.5" Cursor="Hand"/>
+                <Button x:Name="AnswerX" Content="X" Click="AnswerX_Click" Margin="6,0,0,0"
+                        Height="58" FontSize="24" FontWeight="Bold" Foreground="#1E293B"
+                        Background="White" BorderBrush="#CBD5E1" BorderThickness="1.5" Cursor="Hand"/>
+            </UniformGrid>
+
+            <!-- 답을 내고 나면 이 줄만 남는다 -->
+            <TextBlock Grid.Row="3" x:Name="StatusText" FontSize="13" Foreground="#64748B"
+                       HorizontalAlignment="Center" Margin="0,14,0,0"/>
+        </Grid>
+    </Border>
+</Window>

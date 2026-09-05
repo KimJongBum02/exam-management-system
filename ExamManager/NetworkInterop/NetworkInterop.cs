@@ -1,4 +1,4 @@
-// NetworkInterop.cs
+﻿// NetworkInterop.cs
 // UI 팀이 이 파일을 ProfessorUI 또는 StudentUI 프로젝트에 추가해서 사용합니다.
 // NetworkLib_Native.dll 이 실행 파일과 같은 폴더에 있어야 합니다.
 //
@@ -345,6 +345,128 @@ namespace NetworkLib
             success     = buffer[SuccessOffset] == 1;
             message     = ExamSubmitPayload.ReadFixedString(buffer, MessageOffset, MessageSize);
             return true;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  퀴즈 — 수업 중 이해도 확인용 OX 문제
+    //
+    //  Protocol.h 에 구조가 이미 정의돼 있어 그 형식을 그대로 따른다.
+    //  Protocol.h 전체가 #pragma pack(push, 1) 이라 패딩이 없다.
+    //
+    //  QuizQuestionHeader (561바이트, 고정):
+    //    [char quizId[37]][uint32 questionType][char question[512]]
+    //    [uint32 optionCount][uint32 timeoutSeconds]
+    //
+    //  헤더 뒤에 optionCount 개의 보기 문자열이 붙는 가변 길이 형식이지만,
+    //  OX 는 보기가 없으므로 optionCount 를 0 으로 두고 헤더만 보낸다.
+    // ══════════════════════════════════════════════════════════════════
+    public enum QuizQuestionType : uint
+    {
+        OX             = 0,
+        ShortAnswer    = 1,
+        MultipleChoice = 2,
+    }
+
+    public static class QuizQuestionPayload
+    {
+        private const int QuizIdSize   = 37;
+        private const int QuestionSize = 512;
+
+        private const int TypeOffset     = QuizIdSize;                 // 37
+        private const int QuestionOffset = TypeOffset + 4;             // 41
+        private const int OptionOffset   = QuestionOffset + QuestionSize; // 553
+        private const int TimeoutOffset  = OptionOffset + 4;           // 557
+        public  const int Size           = TimeoutOffset + 4;          // 561
+
+        // timeoutSeconds 0 은 제한 없음이다.
+        // 수업 중 퀴즈는 교수가 보고 넘어가는 속도에 맞추므로 기본을 제한 없음으로 둔다.
+        public static byte[] Encode(string quizId, string question, uint timeoutSeconds = 0)
+        {
+            byte[] payload = new byte[Size];
+            ExamSubmitPayload.WriteFixedString(payload, 0, quizId, QuizIdSize);
+            BitConverter.GetBytes((uint)QuizQuestionType.OX).CopyTo(payload, TypeOffset);
+            ExamSubmitPayload.WriteFixedString(payload, QuestionOffset, question, QuestionSize);
+            BitConverter.GetBytes(0u).CopyTo(payload, OptionOffset);          // OX 는 보기가 없다
+            BitConverter.GetBytes(timeoutSeconds).CopyTo(payload, TimeoutOffset);
+            return payload;
+        }
+
+        // OX 가 아닌 문제 유형은 아직 화면이 없으므로 받아도 버린다.
+        public static bool TryDecode(IntPtr payload, uint payloadLen,
+                                     out string quizId, out string question, out uint timeoutSeconds)
+        {
+            quizId = "";
+            question = "";
+            timeoutSeconds = 0;
+            if (payload == IntPtr.Zero || payloadLen < Size) return false;
+
+            byte[] buffer = new byte[Size];
+            Marshal.Copy(payload, buffer, 0, Size);
+
+            if (BitConverter.ToUInt32(buffer, TypeOffset) != (uint)QuizQuestionType.OX) return false;
+
+            quizId         = ExamSubmitPayload.ReadFixedString(buffer, 0,              QuizIdSize);
+            question       = ExamSubmitPayload.ReadFixedString(buffer, QuestionOffset, QuestionSize);
+            timeoutSeconds = BitConverter.ToUInt32(buffer, TimeoutOffset);
+            return quizId.Length > 0;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  QuizAnswer(51) 페이로드 — 학생이 보내는 응답
+    //
+    //  Protocol.h의 QuizAnswerPayload와 같은 형식(고정 373바이트):
+    //    [char quizId[37]][char studentId[16]][char studentName[64]][char answer[256]]
+    //
+    //  answer 는 "O" 또는 "X" 한 글자만 쓴다.
+    //  학번·이름을 함께 실어 보내지만, 교수 쪽은 세션으로도 누구인지 알 수 있으므로
+    //  이 값이 비어 있어도 응답을 버리지 않는다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class QuizAnswerPayload
+    {
+        private const int QuizIdSize   = 37;
+        private const int StudentIdSize = 16;
+        private const int NameSize     = 64;
+        private const int AnswerSize   = 256;
+
+        private const int StudentIdOffset = QuizIdSize;                    // 37
+        private const int NameOffset      = StudentIdOffset + StudentIdSize; // 53
+        private const int AnswerOffset    = NameOffset + NameSize;         // 117
+        public  const int Size            = AnswerOffset + AnswerSize;     // 373
+
+        public static byte[] Encode(string quizId, string studentId, string studentName, bool answer)
+        {
+            byte[] payload = new byte[Size];
+            ExamSubmitPayload.WriteFixedString(payload, 0,                quizId,      QuizIdSize);
+            ExamSubmitPayload.WriteFixedString(payload, StudentIdOffset,  studentId,   StudentIdSize);
+            ExamSubmitPayload.WriteFixedString(payload, NameOffset,       studentName, NameSize);
+            ExamSubmitPayload.WriteFixedString(payload, AnswerOffset,     answer ? "O" : "X", AnswerSize);
+            return payload;
+        }
+
+        public static bool TryDecode(IntPtr payload, uint payloadLen,
+                                     out string quizId, out string studentId, out string studentName,
+                                     out bool answer)
+        {
+            quizId = "";
+            studentId = "";
+            studentName = "";
+            answer = false;
+            if (payload == IntPtr.Zero || payloadLen < Size) return false;
+
+            byte[] buffer = new byte[Size];
+            Marshal.Copy(payload, buffer, 0, Size);
+
+            quizId      = ExamSubmitPayload.ReadFixedString(buffer, 0,               QuizIdSize);
+            studentId   = ExamSubmitPayload.ReadFixedString(buffer, StudentIdOffset, StudentIdSize);
+            studentName = ExamSubmitPayload.ReadFixedString(buffer, NameOffset,      NameSize);
+
+            string text = ExamSubmitPayload.ReadFixedString(buffer, AnswerOffset, AnswerSize).Trim();
+            if (text != "O" && text != "X") return false;   // 알 수 없는 응답은 버린다
+
+            answer = text == "O";
+            return quizId.Length > 0;
         }
     }
 
