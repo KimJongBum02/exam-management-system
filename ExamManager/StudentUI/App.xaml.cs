@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using NetworkLib;
 using StudentUI.Service;
 using StudentUI.ViewModel;
@@ -13,6 +13,7 @@ namespace StudentUI
     {
         private NavigationStore _navigationStore;
         private Window _currentWindow;
+        private Window _quizWindow;
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -39,6 +40,11 @@ namespace StudentUI
             // 답안 제출 구독 시작 — 교수의 수집 요청을 기다린다.
             Service.AnswerSubmitService.Instance.Start();
 
+            // OX 퀴즈 구독 시작 — 교수가 낸 문제를 기다린다.
+            // 수업 중 이해도 확인에도 쓰는 기능이라 시험 화면에 묶지 않고 여기서 받는다.
+            Service.QuizService.Instance.Start();
+            Service.QuizService.Instance.QuestionReceived += ShowQuizWindow;
+
             // ── 시험 파일을 수신하면 교수 PC로 '수신 완료' 응답을 보낸다 ──
             // 실제 접속/로그인 패킷 전송은 IP 입력 후 LoginViewModel.CompleteLogin 에서 수행한다.
             // 수신 사실은 대기 화면·시험 준비 화면이 ExamFileStore를 통해 표시하므로 별도 알림창은 띄우지 않는다.
@@ -47,6 +53,17 @@ namespace StudentUI
                 byte[] payload = ExamStatusUpdatePayload.Encode(StudentStatus.FileReceived);
                 Service.NetworkService.Instance.SendPacket(PacketType.ExamStatusUpdate, payload);
             };
+        }
+
+        // 새 문제가 오면 앞 문제 창은 닫고 새로 띄운다.
+        // 교수가 연달아 낼 수 있어, 창이 쌓이면 학생이 어느 문제에 답하는지 헷갈린다.
+        private void ShowQuizWindow(string question)
+        {
+            _quizWindow?.Close();
+
+            _quizWindow = new View.QuizView.QuizWindow(question);
+            _quizWindow.Closed += (_, _) => _quizWindow = null;
+            _quizWindow.Show();
         }
 
         private void OnCurrentViewModelChanged()

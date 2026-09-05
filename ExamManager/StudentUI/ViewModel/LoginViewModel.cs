@@ -1,4 +1,4 @@
-using NetworkLib;
+﻿using NetworkLib;
 using StudentUI.Model;
 using StudentUI.Service;
 using System;
@@ -63,6 +63,9 @@ namespace StudentUI.ViewModel
             Encoding.UTF8.GetBytes(Student.StudentNumber).CopyTo(loginPayload, 0);
             Encoding.UTF8.GetBytes(Student.StudentName).CopyTo(loginPayload, 16);
             NetworkService.Instance.SendPacket(PacketType.StudentLogin, loginPayload);
+
+            // 퀴즈 응답에 학번·이름을 실어 보낼 수 있도록 학생 정보를 넘겨 둔다.
+            Service.QuizService.Instance.Student = Student;
 
             _navigationStore.CurrentViewModel = new WaitingViewModel(_navigationStore, Student);
         }

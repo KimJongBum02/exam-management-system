@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using NetworkLib;
 using ProfessorUI.View;
 using System.Configuration;
@@ -72,12 +72,20 @@ namespace ProfessorUI
                 }
             };
 
+            // OX 퀴즈 응답 구독 시작 — 학생이 보낸 O/X 를 받아 기록한다.
+            // 수업 중에도 쓰는 기능이라 시험 단계와 무관하게 앱 시작 때 켜 둔다.
+            Service.QuizSessionService.Instance.Start();
+
             // 답안 수집 구독 시작 — 학생이 보낸 답안을 저장하고 확인 회신을 보낸다.
             Service.AnswerCollectService.Instance.Start();
             Service.AnswerCollectService.Instance.AnswerCollected += (studentId, savedPath) =>
                 PostToUi(() => Service.StudentStore.Instance.MarkAnswerSubmitted(studentId));
 
-            if (!network.StartServer())
+            // 서버 열기·닫기는 ServerControl 이 맡는다.
+            // 수업 중 OX 퀴즈처럼 시험과 무관하게 서버가 필요한 경우가 있어,
+            // "언제 켤지"를 화면에서 고를 수 있도록 여기서 분리했다.
+            // 지금은 예전처럼 시작 시 한 번 켜므로 겉보기 동작은 같다.
+            if (!Service.ServerControl.Start())
                 MessageBox.Show("서버 시작에 실패했습니다. 포트 9000을 확인해 주세요.");
             // ───────────────────────────────────
 
