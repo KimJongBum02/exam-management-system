@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -45,6 +45,20 @@ namespace ProfessorUI.ViewModel
         }
 
         public ICommand SendMessageCommand { get; }
+
+        // 탭과 무관하게 모아 둔 학생 수신 메시지.
+        // 알림 패널은 "지금 누가 뭐라고 했는지"만 보여 주면 되므로 탭을 나누지 않는다.
+        public ObservableCollection<ChatMessageModel> RecentMessages { get; } = new();
+
+        private int _unreadCount;
+        public int UnreadCount
+        {
+            get => _unreadCount;
+            private set { _unreadCount = value; OnPropertyChanged(); }
+        }
+
+        // 알림 패널을 열었을 때 호출한다.
+        public void MarkAllRead() => UnreadCount = 0;
 
         public ChatViewModel()
         {
@@ -127,6 +141,16 @@ namespace ProfessorUI.ViewModel
                     {
                         tab.UnreadCount++;
                     }
+
+                    // 상단바 알림 배지가 쓰는 목록. 최근 것이 위로 오게 넣는다.
+                    RecentMessages.Insert(0, new ChatMessageModel
+                    {
+                        SenderName = $"{studentName}({studentId})",
+                        Message = message,
+                        Timestamp = DateTime.Now,
+                        IsMine = false
+                    });
+                    UnreadCount++;
                 });
             }
         }

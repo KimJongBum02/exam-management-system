@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 namespace ProfessorUI.Service
 {
     // 알림 한 건. 화면에 그대로 바인딩된다.
-    public class AlertItem
+    public class AlertItem : System.ComponentModel.INotifyPropertyChanged
     {
         public string Time { get; init; } = string.Empty;
         public string StudentId { get; init; } = string.Empty;
@@ -13,6 +13,28 @@ namespace ProfessorUI.Service
 
         // "202407021 김종범" — 목록에서 한 줄로 보여줄 때 쓴다.
         public string Who => $"{StudentId} {Name}";
+
+        // 교수가 확인했는지. 상단바 배지는 확인하지 않은 것만 센다.
+        private bool _isAcknowledged;
+        public bool IsAcknowledged
+        {
+            get => _isAcknowledged;
+            set { _isAcknowledged = value; OnPropertyChanged(nameof(IsAcknowledged)); OnPropertyChanged(nameof(StateText)); }
+        }
+
+        // 교수가 남긴 처리 메모
+        private string _note = string.Empty;
+        public string Note
+        {
+            get => _note;
+            set { _note = value; OnPropertyChanged(nameof(Note)); }
+        }
+
+        public string StateText => _isAcknowledged ? "확인 완료" : "미확인";
+
+        public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+        private void OnPropertyChanged(string name)
+            => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(name));
     }
 
     // 부정행위 알림을 모아 둔다.
