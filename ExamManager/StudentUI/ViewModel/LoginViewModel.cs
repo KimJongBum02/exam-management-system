@@ -1,4 +1,4 @@
-﻿using NetworkLib;
+using NetworkLib;
 using StudentUI.Model;
 using StudentUI.Service;
 using System;
@@ -67,7 +67,8 @@ namespace StudentUI.ViewModel
             // 퀴즈 응답에 학번·이름을 실어 보낼 수 있도록 학생 정보를 넘겨 둔다.
             Service.QuizService.Instance.Student = Student;
 
-            _navigationStore.CurrentViewModel = new WaitingViewModel(_navigationStore, Student);
+            // 교수 UI와 동일한 '시험 준비 마법사' 대시보드로 진입 (1단계: 대기부터 시작)
+            _navigationStore.CurrentViewModel = new StudentExamViewModel(_navigationStore, Student);
         }
 
         private void ValidateFields()

@@ -1,69 +1,631 @@
 <Window x:Class="StudentUI.View.StudentExamView.StudentExamWindow"
-      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-      xmlns:local="clr-namespace:StudentUI.View.StudentExamView"
-      xmlns:shared="clr-namespace:StudentUI.View.Shared"
-      mc:Ignorable="d" 
-      Background="#F5F5F5"
-      FontFamily="{StaticResource AppFont}"
-      Title="StudentExamWindow" Height="750" Width="1300">
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+        xmlns:local="clr-namespace:StudentUI.View.StudentExamView"
+        mc:Ignorable="d" 
+        Background="White"
+        FontFamily="{StaticResource AppFont}"
+        Title="시험 운영 - 학생용" Height="820" Width="1380"
+        WindowStartupLocation="CenterScreen"
+        MinHeight="700" MinWidth="1150">
+
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- 상단 네비게이션 버튼 스타일 -->
+        <Style x:Key="TopNavButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#64748B"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#F1F5F9"/>
+                                <Setter Property="Foreground" Value="#1E293B"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 사이드바 메뉴 버튼 스타일 -->
+        <Style x:Key="SidebarMenuButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#64748B"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#F8FAFC"/>
+                                <Setter Property="Foreground" Value="#1E293B"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <Grid Margin="20">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/> <!-- 상단 통합 헤더 대시보드 -->
-                <RowDefinition Height="Auto"/> <!-- 제출 진행 상황 -->
-                <RowDefinition Height="*"/>    <!-- 메인 2단 콘텐츠 영역 -->
-                <RowDefinition Height="Auto"/> <!-- 하단 임시 전환 버튼 -->
-            </Grid.RowDefinitions>
 
-            <!-- 1. 상단 통합 헤더 대시보드 -->
-            <local:StudentInformation Grid.Row="0"/>
+    <Grid Background="White">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="56"/> <!-- 1. 상단 네비게이션 헤더 -->
+            <RowDefinition Height="*"/>  <!-- 2. 본문 -->
+        </Grid.RowDefinitions>
 
-            <!-- 1-2. 답안 제출 진행 상황 (제출 중일 때만 보인다) -->
-            <StackPanel Grid.Row="1">
-                <!-- 답안 제출은 시간이 걸린다. 표시가 없으면 멈춘 줄 알고 다시 누른다. -->
-                <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="8"
-                        Padding="14,10" Margin="0,12,0,0"
-                        Visibility="{Binding IsSubmitting, Converter={StaticResource BoolToVis}}">
-                    <TextBlock Text="{Binding SubmitStatus}" FontSize="13" FontWeight="SemiBold" Foreground="#1D4ED8" TextWrapping="Wrap"/>
-                </Border>
-            </StackPanel>
-            <!-- 2. 메인 2단 콘텐츠 영역 -->
-            <Grid Grid.Row="2">
+        <!-- 1. 상단 네비게이션 헤더 -->
+        <Border Grid.Row="0" Background="White" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
+            <Grid Margin="24,0">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1.6*"/> <!-- 좌측: 시험 파일 & 문제 풀이/종료 영역 -->
-                    <ColumnDefinition Width="16"/>   <!-- 간격 -->
-                    <ColumnDefinition Width="1.1*"/> <!-- 우측: 알림 & 채팅 -->
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- [좌측] 시험 진행 & 문제 풀이 영역 -->
-                <StackPanel Grid.Column="0">
-                    <!-- 파일 수신 및 준비 상태 카드 -->
-                    <local:StudentFile Margin="0,0,0,14"/>
-                    <!-- 문제 풀이 작업 폴더 및 시험 종료 카드 -->
-                    <local:StudentExamState/>
+                <!-- 좌측: 로고 및 타이틀 -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="10" Height="10" Background="#16A34A" CornerRadius="5" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="시험 운영" FontSize="16" FontWeight="Bold" Foreground="#0F172A" VerticalAlignment="Center"/>
+                    <Border Background="#F1F5F9" CornerRadius="6" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="학생 응시용" FontSize="11" Foreground="#64748B" FontWeight="SemiBold"/>
+                    </Border>
                 </StackPanel>
 
-                <!-- [우측] 알림 및 채팅 카드 -->
-                <shared:NotificationChatPanel Grid.Column="2"/>
-            </Grid>
+                <!-- 우측 메뉴 -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- 남은 시간 타이머 헤더 뱃지 -->
+                    <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="16"
+                            Padding="12,5" Margin="0,0,16,0" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="⏱️" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="남은 시간 : " FontSize="12" FontWeight="SemiBold" Foreground="#1D4ED8" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding ExamTime.RemainingText, FallbackValue=대기 중}"
+                                       FontSize="13" FontWeight="Bold" Foreground="#1A56DB"
+                                       FontFamily="Consolas, Segoe UI" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
 
-            <!-- 3. 개발용 임시 화면 전환 버튼 -->
-            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
-                <Button Command="{Binding GoToWaitingCommand}" Content="시험 대기 화면으로 전환"
-                        Background="#F1F5F9" Foreground="#64748B" BorderThickness="0" Padding="12,6" Cursor="Hand" FontSize="12">
-                    <Button.Resources>
-                        <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="6"/>
-                        </Style>
-                    </Button.Resources>
-                </Button>
-            </StackPanel>
+                    <!-- 연결 상태 -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <Ellipse Width="7" Height="7" VerticalAlignment="Center" Margin="0,0,6,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="#EF4444"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                            <Setter Property="Fill" Value="#16A34A"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="연결 상태" FontSize="13" Foreground="#64748B" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- 알림 버튼 -->
+                    <Button Style="{StaticResource TopNavButton}" Command="{Binding ToggleNotificationCommand}" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="알림" VerticalAlignment="Center"/>
+                            <Border Background="#EF4444" CornerRadius="8" Padding="5,1" Margin="6,0,0,0"
+                                    Visibility="{Binding HasCheatWarnings, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="{Binding CheatWarningCount}" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                            </Border>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- 채팅 버튼 -->
+                    <Button Style="{StaticResource TopNavButton}" Command="{Binding ToggleChatCommand}" Content="채팅" Margin="0,0,8,0"/>
+
+                    <!-- 프로필 -->
+                    <Border BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="18" Padding="10,4" VerticalAlignment="Center" Margin="6,0,0,0" Background="#F8FAFC">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="👤" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Student.StudentName}" FontWeight="SemiBold" FontSize="12" Foreground="#1E293B" VerticalAlignment="Center"/>
+                            <TextBlock Text=" (" FontSize="12" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Student.StudentNumber}" FontSize="12" Foreground="#64748B" VerticalAlignment="Center"/>
+                            <TextBlock Text=")" FontSize="12" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                            <Button Command="{Binding LogoutCommand}" Content="로그아웃" Background="Transparent" BorderThickness="0"
+                                    Foreground="#EF4444" FontSize="11" Cursor="Hand" Margin="8,0,0,0" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 2. 본문 -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="190"/> <!-- 좌측 사이드바 -->
+                <ColumnDefinition Width="*"/>   <!-- 메인 콘텐츠 영역 -->
+                <ColumnDefinition Width="Auto"/> <!-- 우측 드로어 -->
+            </Grid.ColumnDefinitions>
+
+            <!-- 2-1. 좌측 사이드바 -->
+            <Border Grid.Column="0" Background="White" BorderBrush="#F1F5F9" BorderThickness="0,0,1,0">
+                <StackPanel Margin="16,24,16,0">
+                    <TextBlock Text="응시 메뉴" FontSize="12" FontWeight="SemiBold" Foreground="#94A3B8" Margin="12,0,0,14"/>
+
+                    <!-- 활성화된 메뉴: 시험 응시 -->
+                    <Border Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Margin="0,4">
+                        <TextBlock Text="시험 응시" FontSize="13" FontWeight="Bold" Foreground="#0F172A" Padding="16,8"/>
+                    </Border>
+
+                    <Button Style="{StaticResource SidebarMenuButton}" Content="📂 작업 폴더 열기" Command="{Binding OpenExtractFolderCommand}"/>
+                    <Button Style="{StaticResource SidebarMenuButton}" Content="보안 감시 정책"/>
+                    <Button Style="{StaticResource SidebarMenuButton}" Content="답안 제출 및 종료" Command="{Binding SubmitAnswerCommand}"/>
+
+                    <Separator Background="#F1F5F9" Margin="0,20,0,12"/>
+                    <Button Style="{StaticResource SidebarMenuButton}" Command="{Binding GoToWaitingCommand}" Content="대기 화면으로 전환" FontSize="11" Foreground="#94A3B8"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 2-2. 메인 컨텐츠 영역 -->
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <Grid Margin="32,24,32,32">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/> <!-- 타이틀 -->
+                        <RowDefinition Height="*"/>    <!-- 2열 컨텐츠 -->
+                        <RowDefinition Height="Auto"/> <!-- 액션 버튼 바 -->
+                    </Grid.RowDefinitions>
+
+                    <!-- 상단 타이틀 바 -->
+                    <StackPanel Grid.Row="0" Margin="0,0,0,20">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="시험 진행 현황" FontSize="20" FontWeight="Bold" Foreground="#0F172A"/>
+                            <TextBlock Text="{Binding CurrentTime, StringFormat=마지막 갱신: {0}}"
+                                       FontSize="12" Foreground="#94A3B8" VerticalAlignment="Bottom" Margin="16,0,0,3"/>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Margin="14,0,0,3">
+                                <Ellipse Width="6" Height="6" Fill="#16A34A" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock Text="{Binding ConnectionStatusText}" FontSize="12" Foreground="#64748B" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- 답안 제출 진행 상태 배너 -->
+                        <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="8"
+                                Padding="14,10" Margin="0,12,0,0"
+                                Visibility="{Binding IsSubmitting, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="{Binding SubmitStatus}" FontSize="13" FontWeight="SemiBold" Foreground="#1D4ED8"/>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- 2열 메인 콘텐츠 -->
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="4.1*"/>
+                            <ColumnDefinition Width="24"/>
+                            <ColumnDefinition Width="5.9*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- [좌측 열] 진행 안내 및 환경 점검 -->
+                        <StackPanel Grid.Column="0">
+                            <!-- 시험 진행 안내 -->
+                            <TextBlock Text="시험 진행 안내" FontSize="14" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,0,10"/>
+                            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="18">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding CurrentPhaseTitle}" FontSize="13" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,8"/>
+                                    <TextBlock Text="{Binding CurrentPhaseDescription}" FontSize="12" Foreground="#475569" TextWrapping="Wrap" LineHeight="20"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 응시 환경 점검 -->
+                            <TextBlock Text="응시 환경 점검" FontSize="14" FontWeight="Bold" Foreground="#0F172A" Margin="0,20,0,10"/>
+                            <Border Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="18">
+                                <StackPanel>
+                                    <!-- 시험 세션 활성화 -->
+                                    <Grid Margin="0,5">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="6" Height="6" Fill="#475569" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                            <TextBlock Text="시험 세션 활성화" FontSize="12" Foreground="#334155" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="1" Text="{Binding SessionCheckText}" FontSize="12" Foreground="#16A34A" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    </Grid>
+
+                                    <!-- 보안 정책 로드 -->
+                                    <Grid Margin="0,7">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="6" Height="6" Fill="#475569" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                            <TextBlock Text="보안 정책 로드" FontSize="12" Foreground="#334155" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="1" Text="{Binding SecurityPolicyCheckText}" FontSize="12" Foreground="#16A34A" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    </Grid>
+
+                                    <!-- 네트워크 연결 상태 -->
+                                    <Grid Margin="0,7">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="6" Height="6" Fill="#475569" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                            <TextBlock Text="네트워크 연결 상태" FontSize="12" Foreground="#334155" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="1" Text="{Binding NetworkCheckText}" FontSize="12" Foreground="#64748B" VerticalAlignment="Center"/>
+                                    </Grid>
+
+                                    <!-- 시험 파일 준비 여부 -->
+                                    <Grid Margin="0,5">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="6" Height="6" Fill="#475569" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                            <TextBlock Text="시험 파일 준비 여부" FontSize="12" Foreground="#334155" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="1" Text="{Binding FileReadyCheckText}" FontSize="12" Foreground="#64748B" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 부정행위 적발 경고 (경고가 있을 때 나타나는 알림 박스) -->
+                            <Border Background="#FEF2F2" BorderBrush="#FECACA" BorderThickness="1" CornerRadius="10" Padding="14,12" Margin="0,16,0,0"
+                                    Visibility="{Binding HasCheatWarnings, Converter={StaticResource BoolToVis}}">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                        <TextBlock Text="⚠️" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="부정행위 감시 알림" FontSize="12" FontWeight="Bold" Foreground="#B91C1C" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <TextBlock Text="비인가 프로그램 실행이 감지되었습니다. 상단 알림 메뉴에서 상세 내역을 확인할 수 있습니다."
+                                               FontSize="11" Foreground="#EF4444" TextWrapping="Wrap" LineHeight="16"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- [우측 열] 학생 접속/응시 현황 (요약 지표 + 작업 폴더 + 테이블) -->
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="학생 접속 현황" FontSize="14" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,0,10"/>
+
+                            <!-- 3개 지표 박스 -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- 전체 시간 (교수 화면의 32명 스타일) -->
+                                <Border Grid.Column="0" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14,14">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock Text="전체 시간" FontSize="11" Foreground="#64748B" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="60" FontSize="24" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                        <TextBlock Text="분" FontSize="11" Foreground="#94A3B8" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- 남은 시간 (교수 화면의 27명 스타일) -->
+                                <Border Grid.Column="2" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14,14">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock Text="남은 시간" FontSize="11" Foreground="#64748B" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding ExamTime.RemainingText, FallbackValue=대기 중}"
+                                                   FontSize="22" FontWeight="Bold" Foreground="#1A56DB"
+                                                   FontFamily="Consolas, Segoe UI" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                        <TextBlock Text="{Binding ExamTime.StatusText, FallbackValue=미시작}" FontSize="11" Foreground="#94A3B8" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- 경고 횟수 (교수 화면의 5명 스타일) -->
+                                <Border Grid.Column="4" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14,14">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock Text="부정행위 경고" FontSize="11" Foreground="#64748B" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding CheatWarningCount}" FontSize="24" FontWeight="Bold" Foreground="#EF4444" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                        <TextBlock Text="건" FontSize="11" Foreground="#94A3B8" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <!-- 내 작업 폴더 및 진행 상태 배너 카드 (이전 학생 UI의 핵심 작업 편의성 완벽 지원) -->
+                            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14,12" Margin="0,14,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="내 작업 폴더 (문제 및 답안 저장 경로)" FontSize="12" FontWeight="SemiBold" Foreground="#1E293B"/>
+                                        <TextBlock Text="{Binding ExamFile.ExtractFolder, FallbackValue=C:\Exam}"
+                                                   FontSize="11" Foreground="#64748B" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
+                                        <!-- 프로그레스 바 -->
+                                        <ProgressBar Height="5" Maximum="100" Value="{Binding ExamFile.Progress, Mode=OneWay}" Margin="0,6,0,0">
+                                            <ProgressBar.Style>
+                                                <Style TargetType="ProgressBar">
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="ProgressBar">
+                                                                <Border Background="#E2E8F0" CornerRadius="2.5">
+                                                                    <Border x:Name="PART_Track">
+                                                                        <Border x:Name="PART_Indicator" Background="#1A56DB" CornerRadius="2.5" HorizontalAlignment="Left"/>
+                                                                    </Border>
+                                                                </Border>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Style>
+                                            </ProgressBar.Style>
+                                        </ProgressBar>
+                                    </StackPanel>
+
+                                    <Button Grid.Column="2" Command="{Binding OpenExtractFolderCommand}"
+                                            Height="38" Padding="14,0" Cursor="Hand">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border x:Name="btnBd" Background="#1A56DB" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                                    <TextBlock Text="📂" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                                    <TextBlock Text="작업 폴더 열기" FontSize="12" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                                                                </StackPanel>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter TargetName="btnBd" Property="Background" Value="#1D4ED8"/>
+                                                                </Trigger>
+                                                                <Trigger Property="IsPressed" Value="True">
+                                                                    <Setter TargetName="btnBd" Property="Background" Value="#1E40AF"/>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </Grid>
+                            </Border>
+
+                            <!-- 상세 현황 테이블 (교수 화면의 학생 접속 테이블 디자인 계승) -->
+                            <Border Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Margin="0,14,0,0">
+                                <StackPanel>
+                                    <!-- 테이블 헤더 -->
+                                    <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="16,10" CornerRadius="8,8,0,0">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="85"/>
+                                                <ColumnDefinition Width="1.4*"/>
+                                                <ColumnDefinition Width="1.3*"/>
+                                                <ColumnDefinition Width="1.3*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="구분" FontSize="12" FontWeight="SemiBold" Foreground="#64748B"/>
+                                            <TextBlock Grid.Column="1" Text="파일명 / 항목" FontSize="12" FontWeight="SemiBold" Foreground="#64748B"/>
+                                            <TextBlock Grid.Column="2" Text="상태" FontSize="12" FontWeight="SemiBold" Foreground="#64748B"/>
+                                            <TextBlock Grid.Column="3" Text="확인 / 비고" FontSize="12" FontWeight="SemiBold" Foreground="#64748B"/>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 데이터 행 목록 -->
+                                    <ItemsControl ItemsSource="{Binding StatusItems}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border BorderBrush="#F1F5F9" BorderThickness="0,0,0,1" Padding="16,11">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="85"/>
+                                                            <ColumnDefinition Width="1.4*"/>
+                                                            <ColumnDefinition Width="1.3*"/>
+                                                            <ColumnDefinition Width="1.3*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="{Binding Category}" FontSize="12" Foreground="#0F172A" VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12" Foreground="#334155" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="2" Text="{Binding Status}" FontSize="12" Foreground="#475569" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="3" Text="{Binding TimeOrNote}" FontSize="12" Foreground="#64748B" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+
+                            <TextBlock Text="시험 시작 후 내 작업 폴더에서 문제를 풀고, 종료 전 최종 답안 제출 버튼을 눌러주세요."
+                                       FontSize="11.5" Foreground="#94A3B8" Margin="0,12,0,4"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- 액션 버튼 영역 -->
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
+                        <!-- 주 액션 버튼: 모던 블랙 라운드 버튼 -->
+                        <Button Command="{Binding SubmitAnswerCommand}"
+                                Content="답안 제출 및 시험 종료"
+                                Background="#18181B" Foreground="White" BorderThickness="0"
+                                Padding="18,10" Cursor="Hand" FontSize="13" FontWeight="Bold">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="8"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+
+            <!-- 2-3. 우측 오버레이 드로어 (알림 / 채팅 패널) -->
+            <Border Grid.Column="2" Width="340" Background="White" BorderBrush="#E2E8F0" BorderThickness="1,0,0,0">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsNotificationOpen}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsChatOpen}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+
+                <Grid>
+                    <!-- 알림 패널 뷰 -->
+                    <Grid Visibility="{Binding IsNotificationOpen, Converter={StaticResource BoolToVis}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="16,14" Background="#FEF2F2">
+                            <Grid>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="🔔" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="부정행위 감시 알림" FontSize="13" FontWeight="Bold" Foreground="#B91C1C" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <Button HorizontalAlignment="Right" Command="{Binding ToggleNotificationCommand}" Content="✕"
+                                        Background="Transparent" BorderThickness="0" Foreground="#64748B" Cursor="Hand" FontWeight="Bold"/>
+                            </Grid>
+                        </Border>
+
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                            <Grid>
+                                <TextBlock Text="새로운 알림이 없습니다." Foreground="#94A3B8"
+                                           HorizontalAlignment="Center" Margin="0,40">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasCheatWarnings}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+
+                                <ItemsControl ItemsSource="{Binding CheatWarnings}" Margin="12">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#FEF2F2" BorderBrush="#FECACA" BorderThickness="1"
+                                                    CornerRadius="8" Padding="12,10" Margin="0,0,0,8">
+                                                <StackPanel>
+                                                    <Grid>
+                                                        <TextBlock Text="{Binding Description}" FontSize="12" FontWeight="Bold"
+                                                                   Foreground="#B91C1C" TextWrapping="Wrap" HorizontalAlignment="Left"/>
+                                                        <TextBlock Text="{Binding Time}" FontSize="11" Foreground="#94A3B8"
+                                                                   HorizontalAlignment="Right" VerticalAlignment="Top"/>
+                                                    </Grid>
+                                                    <TextBlock Text="시험 중에는 실행할 수 없는 프로그램입니다." FontSize="11"
+                                                               Foreground="#EF4444" Margin="0,3,0,0"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
+                        </ScrollViewer>
+                    </Grid>
+
+                    <!-- 채팅 패널 뷰 -->
+                    <Grid Visibility="{Binding IsChatOpen, Converter={StaticResource BoolToVis}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="16,14" Background="#F8FAFC">
+                            <Grid>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="💬" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="감독관 대화" FontSize="13" FontWeight="Bold" Foreground="#1E293B" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <Button HorizontalAlignment="Right" Command="{Binding ToggleChatCommand}" Content="✕"
+                                        Background="Transparent" BorderThickness="0" Foreground="#64748B" Cursor="Hand" FontWeight="Bold"/>
+                            </Grid>
+                        </Border>
+
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                            <Grid>
+                                <TextBlock Text="주고받은 대화가 없습니다." Foreground="#94A3B8"
+                                           HorizontalAlignment="Center" Margin="0,40"
+                                           Visibility="{Binding ChatVM.HasNoMessages, Converter={StaticResource BoolToVis}}"/>
+
+                                <ItemsControl ItemsSource="{Binding ChatVM.Messages}" Margin="12">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Margin="0,4">
+                                                <TextBlock Text="{Binding SenderName}" FontSize="10" Foreground="#94A3B8" Margin="0,0,0,2"/>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Border x:Name="MsgBorder" Background="#F1F5F9" CornerRadius="8" Padding="10,8" MaxWidth="220" HorizontalAlignment="Left">
+                                                        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="12" Foreground="#1E293B"/>
+                                                    </Border>
+                                                    <TextBlock Grid.Column="1" Text="{Binding DisplayTime}" FontSize="9" Foreground="#CBD5E1" 
+                                                               VerticalAlignment="Bottom" Margin="6,0,0,0"/>
+                                                </Grid>
+                                            </StackPanel>
+                                            <DataTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding IsMine}" Value="True">
+                                                    <Setter TargetName="MsgBorder" Property="Background" Value="#DBEAFE"/>
+                                                    <Setter TargetName="MsgBorder" Property="HorizontalAlignment" Value="Right"/>
+                                                </DataTrigger>
+                                            </DataTemplate.Triggers>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
+                        </ScrollViewer>
+
+                        <!-- 입력창 및 전송 -->
+                        <Border Grid.Row="2" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="10" Background="White">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Text="{Binding ChatVM.InputMessage, UpdateSourceTrigger=PropertyChanged}"
+                                         Background="White" BorderBrush="#E2E8F0" BorderThickness="1"
+                                         Padding="8,6" VerticalContentAlignment="Center" FontSize="12">
+                                    <TextBox.InputBindings>
+                                        <KeyBinding Key="Enter" Command="{Binding ChatVM.SendMessageCommand}"/>
+                                    </TextBox.InputBindings>
+                                </TextBox>
+                                <Button Grid.Column="1" Content="전송" Command="{Binding ChatVM.SendMessageCommand}"
+                                        Background="#1A56DB" Foreground="White" Width="52" Height="32" Margin="6,0,0,0"
+                                        Cursor="Hand" BorderThickness="0" FontSize="12" FontWeight="SemiBold">
+                                    <Button.Resources>
+                                        <Style TargetType="Border">
+                                            <Setter Property="CornerRadius" Value="6"/>
+                                        </Style>
+                                    </Button.Resources>
+                                </Button>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </Border>
         </Grid>
-    </ScrollViewer>
+    </Grid>
 </Window>
