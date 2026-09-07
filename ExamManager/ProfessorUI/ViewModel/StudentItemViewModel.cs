@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -22,7 +22,21 @@ namespace ProfessorUI.ViewModel
 
         public string StudentId { get => _studentId; set { _studentId = value; OnPropertyChanged(); } }
         public string Name { get => _name; set { _name = value; OnPropertyChanged(); } }
-        public string Status { get => _status; set { _status = value; OnPropertyChanged(); } }
+        // 상태가 바뀔 때마다 시각을 함께 찍는다. 현황 표의 '마지막 갱신' 열이 이 값을 쓴다.
+        public string Status
+        {
+            get => _status;
+            set
+            {
+                _status = value;
+                LastUpdate = DateTime.Now.ToString("HH:mm:ss");
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CleanupText));
+            }
+        }
+
+        private string _lastUpdate = "-";
+        public string LastUpdate { get => _lastUpdate; private set { _lastUpdate = value; OnPropertyChanged(); } }
         public string Ip { get => _ip; set { _ip = value; OnPropertyChanged(); } }
         public string Attendance { get => _attendance; set { _attendance = value; OnPropertyChanged(); } }
 
@@ -31,17 +45,46 @@ namespace ProfessorUI.ViewModel
 
         // 지금 실제로 접속돼 있는지.
         // 접속이 끊겨도 SessionId는 남아 있으므로, 전송 가능 여부는 이 값으로 판단한다.
-        public bool IsConnected { get; set; }
+        private bool _isConnected;
+        public bool IsConnected
+        {
+            get => _isConnected;
+            set { _isConnected = value; OnPropertyChanged(); OnPropertyChanged(nameof(ConnectionText)); }
+        }
+
+        // 표에 그대로 나갈 접속 상태 문구
+        public string ConnectionText => _isConnected ? "접속 중" : "미접속";
+
+        // ── 종료 및 정산 화면에 그대로 나갈 문구 ──
+        // 흔적 삭제는 학생이 답안 회신을 받은 뒤 스스로 하므로, 답안을 걷었는지로 판단한다.
+        public string CollectText => IsAnswerSubmitted ? "완료" : "미수집";
+        public string CleanupText => Status == "정리실패" ? "오류"
+                                   : IsAnswerSubmitted ? "완료" : "미실행";
+        public string ShutdownText => IsApproved ? "완료" : "미실행";
 
         public bool IsSelected { get => _isSelected; set { _isSelected = value; OnPropertyChanged(); } }
         public bool IsFileReceived { get => _isFileReceived; set { _isFileReceived = value; OnPropertyChanged(); } }
-        public bool IsApproved { get => _isApproved; set { _isApproved = value; OnPropertyChanged(); } }
+        public bool IsApproved
+        {
+            get => _isApproved;
+            set { _isApproved = value; OnPropertyChanged(); OnPropertyChanged(nameof(ShutdownText)); }
+        }
 
         // 이 학생의 답안을 받아 저장까지 끝냈는지.
         // IsFileReceived와 헷갈리기 쉬운데 방향이 반대다 —
         // 그쪽은 교수가 보낸 시험 파일을 학생이 받은 것이고, 이쪽은 학생 답안을 교수가 받은 것이다.
         // 학생이 접속을 끊어도 이 기록은 남으므로, 나갔는지 못 냈는지 구분할 수 있다.
-        public bool IsAnswerSubmitted { get => _isAnswerSubmitted; set { _isAnswerSubmitted = value; OnPropertyChanged(); } }
+        public bool IsAnswerSubmitted
+        {
+            get => _isAnswerSubmitted;
+            set
+            {
+                _isAnswerSubmitted = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CollectText));
+                OnPropertyChanged(nameof(CleanupText));
+            }
+        }
 
         // 개별 승인 명령 바인딩용
         public System.Windows.Input.ICommand? ApproveSingleCommand { get; set; }

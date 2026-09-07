@@ -1,10 +1,8 @@
 ﻿using System;
 using NetworkLib;
-using ProfessorUI.View;
 using System.Configuration;
 using System.Data;
 using System.Windows;
-using ProfessorUI.View.MonitoringView;
 
 namespace ProfessorUI
 {
@@ -20,23 +18,6 @@ namespace ProfessorUI
             base.OnStartup(e);
             // 소프트웨어 렌더링(CPU)으로 강제 전환하여 그래픽 깨짐 방지
             System.Windows.Media.RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;
-            // 1. 상태 저장소 생성 (프로그램 전체에서 딱 1개만 존재)
-            Service.NavigationStore navigationStore = new Service.NavigationStore();
-
-            Service.LayoutStore layoutStore = new ProfessorUI.Service.LayoutStore();
-
-            // 처음 프로그램이 켜졌을 때 보여줄 기본 화면 설정 (예: 현황판)
-            //navigationStore.CurrentViewModel = new StudentBoardViewModel();
-
-            // 2. 메인 뷰모델 생성 (저장소와 사이드바 뷰모델을 연결)
-            ViewModel.MainViewModel mainViewModel = new ViewModel.MainViewModel(navigationStore, layoutStore);
-
-            // 3. 메인 창(MainWindow) 생성 후 데이터(ViewModel) 연결
-            MainWindow mainWindow = new MainWindow()
-            {
-                DataContext = mainViewModel // MainWindow의 데이터는 MainViewModel이 담당한다!
-            };
-
             // ── 서버 시작 및 학생 접속/응답 이벤트를 현황판(StudentStore)에 연동 ──
             // 콜백은 네이티브 스레드에서 올라오므로 UI 스레드로 넘겨 처리한다.
             var network = Service.NetworkService.Instance;
@@ -90,9 +71,9 @@ namespace ProfessorUI
             // ───────────────────────────────────
 
 
-            // 기존 MainWindow 띄우는 코드 아래에 추가...
-            mainWindow.Show();
-
+            // 교수 화면은 새 UI(ShellWindow)를 쓴다.
+            // 옛 화면은 View/_Legacy 로 옮겨 두었고 더 이상 띄우지 않는다.
+            new View.Professor.ShellWindow().Show();
         }
 
         // 네이티브 스레드에서 올라온 콜백을 UI 스레드로 안전하게 넘긴다.

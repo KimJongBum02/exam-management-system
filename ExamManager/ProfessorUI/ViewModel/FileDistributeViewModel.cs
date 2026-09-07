@@ -29,15 +29,27 @@ namespace ProfessorUI.ViewModel
         public int ProgressValue
         {
             get => _progressValue;
-            set { _progressValue = value; OnPropertyChanged(); }
+            set { _progressValue = value; OnPropertyChanged(); OnPropertyChanged(nameof(ProgressText)); }
         }
 
         private string _statusText = "대기 중";
         public string StatusText
         {
             get => _statusText;
-            set { _statusText = value; OnPropertyChanged(); }
+            set { _statusText = value; OnPropertyChanged(); OnPropertyChanged(nameof(ProgressText)); }
         }
+
+        // 표에 그대로 나갈 진행률.
+        // 압축 단계와 같은 0~100% 표기로 맞추고, 실패했을 때만 숫자 대신 실패로 적는다.
+        // 실패하면 ProgressValue 가 0으로 되돌아가는데, 그 0%를 그냥 보여 주면
+        // 아직 시작 안 한 학생과 구분되지 않는다.
+        public string ProgressText => _statusText switch
+        {
+            "전송 실패" => "실패",
+            "미접속"   => "-",
+            "대기 중"  => "-",
+            _          => $"{_progressValue}%"
+        };
 
         // 전송을 시작한 세션 ID (수신 완료 응답이 오면 비운다).
         // 같은 세션에 중복 전송하는 것을 막는 용도 — 학생이 재접속하면 세션이 바뀌어 자연히 풀린다.
@@ -79,6 +91,9 @@ namespace ProfessorUI.ViewModel
         public ICommand SelectAllCommand { get; }
         public ICommand DeselectAllCommand { get; }
 
+        // 학생 한 명에게만 다시 보낸다. 지각생이나 전송에 실패한 학생을 시험 중에 합류시킬 때 쓴다.
+        public ICommand RedeployOneCommand { get; }
+
         public FileDistributeViewModel()
         {
             // ⭐ 핵심 2: Command CanExecute 조건에 IsContainerEnabled 연결
@@ -92,6 +107,11 @@ namespace ProfessorUI.ViewModel
             );
             DeselectAllCommand = new RelayCommand(
                 o => SetAllSelection(false),
+                canExecute: o => IsContainerEnabled
+            );
+
+            RedeployOneCommand = new RelayCommand(
+                ExecuteRedeployOne,
                 canExecute: o => IsContainerEnabled
             );
 
@@ -259,6 +279,64 @@ namespace ProfessorUI.ViewModel
             // 전송을 시작했음을 공용 저장소에 기록 (시험 시작 단계 활성화)
             if (sentCount > 0)
                 FileDeployState.IsFileDistributed = true;
+        }
+
+        // 학생 한 명에게만 재전송한다.
+        // 현황판 행(StudentItemViewModel)이나 학번 문자열 어느 쪽으로 불러도 되게 받아 둔다.
+        private void ExecuteRedeployOne(object? parameter)
+        {
+            string? studentId = parameter switch
+            {
+                StudentItemViewModel s => s.StudentId,
+                StudentItem s => s.StudentId,
+                string s => s,
+                _ => null
+            };
+            if (string.IsNullOrEmpty(studentId)) return;
+
+            if (!FileDeployState.IsFilePrepared || string.IsNullOrEmpty(FileDeployState.PackagePath))
+            {
+                MessageBox.Show("먼저 시험 파일을 암호화·압축해 주세요.", "재배포",
+                                MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var connected = StudentStore.Instance.Students
+                .FirstOrDefault(s => s.StudentId == studentId && s.IsConnected);
+            if (connected == null)
+            {
+                MessageBox.Show("접속 중인 학생이 아닙니다.", "재배포",
+                                MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var row = Students.FirstOrDefault(s => s.StudentId == studentId);
+            if (row == null)
+            {
+                row = CreateRow(connected);
+                Students.Add(row);
+            }
+
+            // 재접속하면 세션이 달라지므로, 같은 세션에 중복으로 보내는 경우만 막는다.
+            if (row.SendingSessionId == connected.SessionId)
+            {
+                MessageBox.Show("이미 전송 중입니다.", "재배포",
+                                MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            if (!NetworkService.Instance.SendFileToSession(
+                    connected.SessionId, FileDeployState.PackagePath!, FileDeployState.Password ?? ""))
+            {
+                row.StatusText = "전송 실패";
+                return;
+            }
+
+            row.SendingSessionId = connected.SessionId;
+            row.ProgressValue = 0;
+            row.StatusText = "전송 중";
+            DeployStatusMessage = $"{connected.Name}({studentId}) 에게 다시 전송했습니다.";
+            FileDeployState.IsFileDistributed = true;
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

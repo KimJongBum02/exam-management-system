@@ -1,4 +1,4 @@
-using NetworkLib; // ExamPhase 사용을 위해 추가
+﻿using NetworkLib; // ExamPhase 사용을 위해 추가
 using ProfessorUI.Service;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -41,11 +41,22 @@ namespace ProfessorUI.ViewModel
             ExamState.StateChanged += () => OnPropertyChanged(nameof(IsContainerEnabled));
         }
 
+        // 학생 PC에 종료 명령을 보낸다.
+        // 시험 흔적 삭제는 답안 회신을 받은 학생 쪽에서 이미 진행되므로 여기서는 종료만 지시한다.
+        private static void ShutdownStudentPc(StudentItemViewModel student)
+        {
+            if (!student.IsConnected || string.IsNullOrEmpty(student.SessionId)) return;
+
+            NetworkService.Instance.SendToSession(
+                student.SessionId, PacketType.ShutdownPC, System.Array.Empty<byte>());
+        }
+
         // 개별 승인 처리
         private void ExecuteApproveSingle(object obj)
         {
             if (obj is StudentItemViewModel student && student.IsAnswerSubmitted)
             {
+                ShutdownStudentPc(student);
                 student.IsApproved = true;
                 student.Status = "종료";
             }
@@ -67,6 +78,7 @@ namespace ProfessorUI.ViewModel
 
             foreach (var student in targets)
             {
+                ShutdownStudentPc(student);
                 student.IsApproved = true;
                 student.Status = "종료";
             }
