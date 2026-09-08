@@ -269,7 +269,7 @@ namespace StudentUI.ViewModel
                     }
                     else
                     {
-                        string folderPath = string.IsNullOrEmpty(ExamFile.ExtractFolder) ? @"C:\Exam" : ExamFile.ExtractFolder;
+                        string folderPath = ExamFile.IsExtracted ? ExamFile.ExtractedRoot : ExamFile.ExtractFolder;
                         string folderStatus = ExamFile.IsExtracted ? "압축 해제 완료" : (ExamFile.IsReceived ? "준비 완료" : "대기 중");
                         StatusItems.Add(new ExamFileStatusItem
                         {

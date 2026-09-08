@@ -34,6 +34,8 @@ namespace ProfessorUI.View.Professor
                 student.IsFileReceived = false;
                 student.IsAnswerSubmitted = false;
                 student.IsApproved = false;
+                student.IsCleanupFailed = false;
+                student.IsCleanupDone = false;
                 student.Status = student.IsConnected ? "대기" : "미접속";
             }
 

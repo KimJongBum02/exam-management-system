@@ -84,11 +84,35 @@ namespace ProfessorUI.ViewModel
             OnPropertyChanged(nameof(MonitorText));
         }
 
+        // 학생 PC 에 시험 파일이 남았다는 보고를 받았는지.
+        //
+        // 예전에는 Status 문자열이 "정리실패" 인지로 판단했는데, 그 뒤에 부정행위 알림이
+        // 오면 Status 가 "부정행위 감지" 로 덮여 실패 표시가 사라졌다.
+        // 지워졌는지 여부는 다른 사건에 묻히면 안 되므로 따로 들고 있는다.
+        private bool _isCleanupFailed;
+        public bool IsCleanupFailed
+        {
+            get => _isCleanupFailed;
+            set { _isCleanupFailed = value; OnPropertyChanged(); OnPropertyChanged(nameof(CleanupText)); }
+        }
+
+        // 학생이 "지웠다"고 알려 왔는지.
+        // 이 보고가 있어야 완료로 본다. 답안을 걷은 것만으로 지워졌다고 단정하면,
+        // 보고 전에 학생 PC 가 꺼진 경우를 지워진 것으로 착각한다.
+        private bool _isCleanupDone;
+        public bool IsCleanupDone
+        {
+            get => _isCleanupDone;
+            set { _isCleanupDone = value; OnPropertyChanged(); OnPropertyChanged(nameof(CleanupText)); }
+        }
+
         // ── 종료 및 정산 화면에 그대로 나갈 문구 ──
         // 흔적 삭제는 학생이 답안 회신을 받은 뒤 스스로 하므로, 답안을 걷었는지로 판단한다.
+        // 다만 학생이 "못 지웠다"고 알려 오면 그쪽이 우선이다.
         public string CollectText => IsAnswerSubmitted ? "완료" : "미수집";
-        public string CleanupText => Status == "정리실패" ? "오류"
-                                   : IsAnswerSubmitted ? "완료" : "미실행";
+        public string CleanupText => IsCleanupFailed ? "오류"
+                                   : IsCleanupDone ? "완료"
+                                   : IsAnswerSubmitted ? "확인 필요" : "미실행";
         public string ShutdownText => IsApproved ? "완료" : "미실행";
 
         public bool IsSelected { get => _isSelected; set { _isSelected = value; OnPropertyChanged(); } }

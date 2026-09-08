@@ -72,6 +72,7 @@ namespace NetworkLib
         // 답안 자체는 안전하지만, 다음에 그 자리에 앉는 학생이 앞사람 답안을 보게 되므로
         // 교수가 그 PC를 직접 확인해야 한다.
         CleanupFailed    = 8,
+        CleanupSucceeded = 9,   // 시험 파일까지 지웠음 (학생 → 교수)
     }
 
     // 학생 PC에서 실제로 켜진 감시. 비트를 세워 보낸다.

@@ -60,9 +60,6 @@ namespace ProfessorUI.ViewModel
                 student.IsApproved = true;
                 student.Status = "종료";
             }
-
-            // 단일 승인 후 모든 학생이 승인되었는지 확인
-            CheckAndResetIfAllApproved();
         }
 
         // 선택 항목 일괄 승인 처리
@@ -86,43 +83,16 @@ namespace ProfessorUI.ViewModel
             // 일괄 승인 후 체크박스 해제
             _isAllSelected = false;
             OnPropertyChanged(nameof(IsAllSelected));
-
-            // 일괄 승인 후에도 '모든 학생이 승인되었는지' 검사 후 리셋
-            CheckAndResetIfAllApproved();
         }
 
-        // 모든 학생의 승인이 끝났는지 확인하는 메서드
-        private void CheckAndResetIfAllApproved()
-        {
-            // 학생 목록이 존재하고, 목록 내 모든 학생(Students)의 IsApproved가 true일 때만 초기화
-            if (Students.Count > 0 && Students.All(s => s.IsApproved))
-            {
-                MessageBox.Show("모든 학생의 승인이 완료되어 시험 상태를 초기화합니다.", "안내", MessageBoxButton.OK, MessageBoxImage.Information);
-                ResetAllState();
-            }
-        }
-
-        // 모든 상태 초기화 메서드
-        private void ResetAllState()
-        {
-            // 1. 전체 선택 체크박스 해제
-            _isAllSelected = false;
-            OnPropertyChanged(nameof(IsAllSelected));
-
-            // 2. 모든 학생 개별 상태 초기화
-            foreach (var student in Students)
-            {
-                student.IsSelected = false;
-                student.IsFileReceived = false;
-                student.IsAnswerSubmitted = false;
-                student.IsApproved = false;
-                student.Status = "대기";
-            }
-
-            // 3. 전역 시험 상태 초기화 
-            // ExamPhase.Waiting(0)으로 바꾸면 IsExamStarted(>= InProgress)가 false가 됩니다.
-            ExamState.CurrentPhase = ExamPhase.Waiting;
-        }
+        // 승인이 끝났다고 해서 상태를 초기화하지 않는다.
+        //
+        // 예전에는 모든 학생이 승인되면 곧바로 학생별 기록과 시험 단계를 되돌렸다.
+        // 그러면 교수가 결과를 보려고 종료 완료 현황으로 넘어간 순간 방금 걷은 답안이
+        // '미수집', 승인한 학생이 '대기'로 바뀌어 있게 된다.
+        // (학생이 한 명이면 승인하자마자 그렇게 된다)
+        //
+        // 초기화는 종료 완료 현황 화면의 [처음 화면으로] 가 확인을 받고 처리한다.
 
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? name = null)
