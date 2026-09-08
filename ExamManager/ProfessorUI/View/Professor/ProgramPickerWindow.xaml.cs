@@ -28,6 +28,10 @@ namespace ProfessorUI.View.Professor
         // 이미 감시 목록에 들어 있는 실행 파일들. 목록에서 "추가됨"으로 알려 준다.
         private readonly HashSet<string> _already;
 
+        // 허용 목록을 고르는 중인지. 허용은 원래 이름까지 있어야 인정되므로
+        // 안내와 경고가 달라진다.
+        private readonly bool _forWhiteList;
+
         private ICollectionView? _view;
 
         // 창을 띄우고 고른 것을 허용·금지 목록에 넣는다.
@@ -35,7 +39,7 @@ namespace ProfessorUI.View.Professor
         public static void PickInto(DependencyObject caller, bool toWhiteList)
         {
             var target = toWhiteList ? ProgramControlStore.WhiteList : ProgramControlStore.BlackList;
-            var picker = new ProgramPickerWindow(target) { Owner = Window.GetWindow(caller) };
+            var picker = new ProgramPickerWindow(target, toWhiteList) { Owner = Window.GetWindow(caller) };
             if (picker.ShowDialog() != true) return;
 
             // 반대쪽 목록에 있는 것은 Store 가 조용히 거른다.
@@ -56,10 +60,12 @@ namespace ProfessorUI.View.Professor
                     "이미 반대 목록에 있음", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        public ProgramPickerWindow(IEnumerable<string> alreadyAdded)
+        public ProgramPickerWindow(IEnumerable<string> alreadyAdded, bool forWhiteList)
         {
             InitializeComponent();
             _already = new HashSet<string>(alreadyAdded, StringComparer.OrdinalIgnoreCase);
+            _forWhiteList = forWhiteList;
+            WhiteListNote.Visibility = forWhiteList ? Visibility.Visible : Visibility.Collapsed;
             ChosenList.ItemsSource = _chosen;
             UpdateChosenView();
             Loaded += async (_, _) => { await LoadAsync(); SearchBox.Focus(); };
@@ -78,6 +84,7 @@ namespace ProfessorUI.View.Professor
             foreach (var program in programs)
             {
                 program.IsAlreadyAdded = _already.Contains(program.ExecutableName);
+                program.CannotBeAllowed = _forWhiteList && program.OriginalName.Length == 0;
                 program.IsChosen = chosenExecutables.Contains(program.ExecutableName);
             }
 
@@ -136,8 +143,20 @@ namespace ProfessorUI.View.Professor
         // Ctrl 을 눌러야 여러 개가 골라지는 방식은 알아채기 어려워 쓰지 않았다.
         private void Row_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            if (sender is ListViewItem { DataContext: ProgramEntry entry } && !entry.IsAlreadyAdded)
-                Toggle(entry);
+            if (sender is not ListViewItem { DataContext: ProgramEntry entry }) return;
+            if (entry.IsAlreadyAdded) return;
+
+            if (entry.CannotBeAllowed)
+            {
+                MessageBox.Show(
+                    $"{entry.DisplayName} 은(는) 실행 파일에 원래 이름 정보가 없습니다." + "\n" +
+                    "허용 목록에 넣어도 학생 PC의 감시가 허용으로 인정하지 않아," + "\n" +
+                    "\"목록에 없는 프로그램 실행\" 알림이 계속 뜨게 됩니다.",
+                    "허용 목록에 넣을 수 없음", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            Toggle(entry);
         }
 
         private void Toggle(ProgramEntry entry)
@@ -198,8 +217,8 @@ namespace ProfessorUI.View.Professor
             };
             if (dialog.ShowDialog(this) != true) return;
 
-            string? executable = ProgramCatalog.ResolveExecutableName(dialog.FileName);
-            if (executable == null)
+            ProgramEntry? picked = ProgramCatalog.ResolvePickedFile(dialog.FileName);
+            if (picked == null)
             {
                 MessageBox.Show(
                     "이 바로가기가 어떤 프로그램을 가리키는지 알아내지 못했습니다.\n프로그램(.exe) 파일을 직접 골라 주세요.",
@@ -207,26 +226,23 @@ namespace ProfessorUI.View.Professor
                 return;
             }
 
-            if (_already.Contains(executable))
+            if (_already.Contains(picked.ExecutableName))
             {
-                MessageBox.Show($"{executable} 은(는) 이미 목록에 있습니다.",
+                MessageBox.Show($"{picked.ExecutableName} 은(는) 이미 목록에 있습니다.",
                                 "이미 추가된 프로그램", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
-            if (FindChosen(executable) != null) return;   // 이미 담겨 있으면 그대로 둔다
+            if (FindChosen(picked.ExecutableName) != null) return;   // 이미 담겨 있으면 그대로 둔다
 
             // 목록에 같은 것이 있으면 그 줄을 담아 체크까지 함께 보이게 한다.
             var listed = (ProgramList.ItemsSource as IEnumerable<ProgramEntry>)?.FirstOrDefault(
-                             p => string.Equals(p.ExecutableName, executable, StringComparison.OrdinalIgnoreCase));
+                             p => string.Equals(p.ExecutableName, picked.ExecutableName, StringComparison.OrdinalIgnoreCase));
 
-            Add(listed ?? new ProgramEntry
-            {
-                DisplayName = Path.GetFileNameWithoutExtension(dialog.FileName),
-                ExecutableName = executable,
-                ExecutablePath = dialog.FileName,
-                Source = ProgramSource.Picked,
-            });
+            if (listed == null)
+                picked.CannotBeAllowed = _forWhiteList && picked.OriginalName.Length == 0;
+
+            Add(listed ?? picked);
         }
 
         // ── 확인 ─────────────────────────────────────────────────────
@@ -235,7 +251,16 @@ namespace ProfessorUI.View.Professor
         {
             if (_chosen.Count == 0) return;
 
-            SelectedExecutables.AddRange(_chosen.Select(c => c.ExecutableName));
+            // 허용 목록은 실행 파일 이름과 원래 이름이 '둘 다' 있어야 인정된다.
+            // 허용된 이름으로 위장하는 것을 막으려고 학생 쪽 감시가 그렇게 판정하기 때문에,
+            // 두 이름이 다르면 둘 다 넣어야 한다. 금지는 하나만 걸려도 잡히므로 그대로 둔다.
+            foreach (var entry in _chosen)
+            {
+                SelectedExecutables.Add(entry.ExecutableName);
+                if (_forWhiteList && entry.HasDistinctOriginalName)
+                    SelectedExecutables.Add(entry.OriginalName);
+            }
+
             DialogResult = true;
         }
 
