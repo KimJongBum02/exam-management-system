@@ -10,6 +10,43 @@
 // ══════════════════════════════════════════════════════════════════════
 
 // 고정 길이 문자 배열을 배열 밖으로 나가지 않고 문자열로 만든다
+// C# 은 경로를 UTF-8 로 넘긴다(LPUTF8Str). 그런데 CreateFileA 는 받은 바이트를
+// 시스템 ANSI 코드페이지(한국어 Windows 는 CP949)로 해석하므로, 경로에 한글이
+// 들어가면 엉뚱한 이름을 찾다가 실패한다.
+// 경로가 전부 ASCII 일 때만 우연히 맞아떨어졌던 것이라, 파일을 열 때는 항상
+// UTF-8 을 UTF-16 으로 바꿔 W 계열 API 를 쓴다.
+static std::wstring Utf8ToWide(const std::string& utf8)
+{
+    if (utf8.empty()) return std::wstring();
+
+    int len = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), (int)utf8.size(), nullptr, 0);
+    if (len <= 0) return std::wstring();
+
+    std::wstring wide(len, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), (int)utf8.size(), &wide[0], len);
+    return wide;
+}
+
+// 반대 방향. 시스템에서 받은 경로를 UTF-8 문자열로 통일해 두기 위함이다.
+static std::string WideToUtf8(const std::wstring& wide)
+{
+    if (wide.empty()) return std::string();
+
+    int len = WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), (int)wide.size(), nullptr, 0, nullptr, nullptr);
+    if (len <= 0) return std::string();
+
+    std::string utf8(len, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), (int)wide.size(), &utf8[0], len, nullptr, nullptr);
+    return utf8;
+}
+
+// 경로를 UTF-8 로 받아 여는 CreateFile. 아래 파일 접근은 모두 이것을 쓴다.
+static HANDLE OpenFileUtf8(const std::string& path, DWORD access, DWORD share,
+                           DWORD creation, DWORD flags)
+{
+    return CreateFileW(Utf8ToWide(path).c_str(), access, share, nullptr, creation, flags, nullptr);
+}
+
 static std::string FixedToString(const char* field, size_t maxLen)
 {
     size_t len = 0;
@@ -43,8 +80,8 @@ static std::string SanitizeFileName(const std::string& name)
 std::string ComputeSHA256(const std::string& filePath)
 {
     // 파일 열기
-    HANDLE hFile = CreateFileA(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ,
-                               nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    HANDLE hFile = OpenFileUtf8(filePath, GENERIC_READ, FILE_SHARE_READ,
+                               OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
     if (hFile == INVALID_HANDLE_VALUE) return "";
 
     BCRYPT_ALG_HANDLE  hAlg  = nullptr;
@@ -108,8 +145,8 @@ bool FileTransferSender::SendFile(
     FileErrorCb        errorCb)
 {
     // ── 파일 열기 ────────────────────────────────────────────────
-    HANDLE hFile = CreateFileA(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ,
-                               nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    HANDLE hFile = OpenFileUtf8(filePath, GENERIC_READ, FILE_SHARE_READ,
+                               OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
     if (hFile == INVALID_HANDLE_VALUE)
     {
         if (errorCb) errorCb("", "파일을 열 수 없습니다: " + filePath);
@@ -166,8 +203,8 @@ bool FileTransferSender::SendFile(
     }
 
     // ── 2단계: 파일을 청크 단위로 전송 ───────────────────────────
-    hFile = CreateFileA(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ,
-                        nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    hFile = OpenFileUtf8(filePath, GENERIC_READ, FILE_SHARE_READ,
+                        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
     if (hFile == INVALID_HANDLE_VALUE)
     {
         if (errorCb) errorCb(transferId, "파일을 다시 열 수 없습니다: " + filePath);
@@ -239,9 +276,12 @@ void FileTransferReceiver::HandleStart(
     std::string fileName   = FixedToString(p->fileName,   sizeof(p->fileName));
 
     // 임시 파일 경로 생성 — 경로에 들어가는 값은 파일 이름만 남기고 정리한다
-    char tempDir[MAX_PATH];
-    GetTempPathA(MAX_PATH, tempDir);
-    std::string tempPath = std::string(tempDir)
+    // 사용자 이름에 한글이 들어가면 ANSI 로 받은 경로가 UTF-8 문자열과 섞여 깨진다.
+    wchar_t tempDirW[MAX_PATH];
+    GetTempPathW(MAX_PATH, tempDirW);
+    std::string tempDir = WideToUtf8(tempDirW);
+
+    std::string tempPath = tempDir
         + "NL_" + SanitizeFileName(transferId) + "_" + SanitizeFileName(fileName);
 
     FileReceiveContext ctx;
@@ -256,8 +296,8 @@ void FileTransferReceiver::HandleStart(
     ctx.receivedChunks  = 0;
 
     // 임시 파일 생성
-    ctx.hFile = CreateFileA(tempPath.c_str(), GENERIC_WRITE, 0, nullptr,
-                            CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    ctx.hFile = OpenFileUtf8(tempPath, GENERIC_WRITE, 0,
+                            CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL);
     if (ctx.hFile == INVALID_HANDLE_VALUE)
     {
         if (onFileError) onFileError(transferId, "임시 파일 생성 실패: " + tempPath);
@@ -328,8 +368,8 @@ void FileTransferReceiver::HandleComplete(const uint8_t* payload, uint32_t paylo
     if (onFileProgress) onFileProgress(ctx.transferId, ctx.fileName, 100);
 
     LARGE_INTEGER fileSize{};
-    HANDLE hTmp = CreateFileA(ctx.tempPath.c_str(), GENERIC_READ, FILE_SHARE_READ,
-                              nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    HANDLE hTmp = OpenFileUtf8(ctx.tempPath, GENERIC_READ, FILE_SHARE_READ,
+                              OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
     if (hTmp != INVALID_HANDLE_VALUE) { GetFileSizeEx(hTmp, &fileSize); CloseHandle(hTmp); }
 
     if (onFileReceived)
