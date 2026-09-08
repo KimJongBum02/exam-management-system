@@ -24,13 +24,18 @@ namespace ProfessorUI.View.Professor
 
         // 확인을 누르기 전까지 담아 두는 것들. 창 아래에 그대로 보여 준다.
         private readonly ObservableCollection<ProgramEntry> _chosen = new();
+
+        // 이미 감시 목록에 들어 있는 실행 파일들. 목록에서 "추가됨"으로 알려 준다.
+        private readonly HashSet<string> _already;
+
         private ICollectionView? _view;
 
         // 창을 띄우고 고른 것을 허용·금지 목록에 넣는다.
         // 보안 정책 화면과 마법사 1단계가 같은 방식으로 부른다.
         public static void PickInto(DependencyObject caller, bool toWhiteList)
         {
-            var picker = new ProgramPickerWindow { Owner = Window.GetWindow(caller) };
+            var target = toWhiteList ? ProgramControlStore.WhiteList : ProgramControlStore.BlackList;
+            var picker = new ProgramPickerWindow(target) { Owner = Window.GetWindow(caller) };
             if (picker.ShowDialog() != true) return;
 
             // 반대쪽 목록에 있는 것은 Store 가 조용히 거른다.
@@ -51,26 +56,30 @@ namespace ProfessorUI.View.Professor
                     "이미 반대 목록에 있음", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        public ProgramPickerWindow()
+        public ProgramPickerWindow(IEnumerable<string> alreadyAdded)
         {
             InitializeComponent();
+            _already = new HashSet<string>(alreadyAdded, StringComparer.OrdinalIgnoreCase);
             ChosenList.ItemsSource = _chosen;
             UpdateChosenView();
-            Loaded += async (_, _) => { await LoadAsync(false); SearchBox.Focus(); };
+            Loaded += async (_, _) => { await LoadAsync(); SearchBox.Focus(); };
         }
 
         // ── 목록 읽기 ────────────────────────────────────────────────
 
-        private async Task LoadAsync(bool refresh)
+        private async Task LoadAsync()
         {
             LoadingCover.Visibility = Visibility.Visible;
 
-            var programs = await Task.Run(() => LoadOnStaThread(refresh));
+            var programs = await Task.Run(LoadOnStaThread);
 
             // 다시 읽으면 목록이 새 객체로 바뀌므로, 이미 골라 둔 것에 표시를 다시 입힌다.
             var chosenExecutables = _chosen.Select(c => c.ExecutableName).ToHashSet(StringComparer.OrdinalIgnoreCase);
             foreach (var program in programs)
+            {
+                program.IsAlreadyAdded = _already.Contains(program.ExecutableName);
                 program.IsChosen = chosenExecutables.Contains(program.ExecutableName);
+            }
 
             ProgramList.ItemsSource = programs;
             _view = CollectionViewSource.GetDefaultView(programs);
@@ -90,13 +99,13 @@ namespace ProfessorUI.View.Professor
         // 바로가기를 읽는 WScript.Shell 은 STA 스레드에서 부르는 것이 안전하다.
         // 그렇다고 UI 스레드에서 돌리면 목록을 훑는 동안 창이 멈춘 것처럼 보여
         // 전용 STA 스레드를 하나 띄운다.
-        private static Task<List<ProgramEntry>> LoadOnStaThread(bool refresh)
+        private static Task<List<ProgramEntry>> LoadOnStaThread()
         {
             var done = new TaskCompletionSource<List<ProgramEntry>>();
 
             var worker = new Thread(() =>
             {
-                try { done.SetResult(ProgramCatalog.Load(refresh).ToList()); }
+                try { done.SetResult(ProgramCatalog.Load().ToList()); }
                 catch (Exception) { done.SetResult(new List<ProgramEntry>()); }
             });
             worker.SetApartmentState(ApartmentState.STA);
@@ -117,7 +126,7 @@ namespace ProfessorUI.View.Professor
         private async void Refresh_Click(object sender, RoutedEventArgs e)
         {
             SearchBox.Clear();
-            await LoadAsync(true);
+            await LoadAsync();
             SearchBox.Focus();
         }
 
@@ -127,7 +136,7 @@ namespace ProfessorUI.View.Professor
         // Ctrl 을 눌러야 여러 개가 골라지는 방식은 알아채기 어려워 쓰지 않았다.
         private void Row_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            if (sender is ListViewItem { DataContext: ProgramEntry entry })
+            if (sender is ListViewItem { DataContext: ProgramEntry entry } && !entry.IsAlreadyAdded)
                 Toggle(entry);
         }
 
@@ -195,6 +204,13 @@ namespace ProfessorUI.View.Professor
                 MessageBox.Show(
                     "이 바로가기가 어떤 프로그램을 가리키는지 알아내지 못했습니다.\n프로그램(.exe) 파일을 직접 골라 주세요.",
                     "실행 파일을 찾지 못함", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (_already.Contains(executable))
+            {
+                MessageBox.Show($"{executable} 은(는) 이미 목록에 있습니다.",
+                                "이미 추가된 프로그램", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 

@@ -1,7 +1,7 @@
 ﻿<Window x:Class="ProfessorUI.View.Professor.ProgramPickerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="프로그램 찾기" Height="700" Width="760"
+        Title="프로그램 찾기" Height="700" Width="840"
         MinHeight="520" MinWidth="640"
         WindowStartupLocation="CenterOwner"
         Background="#FFFFFF"
@@ -16,6 +16,13 @@
             <!-- 줄 아무 데나 눌러도 골라지도록 한 목록 행 -->
             <Style x:Key="PickRow" TargetType="ListViewItem" BasedOn="{StaticResource TableRow}">
                 <EventSetter Event="MouseLeftButtonUp" Handler="Row_Click"/>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsAlreadyAdded}" Value="True">
+                        <Setter Property="Opacity" Value="0.45"/>
+                        <Setter Property="Cursor" Value="Arrow"/>
+                        <Setter Property="ToolTip" Value="이미 목록에 있습니다"/>
+                    </DataTrigger>
+                </Style.Triggers>
             </Style>
 
             <!-- 고른 항목 하나 (이름 + 빼기) -->
@@ -41,7 +48,7 @@
             <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
                        Text="한글 이름(카카오톡)으로도, 실행 파일 이름(KakaoTalk.exe)으로도 찾을 수 있습니다. 목록에 없으면 [직접 찾아보기]로 프로그램이나 바탕화면 바로가기를 고르세요."/>
             <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,4,0,0"
-                       Text="줄을 누르면 아래 [고른 프로그램]에 담기고, 다시 누르면 빠집니다. 여러 개를 한 번에 담을 수 있습니다."/>
+                       Text="줄을 누르면 아래 [고른 프로그램]에 담기고, 다시 누르면 빠집니다. 여러 개를 한 번에 담을 수 있으며, [추가됨]으로 표시된 것은 이미 목록에 있어 고를 수 없습니다."/>
         </StackPanel>
 
         <!-- 검색 -->
@@ -71,9 +78,19 @@
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
                                     <!-- 표시 전용. 고르는 것은 줄 전체를 누르는 것으로 한다 -->
-                                    <CheckBox IsChecked="{Binding IsChosen, Mode=OneWay}"
-                                              IsHitTestVisible="False" Focusable="False"
-                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <CheckBox IsHitTestVisible="False" Focusable="False"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <CheckBox.Style>
+                                            <Style TargetType="CheckBox">
+                                                <Setter Property="IsChecked" Value="{Binding IsChosen, Mode=OneWay}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsAlreadyAdded}" Value="True">
+                                                        <Setter Property="IsChecked" Value="True"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </CheckBox.Style>
+                                    </CheckBox>
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>
@@ -103,6 +120,13 @@
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding SourceText}" Style="{StaticResource Cell}"/>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                        <GridViewColumn Header="상태" Width="80">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding StatusText}" Style="{StaticResource Cell}"/>
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>
@@ -152,9 +176,9 @@
         <!-- 확인 -->
         <Grid Grid.Row="4" Margin="0,14,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="취소" Style="{StaticResource SecondaryButton}" Click="Cancel_Click"/>
+                <Button Content="취소" Style="{StaticResource SecondaryButton}" IsCancel="True" Click="Cancel_Click"/>
                 <Button x:Name="ConfirmButton" Content="선택 항목 추가" Style="{StaticResource PrimaryButton}"
-                        Padding="16,8" Margin="10,0,0,0" Click="Confirm_Click"/>
+                        Padding="16,8" Margin="10,0,0,0" IsDefault="True" Click="Confirm_Click"/>
             </StackPanel>
         </Grid>
     </Grid>

@@ -38,6 +38,12 @@ namespace ProfessorUI.Service
             _ => "설치됨",
         };
 
+        // 이미 감시 목록에 들어 있는 것. 다시 고를 수 없게 하고 그렇다고 알려 준다.
+        // 조용히 무시하면 눌리지 않은 것처럼 보이기 때문이다.
+        public bool IsAlreadyAdded { get; set; }
+
+        public string StatusText => IsAlreadyAdded ? "추가됨" : string.Empty;
+
         // 선택창에서 고른 상태. 목록의 체크 표시가 이 값을 따라간다.
         private bool _isChosen;
         public bool IsChosen
@@ -73,14 +79,10 @@ namespace ProfessorUI.Service
     // 표를 두면 새 프로그램이 나올 때마다 우리가 채워 넣어야 한다.
     public static class ProgramCatalog
     {
-        private static List<ProgramEntry>? _cache;
-
-        // 목록을 읽는다. 처음 한 번만 훑고 그 뒤로는 모아 둔 것을 준다.
-        // 다시 읽으려면 refresh 를 준다 — 그 사이에 켜진 프로그램을 잡을 때 쓴다.
-        public static IReadOnlyList<ProgramEntry> Load(bool refresh = false)
+        // 부를 때마다 새로 훑는다. 1초 남짓이면 끝나고,
+        // 모아 두면 그 사이에 켜고 끈 프로그램의 "실행 중" 표시가 실제와 어긋난다.
+        public static IReadOnlyList<ProgramEntry> Load()
         {
-            if (_cache != null && !refresh) return _cache;
-
             var byExe = new Dictionary<string, ProgramEntry>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var entry in ReadStartMenu())
@@ -96,11 +98,10 @@ namespace ProfessorUI.Service
                     byExe[entry.ExecutableName] = entry;
             }
 
-            _cache = byExe.Values
+            // 현재 문화권(ko-KR) 기준이라 한글 가나다가 먼저, 그다음 영문 순으로 놓인다.
+            return byExe.Values
                 .OrderBy(e => e.DisplayName, StringComparer.CurrentCulture)
                 .ToList();
-
-            return _cache;
         }
 
         // ── 시작 메뉴 바로가기 ────────────────────────────────────────

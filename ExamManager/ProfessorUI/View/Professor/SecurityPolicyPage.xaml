@@ -65,12 +65,17 @@
             <StackPanel Grid.Column="0">
                 <Border Style="{StaticResource Card}" Margin="0,0,0,20">
                     <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-                            <TextBlock Text="금지 프로세스 목록" Style="{StaticResource SectionTitle}" Margin="0,0,12,0"
-                                       VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding BlackList.BlackList.Count}" Style="{StaticResource Caption}"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
+                        <Grid Margin="0,0,0,14">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="금지 프로세스 목록" Style="{StaticResource SectionTitle}" Margin="0,0,12,0"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding BlackList.BlackList.Count}" Style="{StaticResource Caption}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Button Content="전체 삭제" Style="{StaticResource LinkButton}"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    Command="{Binding BlackList.ClearAllCommand}"/>
+                        </Grid>
                         <Grid Margin="0,0,0,14">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -112,12 +117,17 @@
 
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-                            <TextBlock Text="허용 프로세스 목록" Style="{StaticResource SectionTitle}" Margin="0,0,12,0"
-                                       VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding WhiteList.WhiteList.Count}" Style="{StaticResource Caption}"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
+                        <Grid Margin="0,0,0,14">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="허용 프로세스 목록" Style="{StaticResource SectionTitle}" Margin="0,0,12,0"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding WhiteList.WhiteList.Count}" Style="{StaticResource Caption}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Button Content="전체 삭제" Style="{StaticResource LinkButton}"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    Command="{Binding WhiteList.ClearAllCommand}"/>
+                        </Grid>
                         <Grid Margin="0,0,0,14">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>

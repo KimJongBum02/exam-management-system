@@ -144,7 +144,12 @@
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" Margin="0,0,0,10">
-                        <TextBlock Text="금지 프로세스 목록" Style="{StaticResource SectionTitle}"/>
+                        <Grid>
+                            <TextBlock Text="금지 프로세스 목록" Style="{StaticResource SectionTitle}"/>
+                            <Button Content="전체 삭제" Style="{StaticResource LinkButton}"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    Command="{Binding BlackList.ClearAllCommand}"/>
+                        </Grid>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -185,7 +190,12 @@
                     </ListView>
 
                     <StackPanel Grid.Row="2" Margin="0,20,0,10">
-                        <TextBlock Text="허용 프로세스 목록" Style="{StaticResource SectionTitle}"/>
+                        <Grid>
+                            <TextBlock Text="허용 프로세스 목록" Style="{StaticResource SectionTitle}"/>
+                            <Button Content="전체 삭제" Style="{StaticResource LinkButton}"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    Command="{Binding WhiteList.ClearAllCommand}"/>
+                        </Grid>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
