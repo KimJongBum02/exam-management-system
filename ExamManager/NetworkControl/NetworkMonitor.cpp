@@ -15,7 +15,30 @@ namespace {
     constexpr int UPSTREAM_TIMEOUT_MS = 3000;  // 상위 DNS 무응답 시 이 조회 포기
     constexpr int BUF_SIZE = 4096;             // EDNS0 대비 넉넉히
 
-    // 조회를 상위 DNS로 전달하고 응답을 클라이언트에게 릴레이 (차단하지 않음)
+    // 금지 도메인에 "그런 이름 없음"(NXDOMAIN)으로 답해 접속을 막는다.
+    //
+    // 상위 DNS로 넘기지 않으므로 주소를 얻지 못하고, 브라우저는 사이트를 찾을 수 없다고 표시한다.
+    // 질의를 그대로 되돌려 보내되 헤더의 몇 비트만 응답으로 바꾼다.
+    // (질문 구역이 그대로 있어야 클라이언트가 자기 질의의 답으로 받아들인다)
+    void SendBlockedReply(SOCKET listener, char* query, int queryLen, const sockaddr_in& client)
+    {
+        if (queryLen < DNS_HEADER_LEN) return;
+
+        unsigned char* header = (unsigned char*)query;
+
+        header[2] |= 0x80;                      // QR=1 (질의가 아니라 응답)
+        header[3] = (header[3] & 0xF0) | 0x03;  // RCODE=3 (NXDOMAIN, 그런 이름 없음)
+        header[3] |= 0x80;                      // RA=1 (재귀 질의 가능)
+
+        // 답변·권한·추가 구역은 하나도 없다
+        header[6] = header[7] = 0;
+        header[8] = header[9] = 0;
+        header[10] = header[11] = 0;
+
+        sendto(listener, query, queryLen, 0, (const sockaddr*)&client, sizeof(client));
+    }
+
+    // 조회를 상위 DNS로 전달하고 응답을 클라이언트에게 릴레이 (금지 목록이 아닌 것)
     void ForwardQuery(SOCKET listener, const char* query, int queryLen,
         const sockaddr_in& client, const sockaddr_in& upstream)
     {
@@ -155,13 +178,20 @@ void NetworkMonitor::CaptureThreadFunc()
         }
         if (n <= 0) continue;
 
-        // 1) 도메인 추출 → 금지 목록 검사 (차단하지 않고 감지만)
+        // 1) 도메인 추출 → 금지 목록 검사
         std::wstring domain;
+        bool blocked = false;
+
         if (ExtractQname((const unsigned char*)buf, n, domain))
         {
             std::wstring matched;
             if (MatchTarget(domain, matched))
             {
+                blocked = true;
+
+                // 알림은 도메인마다 한 번만 보낸다.
+                // 브라우저는 같은 이름을 계속 다시 묻기 때문에, 매번 보내면
+                // 교수 화면이 같은 알림으로 가득 찬다. 차단은 매번 한다.
                 bool first;
                 {
                     std::lock_guard<std::mutex> lock(m_targetMutex);
@@ -179,8 +209,11 @@ void NetworkMonitor::CaptureThreadFunc()
             }
         }
 
-        // 2) 상위 DNS로 전달하고 응답을 릴레이 (정상 조회 유지)
-        ForwardQuery(listener, buf, n, client, upstream);
+        // 2) 금지 도메인은 막고, 나머지는 상위 DNS로 넘겨 정상 조회를 유지한다
+        if (blocked)
+            SendBlockedReply(listener, buf, n, client);
+        else
+            ForwardQuery(listener, buf, n, client, upstream);
     }
 }
 

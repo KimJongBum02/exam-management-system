@@ -36,6 +36,7 @@ namespace NetworkLib
         ProcessListUpdate       = 40,
         ForceProcessKill        = 41,
         ShutdownPC              = 42,
+        MonitorStatusReport     = 43,   // 학생 → 교수. 감시가 실제로 켜졌는지
         QuizQuestion            = 50,
         QuizAnswer              = 51,
         QuizResult              = 52,
@@ -71,6 +72,52 @@ namespace NetworkLib
         // 답안 자체는 안전하지만, 다음에 그 자리에 앉는 학생이 앞사람 답안을 보게 되므로
         // 교수가 그 PC를 직접 확인해야 한다.
         CleanupFailed    = 8,
+    }
+
+    // 학생 PC에서 실제로 켜진 감시. 비트를 세워 보낸다.
+    // 교수가 "감시가 도는 줄 알았는데 아니었다"를 시험이 끝난 뒤에 알게 되면 늦기 때문에,
+    // 학생이 시험 시작 직후 스스로 보고한다.
+    [Flags]
+    public enum MonitorFlags : uint
+    {
+        None           = 0,
+        ProcessMonitor = 1 << 0,
+        NetworkMonitor = 1 << 1,
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  MonitorStatusReport 페이로드 (고정 260바이트)
+    //    [uint32 flags][char detail[256]]
+    //  detail 에는 켜지지 못한 이유를 담는다 (예: "관리자 권한 없음").
+    // ══════════════════════════════════════════════════════════════════
+    public static class MonitorStatusPayload
+    {
+        private const int DetailOffset = 4;
+        private const int DetailSize   = 256;
+        public  const int Size         = DetailOffset + DetailSize;   // 260
+
+        public static byte[] Encode(MonitorFlags flags, string detail = "")
+        {
+            byte[] payload = new byte[Size];
+            BitConverter.GetBytes((uint)flags).CopyTo(payload, 0);
+            ExamSubmitPayload.WriteFixedString(payload, DetailOffset, detail, DetailSize);
+            return payload;
+        }
+
+        public static bool TryDecode(IntPtr payload, uint payloadLen,
+                                     out MonitorFlags flags, out string detail)
+        {
+            flags = MonitorFlags.None;
+            detail = "";
+            if (payload == IntPtr.Zero || payloadLen < Size) return false;
+
+            byte[] buffer = new byte[Size];
+            Marshal.Copy(payload, buffer, 0, Size);
+
+            flags = (MonitorFlags)BitConverter.ToUInt32(buffer, 0);
+            detail = Encoding.UTF8.GetString(buffer, DetailOffset, DetailSize).Split('\0')[0];
+            return true;
+        }
     }
 
     // 부정행위 유형 (Protocol.h의 CheatingAlertType enum과 동일한 값)
