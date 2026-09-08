@@ -185,7 +185,10 @@ namespace StudentUI.Service
 
         // 시험 파일을 지운다. 답안이 교수 PC에 안전히 도착한 뒤에만 불린다.
         //
-        // 폴더를 통째로 지운다. 다음 시험에서 압축을 풀 때 ExamFileStore가 다시 만들어 준다.
+        // 배포받은 폴더만 지우고 그 위의 "시험 파일" 폴더는 남긴다.
+        // 교수 PC 와 학생 PC 를 같은 기계에서 돌리면 두 쪽이 같은 폴더를 쓰는데,
+        // 통째로 지우면 교수가 만들어 둔 배포용 묶음까지 사라진다.
+        // 남은 폴더가 지워지더라도 다음 배포 때 압축을 풀면서 다시 만들어진다.
         // 삭제에 실패해도 답안은 이미 교수에게 가 있어 유실은 아니다. 다만 그 자리에 앉는
         // 다음 학생이 앞사람 답안을 보게 되므로, 교수에게 알려 직접 확인하도록 한다.
         //
@@ -193,7 +196,7 @@ namespace StudentUI.Service
         // 창을 강제로 닫지는 않는다 — 학생이 열어 둔 다른 창까지 잘못 닫을 수 있다.
         private void CleanupExamFiles()
         {
-            string examFolder = ExamFileStore.Instance.ExtractFolder;
+            string examFolder = ExamFileStore.Instance.ExtractedRoot;
             try
             {
                 if (Directory.Exists(examFolder))
@@ -234,7 +237,8 @@ namespace StudentUI.Service
         // 이걸 성공으로 보면 답안 없는 파일을 제출하고 원본까지 지우게 된다.
         private static (string? ArchivePath, int Code) CompressAnswers(string password)
         {
-            string sourceFolder = ExamFileStore.Instance.ExtractFolder;
+            // 배포받은 폴더만 묶는다. 지우는 범위와 같아야 걷지 않은 것이 남지 않는다.
+            string sourceFolder = ExamFileStore.Instance.ExtractedRoot;
             if (!Directory.Exists(sourceFolder)) return (null, -1);
 
             string sevenZa = Path.Combine(AppContext.BaseDirectory, "7za.exe");
