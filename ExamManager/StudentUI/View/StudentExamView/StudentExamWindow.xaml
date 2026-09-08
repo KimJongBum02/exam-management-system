@@ -1,4 +1,4 @@
-<Window x:Class="StudentUI.View.StudentExamView.StudentExamWindow"
+﻿<Window x:Class="StudentUI.View.StudentExamView.StudentExamWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -8,6 +8,7 @@
         Background="White"
         FontFamily="{StaticResource AppFont}"
         Title="시험 운영 - 학생용" Height="820" Width="1380"
+        WindowState="Maximized"
         WindowStartupLocation="CenterScreen"
         MinHeight="700" MinWidth="1150">
 
