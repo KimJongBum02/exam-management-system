@@ -187,8 +187,33 @@
                     </StackPanel>
                 </Border>
 
-                <Button Grid.Row="5" Content="시험 준비 화면으로 이동" Style="{StaticResource PrimaryButton}"
-                        Click="StartWizard_Click" Margin="0,18,0,0"/>
+                <StackPanel Grid.Row="5" Margin="0,18,0,0">
+                    <!-- 서버는 마법사 2단계에서도 열 수 있지만, 수업 중 OX 퀴즈만 쓰려는 경우
+                         마법사를 거치지 않아도 되도록 여기에도 둔다 -->
+                    <Border Style="{StaticResource Card}" Padding="16,14" Margin="0,0,0,12">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,10">
+                                <TextBlock Text="서버" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Server.StatusText}" Style="{StaticResource Caption}"
+                                           HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                            </Grid>
+                            <TextBlock Text="{Binding Server.Address}" FontSize="18" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextPrimary}" Margin="0,0,0,12"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="서버 열기" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"
+                                        Command="{Binding Server.StartCommand}"/>
+                                <Button Content="서버 닫기" Style="{StaticResource SecondaryButton}"
+                                        Command="{Binding Server.StopCommand}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Button Content="강의실 현황판 열기" Style="{StaticResource SecondaryButton}"
+                            HorizontalAlignment="Stretch" Margin="0,0,0,12" Click="OpenMonitorBoard_Click"/>
+
+                    <Button Content="시험 준비 화면으로 이동" Style="{StaticResource PrimaryButton}"
+                            Click="StartWizard_Click"/>
+                </StackPanel>
             </Grid>
         </Grid>
     </Grid>

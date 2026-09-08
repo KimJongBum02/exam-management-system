@@ -101,6 +101,17 @@ namespace ProfessorUI.Service
 
         // 부정행위 알림 처리: 해당 학번 학생을 '부정행위 감지'로 표시
         // (어떤 프로그램이었는지 자세히 보여주는 화면은 아직 없다 — 모니터링 화면 작업에서 붙일 예정)
+        // 학생 PC 가 보고한 감시 상태를 그 학생 줄에 적는다.
+        public void MarkMonitorStatus(string studentId, bool processOn, bool networkOn, string detail)
+        {
+            foreach (var student in Students)
+                if (student.StudentId == studentId)
+                {
+                    student.SetMonitorStatus(processOn, networkOn, detail);
+                    return;
+                }
+        }
+
         public void MarkCheatingDetected(string studentId)
         {
             var student = Students.FirstOrDefault(s => s.StudentId == studentId);

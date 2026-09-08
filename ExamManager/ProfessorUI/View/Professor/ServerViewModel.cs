@@ -10,7 +10,7 @@ namespace ProfessorUI.View.Professor
     // 마법사 2단계의 서버 열기/닫기 화면.
     //
     // 서버를 실제로 여닫는 일은 ServerControl 이 맡고, 여기서는 그 상태를 보여 주기만 한다.
-    // App 이 시작할 때 이미 서버를 켜 두므로, 화면에 들어오면 "열림"으로 뜨는 것이 정상이다.
+    // 앱을 켠 직후에는 서버가 닫혀 있고, 교수가 [서버 열기] 를 눌러야 열린다.
     // 상태를 여기서 따로 들고 있으면 실제 서버와 화면이 어긋나므로 ServerControl 만 본다.
     public class ServerViewModel : INotifyPropertyChanged
     {

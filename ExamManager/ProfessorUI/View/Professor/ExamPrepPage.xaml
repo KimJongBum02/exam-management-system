@@ -265,16 +265,17 @@
                     <TextBlock Text="서버 상태" Style="{StaticResource SectionTitle}"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
-                            <Grid Margin="0,0,0,12">
-                                <TextBlock Text="학생 접속 주소" Style="{StaticResource Body}"/>
-                                <TextBlock Text="{Binding Server.Address}" Style="{StaticResource Caption}"
-                                           HorizontalAlignment="Right"/>
-                            </Grid>
-                            <Grid Margin="0,0,0,12">
-                                <TextBlock Text="포트" Style="{StaticResource Body}"/>
-                                <TextBlock Text="{Binding Server.Port}" Style="{StaticResource Caption}"
-                                           HorizontalAlignment="Right"/>
-                            </Grid>
+                            <!-- 학생에게 불러 줘야 하는 값이라 이 화면에서 제일 크게 둔다 -->
+                            <Border Background="{StaticResource BgSubtle}" BorderBrush="{StaticResource BorderLight}"
+                                    BorderThickness="1" CornerRadius="6" Padding="20,16" Margin="0,0,0,18">
+                                <StackPanel>
+                                    <TextBlock Text="학생 접속 주소" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
+                                    <TextBlock Text="{Binding Server.Address}" FontSize="30" FontWeight="SemiBold"
+                                               Foreground="{StaticResource TextPrimary}"/>
+                                    <TextBlock Text="학생 프로그램의 접속 화면에 이 주소를 그대로 입력하게 하십시오."
+                                               Style="{StaticResource Caption}" Margin="0,8,0,0"/>
+                                </StackPanel>
+                            </Border>
                             <Grid Margin="0,0,0,18">
                                 <TextBlock Text="서버 상태" Style="{StaticResource Body}"/>
                                 <TextBlock Text="{Binding Server.StatusText}" Style="{StaticResource Caption}"
@@ -517,9 +518,14 @@
                                 <TextBlock Text="{Binding Overview.ConnectedText}" Style="{StaticResource Caption}"
                                            HorizontalAlignment="Right"/>
                             </Grid>
-                            <Grid Margin="0">
+                            <Grid Style="{StaticResource CheckRow}">
                                 <TextBlock Text="● 파일 수신 완료" Style="{StaticResource Body}"/>
                                 <TextBlock Text="{Binding Overview.FileReceivedCount}" Style="{StaticResource Caption}"
+                                           HorizontalAlignment="Right"/>
+                            </Grid>
+                            <Grid Margin="0">
+                                <TextBlock Text="● 네트워크 감시" Style="{StaticResource Body}"/>
+                                <TextBlock Text="{Binding Overview.NetworkMonitorText}" Style="{StaticResource Caption}"
                                            HorizontalAlignment="Right"/>
                             </Grid>
                         </StackPanel>
