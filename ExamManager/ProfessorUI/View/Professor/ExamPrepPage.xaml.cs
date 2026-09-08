@@ -62,5 +62,13 @@ namespace ProfessorUI.View.Professor
             box.BorderThickness = new Thickness(active ? 1.6 : 1);
             name.FontWeight = active ? FontWeights.Bold : FontWeights.Normal;
         }
+
+        // 실행 파일 이름을 외우지 않아도 되도록 프로그램 목록에서 고르게 한다.
+        private void PickWhite_Click(object sender, RoutedEventArgs e)
+            => ProgramPickerWindow.PickInto(this, toWhiteList: true);
+
+        private void PickBlack_Click(object sender, RoutedEventArgs e)
+            => ProgramPickerWindow.PickInto(this, toWhiteList: false);
+
     }
 }

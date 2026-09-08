@@ -42,5 +42,13 @@ namespace ProfessorUI.View.Professor
 
         private void ShowAllAlerts_Click(object sender, RoutedEventArgs e)
             => ShellWindow.From(this)?.Navigate(new ExamManagePage(), 2);
+
+        // 실행 파일 이름을 외우지 않아도 되도록 프로그램 목록에서 고르게 한다.
+        private void PickWhite_Click(object sender, RoutedEventArgs e)
+            => ProgramPickerWindow.PickInto(this, toWhiteList: true);
+
+        private void PickBlack_Click(object sender, RoutedEventArgs e)
+            => ProgramPickerWindow.PickInto(this, toWhiteList: false);
+
     }
 }

@@ -83,7 +83,7 @@ namespace ProfessorUI.ViewModel
         {
             if (WhiteList.Count == 0) return;
 
-            var result = MessageBox.Show("등록된 모든 화이트리스트 항목을 삭제하시겠습니까?", "전체 삭제 확인",
+            var result = MessageBox.Show("허용 프로세스 목록을 모두 비우시겠습니까?", "전체 삭제 확인",
                                          MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (result == MessageBoxResult.Yes)
             {

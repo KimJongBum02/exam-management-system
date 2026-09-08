@@ -144,59 +144,29 @@
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" Margin="0,0,0,10">
-                        <TextBlock Text="허용 프로세스 목록" Style="{StaticResource SectionTitle}"/>
+                        <Grid>
+                            <TextBlock Text="금지 프로세스 목록" Style="{StaticResource SectionTitle}"/>
+                            <Button Content="전체 삭제" Style="{StaticResource LinkButton}"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    Command="{Binding BlackList.ClearAllCommand}"/>
+                        </Grid>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBox Grid.Column="0" Style="{StaticResource SearchBox}"
-                                     Foreground="{StaticResource TextPrimary}"
-                                     Text="{Binding WhiteList.InputProcessName, UpdateSourceTrigger=PropertyChanged}"/>
-                            <Button Grid.Column="1" Content="추가" Style="{StaticResource SecondaryButton}"
-                                    Margin="10,0,0,0" Command="{Binding WhiteList.AddCommand}"/>
-                        </Grid>
-                    </StackPanel>
-
-                    <ListView Grid.Row="1" ItemsSource="{Binding WhiteList.WhiteList}"
-                              Style="{StaticResource FlatTable}" MinHeight="150">
-                        <ListView.View>
-                            <GridView ColumnHeaderContainerStyle="{StaticResource TableHeader}">
-                                <GridViewColumn Header="프로세스 이름" Width="330">
-                                    <GridViewColumn.CellTemplate>
-                                        <DataTemplate><TextBlock Text="{Binding}" Style="{StaticResource Cell}"/></DataTemplate>
-                                    </GridViewColumn.CellTemplate>
-                                </GridViewColumn>
-                                <GridViewColumn Header="관리" Width="110">
-                                    <GridViewColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Button Content="삭제" Style="{StaticResource CellLink}"
-                                                    CommandParameter="{Binding}"
-                                                    Command="{Binding DataContext.WhiteList.RemoveCommand,
-                                                              RelativeSource={RelativeSource AncestorType=UserControl}}"/>
-                                        </DataTemplate>
-                                    </GridViewColumn.CellTemplate>
-                                </GridViewColumn>
-                            </GridView>
-                        </ListView.View>
-                    </ListView>
-
-                    <StackPanel Grid.Row="2" Margin="0,20,0,10">
-                        <TextBlock Text="금지 프로세스 목록" Style="{StaticResource SectionTitle}"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBox Grid.Column="0" Style="{StaticResource SearchBox}"
                                      Foreground="{StaticResource TextPrimary}"
                                      Text="{Binding BlackList.InputProcessName, UpdateSourceTrigger=PropertyChanged}"/>
-                            <Button Grid.Column="1" Content="추가" Style="{StaticResource SecondaryButton}"
-                                    Margin="10,0,0,0" Command="{Binding BlackList.AddCommand}"/>
+                            <Button Grid.Column="1" Content="목록에서 찾기" Style="{StaticResource SecondaryButton}"
+                                    Margin="10,0,0,0" Click="PickBlack_Click"/>
+                            <Button Grid.Column="2" Content="추가" Style="{StaticResource SecondaryButton}"
+                                    Margin="8,0,0,0" Command="{Binding BlackList.AddCommand}"/>
                         </Grid>
                     </StackPanel>
 
-                    <ListView Grid.Row="3" ItemsSource="{Binding BlackList.BlackList}"
+                    <ListView Grid.Row="1" ItemsSource="{Binding BlackList.BlackList}"
                               Style="{StaticResource FlatTable}" MinHeight="150">
                         <ListView.View>
                             <GridView ColumnHeaderContainerStyle="{StaticResource TableHeader}">
@@ -211,6 +181,52 @@
                                             <Button Content="삭제" Style="{StaticResource CellLink}"
                                                     CommandParameter="{Binding}"
                                                     Command="{Binding DataContext.BlackList.RemoveCommand,
+                                                              RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+
+                    <StackPanel Grid.Row="2" Margin="0,20,0,10">
+                        <Grid>
+                            <TextBlock Text="허용 프로세스 목록" Style="{StaticResource SectionTitle}"/>
+                            <Button Content="전체 삭제" Style="{StaticResource LinkButton}"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    Command="{Binding WhiteList.ClearAllCommand}"/>
+                        </Grid>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0" Style="{StaticResource SearchBox}"
+                                     Foreground="{StaticResource TextPrimary}"
+                                     Text="{Binding WhiteList.InputProcessName, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button Grid.Column="1" Content="목록에서 찾기" Style="{StaticResource SecondaryButton}"
+                                    Margin="10,0,0,0" Click="PickWhite_Click"/>
+                            <Button Grid.Column="2" Content="추가" Style="{StaticResource SecondaryButton}"
+                                    Margin="8,0,0,0" Command="{Binding WhiteList.AddCommand}"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <ListView Grid.Row="3" ItemsSource="{Binding WhiteList.WhiteList}"
+                              Style="{StaticResource FlatTable}" MinHeight="150">
+                        <ListView.View>
+                            <GridView ColumnHeaderContainerStyle="{StaticResource TableHeader}">
+                                <GridViewColumn Header="프로세스 이름" Width="330">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate><TextBlock Text="{Binding}" Style="{StaticResource Cell}"/></DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="관리" Width="110">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="삭제" Style="{StaticResource CellLink}"
+                                                    CommandParameter="{Binding}"
+                                                    Command="{Binding DataContext.WhiteList.RemoveCommand,
                                                               RelativeSource={RelativeSource AncestorType=UserControl}}"/>
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>
