@@ -31,6 +31,19 @@ namespace ProfessorUI.Service
         public ProgramSource Source { get; set; }
         public ImageSource? Icon { get; init; }
 
+        // 실행 파일에 박혀 있는 원래 이름. 파일 이름을 바꿔도 따라 변하지 않는다.
+        // 학생 PC의 감시는 허용 목록을 판정할 때 이 이름까지 요구하므로
+        // (허용된 이름으로 위장하는 것을 막기 위함) 함께 목록에 넣어야 한다.
+        // 버전 리소스가 없는 실행 파일도 흔해서 빈 문자열이 정상 결과다.
+        public string OriginalName { get; init; } = string.Empty;
+
+        // 실행 파일 이름과 원래 이름이 달라 목록에 두 개를 넣어야 하는 경우
+        public bool HasDistinctOriginalName =>
+            OriginalName.Length > 0 &&
+            !string.Equals(Path.GetFileNameWithoutExtension(OriginalName),
+                           Path.GetFileNameWithoutExtension(ExecutableName),
+                           StringComparison.OrdinalIgnoreCase);
+
         public string SourceText => Source switch
         {
             ProgramSource.Running => "실행 중",
@@ -42,7 +55,13 @@ namespace ProfessorUI.Service
         // 조용히 무시하면 눌리지 않은 것처럼 보이기 때문이다.
         public bool IsAlreadyAdded { get; set; }
 
-        public string StatusText => IsAlreadyAdded ? "추가됨" : string.Empty;
+        // 허용 목록을 고르는 중인데 원래 이름이 없는 경우.
+        // 넣어도 감시가 허용으로 인정하지 않으므로 미리 알려 준다.
+        public bool CannotBeAllowed { get; set; }
+
+        public string StatusText =>
+            IsAlreadyAdded ? "추가됨" :
+            CannotBeAllowed ? "허용 불가" : string.Empty;
 
         // 선택창에서 고른 상태. 목록의 체크 표시가 이 값을 따라간다.
         private bool _isChosen;
@@ -146,6 +165,7 @@ namespace ProfessorUI.Service
                         DisplayName = name,
                         ExecutableName = exe,
                         ExecutablePath = target,
+                        OriginalName = ReadOriginalName(target),
                         Source = ProgramSource.Installed,
                         Icon = LoadIcon(target),
                     };
@@ -156,22 +176,31 @@ namespace ProfessorUI.Service
         // 파일 선택창에서 고른 것 하나를 실행 파일 이름으로 바꾼다.
         // 목록에 없는 프로그램을 넣는 길이며, 교수가 Program Files 를 뒤지지 않아도 되도록
         // 바탕화면·시작 메뉴의 바로가기(.lnk)를 골라도 대상 실행 파일을 풀어 준다.
-        public static string? ResolveExecutableName(string path)
+        public static ProgramEntry? ResolvePickedFile(string path)
         {
-            if (path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-                return Path.GetFileName(path);
+            string? target = path;
 
-            if (!path.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase))
-                return null;
+            if (!path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!path.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase)) return null;
 
-            object? shell = CreateShell();
-            if (shell == null) return null;
+                object? shell = CreateShell();
+                if (shell == null) return null;
 
-            string? target = ResolveShortcut(shell, path);
-            if (target == null || !target.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-                return null;
+                target = ResolveShortcut(shell, path);
+                if (target == null || !target.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                    return null;
+            }
 
-            return Path.GetFileName(target);
+            return new ProgramEntry
+            {
+                DisplayName = Path.GetFileNameWithoutExtension(target),
+                ExecutableName = Path.GetFileName(target),
+                ExecutablePath = target,
+                OriginalName = ReadOriginalName(target),
+                Source = ProgramSource.Picked,
+                Icon = LoadIcon(target),
+            };
         }
 
         // 바로가기를 읽는 데 WScript.Shell 을 쓴다. 참조를 늘리지 않으려고 늦은 바인딩으로 부른다.
@@ -233,6 +262,7 @@ namespace ProfessorUI.Service
                     DisplayName = string.IsNullOrWhiteSpace(description) ? p.ProcessName : description!,
                     ExecutableName = Path.GetFileName(path),
                     ExecutablePath = path,
+                    OriginalName = ReadOriginalName(path),
                     Source = ProgramSource.Running,
                     Icon = LoadIcon(path),
                 };
@@ -263,6 +293,56 @@ namespace ProfessorUI.Service
             catch { return null; }
             finally { if (handle != IntPtr.Zero) DestroyIcon(handle); }
         }
+
+        // ── 원래 이름 ─────────────────────────────────────────────────
+        // 학생 PC의 ProcessMonitor 가 읽는 것과 같은 값이어야 목록이 맞아떨어진다.
+        // 그래서 .NET 의 FileVersionInfo 대신 네이티브와 같은 방식으로 직접 읽는다.
+        //
+        // FILE_VER_GET_NEUTRAL 이 반드시 필요하다. 이 플래그가 없으면 다국어 리소스로
+        // 리다이렉션되어 "ping.exe.mui" 같은 값이 나오고, 네이티브 쪽 값과 달라진다.
+
+        private static string ReadOriginalName(string path)
+        {
+            if (path.Length == 0) return string.Empty;
+
+            try
+            {
+                int size = GetFileVersionInfoSizeEx(FileVerGetNeutral, path, out _);
+                if (size == 0) return string.Empty;
+
+                var block = new byte[size];
+                if (!GetFileVersionInfoEx(FileVerGetNeutral, path, 0, (uint)size, block))
+                    return string.Empty;
+
+                // 문자열은 언어별로 나뉘어 있어 번역 테이블을 먼저 읽어야 조회 경로를 만들 수 있다.
+                if (!VerQueryValue(block, @"\VarFileInfo\Translation", out IntPtr table, out uint tableLen))
+                    return string.Empty;
+
+                for (int i = 0; i + 4 <= tableLen; i += 4)
+                {
+                    ushort language = (ushort)Marshal.ReadInt16(table, i);
+                    ushort codePage = (ushort)Marshal.ReadInt16(table, i + 2);
+                    string entry = $@"\StringFileInfo\{language:x4}{codePage:x4}\OriginalFilename";
+
+                    if (VerQueryValue(block, entry, out IntPtr value, out uint valueLen) && valueLen > 0)
+                        return (Marshal.PtrToStringUni(value, (int)valueLen) ?? "").TrimEnd('\0');
+                }
+            }
+            catch { }
+
+            return string.Empty;
+        }
+
+        private const uint FileVerGetNeutral = 0x02;
+
+        [DllImport("version.dll", CharSet = CharSet.Unicode, EntryPoint = "GetFileVersionInfoSizeExW")]
+        private static extern int GetFileVersionInfoSizeEx(uint flags, string file, out uint handle);
+
+        [DllImport("version.dll", CharSet = CharSet.Unicode, EntryPoint = "GetFileVersionInfoExW")]
+        private static extern bool GetFileVersionInfoEx(uint flags, string file, uint handle, uint length, byte[] data);
+
+        [DllImport("version.dll", CharSet = CharSet.Unicode, EntryPoint = "VerQueryValueW")]
+        private static extern bool VerQueryValue(byte[] block, string subBlock, out IntPtr buffer, out uint length);
 
         private const uint SHGFI_ICON = 0x000000100;
         private const uint SHGFI_SMALLICON = 0x000000001;

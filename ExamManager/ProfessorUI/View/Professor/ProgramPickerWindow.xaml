@@ -22,8 +22,15 @@
                         <Setter Property="Cursor" Value="Arrow"/>
                         <Setter Property="ToolTip" Value="이미 목록에 있습니다"/>
                     </DataTrigger>
+                    <DataTrigger Binding="{Binding CannotBeAllowed}" Value="True">
+                        <Setter Property="Opacity" Value="0.45"/>
+                        <Setter Property="Cursor" Value="Arrow"/>
+                        <Setter Property="ToolTip" Value="원래 이름 정보가 없어 허용 목록에 넣을 수 없습니다"/>
+                    </DataTrigger>
                 </Style.Triggers>
             </Style>
+
+            <BooleanToVisibilityConverter x:Key="BoolToVisible"/>
 
             <!-- 고른 항목 하나 (이름 + 빼기) -->
             <Style x:Key="ChipRemove" TargetType="Button" BasedOn="{StaticResource LinkButton}">
@@ -49,6 +56,8 @@
                        Text="한글 이름(카카오톡)으로도, 실행 파일 이름(KakaoTalk.exe)으로도 찾을 수 있습니다. 목록에 없으면 [직접 찾아보기]로 프로그램이나 바탕화면 바로가기를 고르세요."/>
             <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,4,0,0"
                        Text="줄을 누르면 아래 [고른 프로그램]에 담기고, 다시 누르면 빠집니다. 여러 개를 한 번에 담을 수 있으며, [추가됨]으로 표시된 것은 이미 목록에 있어 고를 수 없습니다."/>
+            <TextBlock x:Name="WhiteListNote" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,4,0,0"
+                       Text="허용 목록은 실행 파일 이름과 원래 이름이 둘 다 맞아야 인정됩니다. 두 이름이 다르면 목록에 두 줄로 들어가며, 원래 이름이 없는 프로그램은 [허용 불가]로 표시되어 고를 수 없습니다."/>
         </StackPanel>
 
         <!-- 검색 -->
@@ -158,10 +167,16 @@
                                         BorderBrush="{StaticResource BorderLight}" BorderThickness="1"
                                         CornerRadius="4" Padding="10,5" Margin="0,0,8,8">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center"
-                                                   Foreground="{StaticResource TextPrimary}">
-                                            <Run Text="{Binding DisplayName, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding ExecutableName, Mode=OneWay}"/>
-                                        </TextBlock>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Style="{StaticResource Caption}"
+                                                       Foreground="{StaticResource TextPrimary}">
+                                                <Run Text="{Binding DisplayName, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding ExecutableName, Mode=OneWay}"/>
+                                            </TextBlock>
+                                            <TextBlock Style="{StaticResource Caption}" Margin="6,0,0,0"
+                                                       Visibility="{Binding HasDistinctOriginalName, Converter={StaticResource BoolToVisible}}">
+                                                <Run Text="+ "/><Run Text="{Binding OriginalName, Mode=OneWay}"/>
+                                            </TextBlock>
+                                        </StackPanel>
                                         <Button Content="✕" Style="{StaticResource ChipRemove}"
                                                 ToolTip="빼기" Click="RemoveChosen_Click"/>
                                     </StackPanel>
