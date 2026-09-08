@@ -111,7 +111,9 @@ namespace ProfessorUI.ViewModel
             ProgressText = "0%";
 
             string examId = "Exam_" + DateTime.Now.ToString("yyyyMMdd_HHmm");
-            string packageDir = @"C:\Exam";
+            // 배포용 묶음을 만들어 두는 곳. 교수가 바로 확인할 수 있도록 바탕화면에 둔다.
+            string packageDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "시험 파일");
             string output = Path.Combine(packageDir, examId + ".7z");
 
             string? password;

@@ -18,8 +18,17 @@ namespace StudentUI.Service
     {
         public static ExamFileStore Instance { get; } = new ExamFileStore();
 
-        // 압축 해제 위치 (C:\Exam 고정 — 압축 해제할 때 없으면 만들어진다)
-        public string ExtractFolder { get; } = @"C:\Exam";
+        // 시험 파일을 두는 곳. 학생이 바로 찾을 수 있도록 바탕화면에 둔다.
+        // (없으면 압축을 풀 때 만들어진다)
+        public string ExtractFolder { get; } = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "시험 파일");
+
+        // 압축을 푼 결과가 들어갈 폴더. 시험 파일 폴더 바로 밑에 묶음 이름으로 만든다.
+        // 여기에 바로 풀면 폴더를 열자마자 파일이 흩어져 나와 보기 불편하다.
+        public string ExtractedRoot =>
+            _archiveName.Length == 0 ? ExtractFolder : Path.Combine(ExtractFolder, _archiveName);
+
+        private string _archiveName = string.Empty;
 
         private string _archivePath = string.Empty; // 수신된 .7z 임시 경로
         private string _password = string.Empty;    // 교수 PC가 함께 보낸 암호
@@ -139,6 +148,9 @@ namespace StudentUI.Service
             _archivePath = tempPath;
             _password = archivePassword;
 
+            // 압축을 풀 폴더 이름으로 쓴다. 확장자를 뗀 묶음 이름이 곧 폴더 이름이 된다.
+            _archiveName = Path.GetFileNameWithoutExtension(fileName ?? "");
+
             FileName = fileName;
             Progress = 100;
             IsReceived = true;
@@ -199,7 +211,7 @@ namespace StudentUI.Service
             string sevenZa = Path.Combine(AppContext.BaseDirectory, "7za.exe");
             string archive = _archivePath;
             string password = _password;
-            string outputFolder = ExtractFolder;
+            string outputFolder = ExtractedRoot;
 
             var previous = _lastExtracted;
             var delivered = new List<string>();
@@ -266,19 +278,21 @@ namespace StudentUI.Service
         // (explorer.exe는 없는 경로를 받으면 엉뚱하게 문서 폴더를 연다).
         public void OpenExtractFolder()
         {
+            // 압축을 풀었으면 그 폴더를, 아직이면 시험 파일 폴더를 연다.
+            string target = IsExtracted ? ExtractedRoot : ExtractFolder;
             try
             {
-                Directory.CreateDirectory(ExtractFolder);
+                Directory.CreateDirectory(target);
 
                 // 포그라운드 전환 권한을 explorer에 넘긴 뒤 띄운다.
                 // 이게 없으면 Windows가 포그라운드 앱(학생 UI)을 보호해서,
                 // 탐색기 창이 뒤에 열리고 작업표시줄에서 깜빡이기만 한다.
                 AllowSetForegroundWindow(ASFW_ANY);
-                Process.Start("explorer.exe", ExtractFolder);
+                Process.Start("explorer.exe", target);
             }
             catch (Exception ex)
             {
-                StatusText = $"폴더 열기 실패: {ex.Message} — {ExtractFolder} 를 직접 열어 주세요.";
+                StatusText = $"폴더 열기 실패: {ex.Message} — {target} 를 직접 열어 주세요.";
             }
         }
 
