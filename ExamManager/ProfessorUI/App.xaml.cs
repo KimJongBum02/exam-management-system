@@ -41,6 +41,17 @@ namespace ProfessorUI
                     else if (status == StudentStatus.CleanupFailed)
                         PostToUi(() => Service.StudentStore.Instance.MarkCleanupFailed(studentId));
                 }
+                else if (type == PacketType.MonitorStatusReport &&
+                         MonitorStatusPayload.TryDecode(payload, len, out MonitorFlags flags, out string monitorDetail))
+                {
+                    // 감시가 실제로 켜졌는지 학생이 알려 온다.
+                    // 이게 없으면 교수는 감시가 도는 줄 알고 시험을 진행하게 된다.
+                    bool processOn = flags.HasFlag(MonitorFlags.ProcessMonitor);
+                    bool networkOn = flags.HasFlag(MonitorFlags.NetworkMonitor);
+
+                    PostToUi(() => Service.StudentStore.Instance.MarkMonitorStatus(
+                        studentId, processOn, networkOn, monitorDetail));
+                }
                 else if (type == PacketType.CheatingAlert)
                 {
                     // 누가 보냈는지는 로그인 때 등록된 세션 정보로 알 수 있으므로 페이로드에서 읽지 않는다.
@@ -62,12 +73,10 @@ namespace ProfessorUI
             Service.AnswerCollectService.Instance.AnswerCollected += (studentId, savedPath) =>
                 PostToUi(() => Service.StudentStore.Instance.MarkAnswerSubmitted(studentId));
 
-            // 서버 열기·닫기는 ServerControl 이 맡는다.
-            // 수업 중 OX 퀴즈처럼 시험과 무관하게 서버가 필요한 경우가 있어,
-            // "언제 켤지"를 화면에서 고를 수 있도록 여기서 분리했다.
-            // 지금은 예전처럼 시작 시 한 번 켜므로 겉보기 동작은 같다.
-            if (!Service.ServerControl.Start())
-                MessageBox.Show("서버 시작에 실패했습니다. 포트 9000을 확인해 주세요.");
+            // 서버는 여기서 열지 않는다.
+            // 교수가 파일 준비와 감시 목록을 끝낸 뒤 마법사 2단계에서 직접 열어야
+            // 준비가 안 된 상태로 학생이 붙는 일이 없다.
+            // 여닫는 일은 Service.ServerControl 이 맡는다.
             // ───────────────────────────────────
 
 

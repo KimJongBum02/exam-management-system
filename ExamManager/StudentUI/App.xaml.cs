@@ -22,6 +22,10 @@ namespace StudentUI
             // 윈도우 전환 시 앱이 종료되지 않도록 명시적 종료 모드 설정
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
+            // 지난 시험이 DNS 를 되돌리지 못하고 끝났으면 지금 되돌린다.
+            // 이 안전장치가 없으면 그 PC 는 인터넷이 되지 않는 채로 남는다.
+            Service.DnsRedirectService.RestoreIfLeftOver();
+
             _navigationStore = new NavigationStore();
             _navigationStore.CurrentViewModelChanged += OnCurrentViewModelChanged;
 

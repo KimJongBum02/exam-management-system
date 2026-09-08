@@ -132,6 +132,14 @@
                             <DataTemplate><TextBlock Text="{Binding Status}" Style="{StaticResource Cell}"/></DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
+                    <GridViewColumn Header="감시" Width="130">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding MonitorText}" Style="{StaticResource Cell}"
+                                           ToolTip="{Binding MonitorDetail}"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
                     <GridViewColumn Header="마지막 갱신" Width="160">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate><TextBlock Text="{Binding LastUpdate}" Style="{StaticResource Cell}"/></DataTemplate>

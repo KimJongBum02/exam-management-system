@@ -53,6 +53,12 @@ namespace ProfessorUI.View.Professor
         public int FileReceivedCount { get; private set; }
 
         // ── 경고 ──
+        // 학생 PC 에서 네트워크 감시가 실제로 켜진 인원
+        public int NetworkMonitorOnCount { get; private set; }
+        public string NetworkMonitorText => !ExamState.IsExamStarted
+                                          ? "시험 시작 시 자동 적용"
+                                          : $"{NetworkMonitorOnCount} / {ConnectedCount}명 적용";
+
         public int AlertCount { get; private set; }
         public int UnreadAlertCount { get; private set; }
 
@@ -108,6 +114,8 @@ namespace ProfessorUI.View.Professor
 
             // 파일을 받고 아직 제출하지 않은 채 접속해 있으면 시험을 보고 있는 것이다
             InProgressCount = Students.Count(s => s.IsConnected && s.IsFileReceived && !s.IsAnswerSubmitted);
+
+            NetworkMonitorOnCount = Students.Count(s => s.IsConnected && s.NetworkMonitorOn);
 
             AlertCount = Alerts.Count;
             UnreadAlertCount = Alerts.Count(a => !a.IsAcknowledged);

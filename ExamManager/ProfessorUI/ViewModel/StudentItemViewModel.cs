@@ -55,6 +55,35 @@ namespace ProfessorUI.ViewModel
         // 표에 그대로 나갈 접속 상태 문구
         public string ConnectionText => _isConnected ? "접속 중" : "미접속";
 
+        // ── 학생 PC 에서 감시가 실제로 켜졌는지 ──
+        // 학생이 시험 시작 직후 스스로 보고한 값이다.
+        // 보고가 오기 전에는 셋 다 기본값이라 "확인 전"으로 보인다.
+        private bool _monitorReported;
+        private bool _processMonitorOn;
+        private bool _networkMonitorOn;
+        private string _monitorDetail = string.Empty;
+
+        public bool NetworkMonitorOn => _networkMonitorOn;
+        public string MonitorDetail => _monitorDetail;
+
+        public string MonitorText => !_monitorReported ? "확인 전"
+                                   : _processMonitorOn && _networkMonitorOn ? "정상"
+                                   : _networkMonitorOn ? "네트워크만"
+                                   : _processMonitorOn ? "프로세스만"
+                                   : "꺼짐";
+
+        public void SetMonitorStatus(bool processOn, bool networkOn, string detail)
+        {
+            _monitorReported = true;
+            _processMonitorOn = processOn;
+            _networkMonitorOn = networkOn;
+            _monitorDetail = detail;
+
+            OnPropertyChanged(nameof(NetworkMonitorOn));
+            OnPropertyChanged(nameof(MonitorDetail));
+            OnPropertyChanged(nameof(MonitorText));
+        }
+
         // ── 종료 및 정산 화면에 그대로 나갈 문구 ──
         // 흔적 삭제는 학생이 답안 회신을 받은 뒤 스스로 하므로, 답안을 걷었는지로 판단한다.
         public string CollectText => IsAnswerSubmitted ? "완료" : "미수집";

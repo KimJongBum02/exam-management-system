@@ -42,6 +42,8 @@ enum class PacketType : uint32_t
     ProcessListUpdate        = 40,   // 가변 길이 페이로드
     ForceProcessKill         = 41,
     ShutdownPC               = 42,
+    MonitorStatusReport      = 43,   // 학생 → 교수. 감시가 실제로 켜졌는지 알린다
+                                     // (네이티브는 해석하지 않고 그대로 전달한다)
 
     // 퀴즈 (50~59)
     QuizQuestion             = 50,   // 가변 길이 페이로드
