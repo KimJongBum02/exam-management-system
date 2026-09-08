@@ -123,7 +123,7 @@ namespace ProfessorUI.View.Professor
 
             CollectedCount = SubmittedCount;
             NotCollectedCount = TotalCount - SubmittedCount;
-            CleanupFailedCount = Students.Count(s => s.Status == "정리실패");
+            CleanupFailedCount = Students.Count(s => s.IsCleanupFailed);
             ApprovedCount = Students.Count(s => s.IsApproved);
             CompletionRate = TotalCount == 0 ? "0%" : $"{CollectedCount * 100 / TotalCount}%";
 

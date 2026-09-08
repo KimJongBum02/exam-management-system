@@ -40,6 +40,10 @@ namespace ProfessorUI
                     // 그 자리에 앉는 다음 학생이 앞사람 답안을 보게 되므로 교수가 직접 확인해야 한다.
                     else if (status == StudentStatus.CleanupFailed)
                         PostToUi(() => Service.StudentStore.Instance.MarkCleanupFailed(studentId));
+
+                    // 시험 파일까지 지웠다는 보고. 이게 와야 '완료'로 본다.
+                    else if (status == StudentStatus.CleanupSucceeded)
+                        PostToUi(() => Service.StudentStore.Instance.MarkCleanupSucceeded(studentId));
                 }
                 else if (type == PacketType.MonitorStatusReport &&
                          MonitorStatusPayload.TryDecode(payload, len, out MonitorFlags flags, out string monitorDetail))

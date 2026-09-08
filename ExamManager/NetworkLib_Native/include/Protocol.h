@@ -76,6 +76,7 @@ enum class StudentStatus : uint32_t
     CheatingDetected = 6,
     Absent         = 7,
     CleanupFailed  = 8,   // 답안은 냈으나 시험 파일 삭제에 실패함
+    CleanupSucceeded = 9, // 시험 파일까지 지웠음 (학생 → 교수)
 };
 
 // ─── 부정행위 유형 ─────────────────────────────────────────────────

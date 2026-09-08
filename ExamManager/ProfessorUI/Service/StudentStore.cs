@@ -96,11 +96,12 @@ namespace ProfessorUI.Service
         {
             var student = Students.FirstOrDefault(s => s.StudentId == studentId);
             if (student != null)
+            {
+                student.IsCleanupFailed = true;
                 student.Status = "정리실패";
+            }
         }
 
-        // 부정행위 알림 처리: 해당 학번 학생을 '부정행위 감지'로 표시
-        // (어떤 프로그램이었는지 자세히 보여주는 화면은 아직 없다 — 모니터링 화면 작업에서 붙일 예정)
         // 학생 PC 가 보고한 감시 상태를 그 학생 줄에 적는다.
         public void MarkMonitorStatus(string studentId, bool processOn, bool networkOn, string detail)
         {
@@ -112,6 +113,19 @@ namespace ProfessorUI.Service
                 }
         }
 
+        // 학생 PC 가 시험 파일을 지웠다고 알려 왔을 때.
+        public void MarkCleanupSucceeded(string studentId)
+        {
+            var student = Students.FirstOrDefault(s => s.StudentId == studentId);
+            if (student != null)
+            {
+                student.IsCleanupFailed = false;
+                student.IsCleanupDone = true;
+            }
+        }
+
+        // 부정행위 알림 처리: 해당 학번 학생을 '부정행위 감지'로 표시
+        // (어떤 프로그램이었는지는 부정행위 알림 목록에서 본다)
         public void MarkCheatingDetected(string studentId)
         {
             var student = Students.FirstOrDefault(s => s.StudentId == studentId);

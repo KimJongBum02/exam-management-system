@@ -199,7 +199,11 @@ namespace StudentUI.Service
                 if (Directory.Exists(examFolder))
                     Directory.Delete(examFolder, true);
 
-                // 교수 PC에는 따로 알리지 않는다. 답안을 받은 시점에 이미 '제출완료'로 표시했다.
+                // 지웠다는 사실도 교수에게 알린다.
+                // 실패만 알리면, 학생 PC가 보고 전에 꺼졌을 때 교수 화면에는
+                // 지워진 것처럼 보여 다음 학생이 앞사람 답안을 보게 된다.
+                ReportStatus(StudentStatus.CleanupSucceeded, "시험 파일을 지웠습니다.");
+
                 // 학생 화면은 아직 "수신 완료 100%"에 멈춰 있으므로 여기서 바꿔 준다.
                 ExamFileStore.Instance.MarkAnswerSubmitted(cleanupSucceeded: true);
             }
