@@ -2,20 +2,18 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using ProfessorUI.Model;
 using ProfessorUI.Service;
 
 namespace ProfessorUI.View.Professor
 {
     // OX 퀴즈는 시험 단계와 별개라 메뉴가 항상 열려 있다.
     //
-    // 문제 만들기·저장·삭제는 기존 OXQuizViewModel 이 그대로 처리하고,
-    // 출제와 응답 기록은 QuizSessionService 가 맡는다. 이 화면은 둘을 이어 주고 보여 준다.
+    // 문제는 그 자리에서 써서 바로 낸다. 모아 두지 않으므로 목록도 저장도 없다.
+    // 출제와 응답 기록은 QuizSessionService 가 맡고, 이 화면은 그것을 보여 준다.
     public partial class OXQuizPage : UserControl
     {
         private readonly UiContext _ctx = UiContext.Instance;
         private readonly QuizSessionService _session = QuizSessionService.Instance;
-        private readonly ICollectionView _quizView;
 
         public OXQuizPage()
         {
@@ -23,11 +21,6 @@ namespace ProfessorUI.View.Professor
 
             DataContext = _ctx;
 
-            _quizView = CollectionViewSource.GetDefaultView(_ctx.Quiz.QuizList);
-            _quizView.Filter = MatchesFilter;
-            QuizTable.ItemsSource = _quizView;
-
-            _ctx.Quiz.QuizList.CollectionChanged += (_, _) => UpdateCount();
             _ctx.Quiz.PropertyChanged += OnQuizEdited;
             _session.Rounds.CollectionChanged += (_, _) => RefreshResults();
             _session.ResponseReceived += OnResponseReceived;
@@ -41,7 +34,6 @@ namespace ProfessorUI.View.Professor
                 ServerControl.StateChanged -= UpdateAskState;
             };
 
-            UpdateCount();
             RefreshResults();
             UpdateAskState();
         }
@@ -155,41 +147,6 @@ namespace ProfessorUI.View.Professor
 
             _session.ClearSession();
             RefreshResults();
-        }
-
-        // ── 문제 목록 ─────────────────────────────────────────
-
-        private void UpdateCount()
-        {
-            int total = _ctx.Quiz.QuizList.Count;
-            int incomplete = 0;
-            foreach (var q in _ctx.Quiz.QuizList)
-                if (q.IsIncomplete) incomplete++;
-
-            QuizCountText.Text = $"문제 {total}개 · 미완성 {incomplete}개";
-        }
-
-        private bool MatchesFilter(object item)
-        {
-            if (item is not OXQuizModel quiz) return false;
-
-            string keyword = SearchBox?.Text?.Trim() ?? string.Empty;
-            if (keyword.Length > 0 &&
-                !quiz.Question.Contains(keyword) &&
-                !quiz.Category.Contains(keyword))
-                return false;
-
-            string state = (StateFilter?.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? string.Empty;
-            if (state == "완성" && quiz.IsIncomplete) return false;
-            if (state == "미완성" && !quiz.IsIncomplete) return false;
-
-            return true;
-        }
-
-        private void Filter_Changed(object sender, RoutedEventArgs e)
-        {
-            _quizView?.Refresh();
-            UpdateCount();
         }
     }
 }

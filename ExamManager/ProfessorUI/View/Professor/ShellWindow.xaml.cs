@@ -102,6 +102,8 @@ namespace ProfessorUI.View.Professor
         {
             int count = _ctx.Overview.UnreadAlertCount + _ctx.Chat.UnreadCount;
             NotifyButton.Tag = count.ToString();
+            // 알릴 것이 없으면 배지를 숨긴다
+            Badge.Visibility = count == 0 ? Visibility.Collapsed : Visibility.Visible;
             PaneAlertTitle.Text = $"부정행위 경고 (미확인 {_ctx.Overview.UnreadAlertCount})";
             PaneChatTitle.Text = $"학생 채팅 ({_ctx.Chat.UnreadCount})";
         }

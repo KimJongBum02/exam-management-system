@@ -16,16 +16,8 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- 제목 -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,18">
-            <TextBlock Text="보안 정책 관리" Style="{StaticResource PageTitle}"/>
-            <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Bottom" Margin="18,0,14,3">
-                <Run Text="마지막 갱신:"/><Run Text=" "/><Run Text="{Binding Overview.LastUpdatedText, Mode=OneWay}"/>
-            </TextBlock>
-            <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Bottom" Margin="0,0,0,3">
-                <Run Text="● 서버"/><Run Text=" "/><Run Text="{Binding Server.StatusText, Mode=OneWay}"/>
-            </TextBlock>
-        </StackPanel>
+        <!-- 제목 (마지막 갱신·서버 상태는 상단바에 있다) -->
+        <TextBlock Grid.Row="0" Text="보안 정책 관리" Style="{StaticResource PageTitle}" Margin="0,0,0,18"/>
 
         <!-- 현재 정책 상태 -->
         <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,22">

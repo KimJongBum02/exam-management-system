@@ -90,7 +90,7 @@
                                     <CheckBox IsHitTestVisible="False" Focusable="False"
                                               HorizontalAlignment="Center" VerticalAlignment="Center">
                                         <CheckBox.Style>
-                                            <Style TargetType="CheckBox">
+                                            <Style TargetType="CheckBox" BasedOn="{StaticResource AppCheckBox}">
                                                 <Setter Property="IsChecked" Value="{Binding IsChosen, Mode=OneWay}"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsAlreadyAdded}" Value="True">
