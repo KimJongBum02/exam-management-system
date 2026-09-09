@@ -66,7 +66,7 @@ namespace StudentUI.Service
                 .FirstOrDefault(s => s != Loopback) ?? "8.8.8.8";
 
             // 바꾸기 전에 남긴다. 이 순서가 뒤집히면 복구할 근거가 사라진다.
-            SaveBackup(adapters);
+            SaveBackup(StripLoopback(adapters));
 
             foreach (var adapter in adapters)
                 Run("netsh", $"interface ipv4 set dnsservers name=\"{adapter.Name}\" static {Loopback} primary");
@@ -166,6 +166,33 @@ namespace StudentUI.Service
                 // 못 읽으면 자동이었다고 본다. 고정으로 잘못 되돌리는 것보다 안전하다.
                 return true;
             }
+        }
+
+        // 백업에서 127.0.0.1 을 걷어낸다.
+        //
+        // 지난 시험이 복구되지 못하고 끝나면 지금 DNS 가 이미 127.0.0.1 이다.
+        // 그대로 백업하면 '원래 값'이 127.0.0.1 이 되어, 시험이 끝나고 되돌려도
+        // 여전히 감시 프로그램을 가리킨다 — 그 PC 는 인터넷이 되지 않는 채로 남는다.
+        //
+        // 걷어낸 뒤 남는 주소가 없으면 DHCP 로 되돌리게 표시한다.
+        // 공유기나 교내망이 주는 값을 다시 받아오는 것이 원래 상태에 가장 가깝다.
+        private static List<AdapterDns> StripLoopback(List<AdapterDns> adapters)
+        {
+            var cleaned = new List<AdapterDns>();
+
+            foreach (var adapter in adapters)
+            {
+                var servers = adapter.Servers.Where(s => s != Loopback).ToList();
+
+                cleaned.Add(new AdapterDns
+                {
+                    Name         = adapter.Name,
+                    WasAutomatic = adapter.WasAutomatic || servers.Count == 0,
+                    Servers      = servers,
+                });
+            }
+
+            return cleaned;
         }
 
         private static void SaveBackup(List<AdapterDns> adapters)

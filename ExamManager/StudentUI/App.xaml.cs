@@ -26,6 +26,8 @@ namespace StudentUI
             // 이 안전장치가 없으면 그 PC 는 인터넷이 되지 않는 채로 남는다.
             Service.DnsRedirectService.RestoreIfLeftOver();
 
+            RegisterShutdownGuards();
+
             _navigationStore = new NavigationStore();
             _navigationStore.CurrentViewModelChanged += OnCurrentViewModelChanged;
 
@@ -128,6 +130,38 @@ namespace StudentUI
         private void OnCurrentWindowClosed(object? sender, EventArgs e)
         {
             Shutdown();
+        }
+
+        // 어떤 경로로 끝나든 감시를 끄고 DNS 를 되돌린다.
+        //
+        // 이 PC 는 시험 중 DNS 가 127.0.0.1 로 바뀌어 있다. 되돌리지 못한 채 끝나면
+        // 감시 프로그램이 없는 그 주소를 계속 가리켜, 학생 PC 는 인터넷이 되지 않는다.
+        // 시험이 끝난 강의실 PC 가 먹통으로 남는 것이 가장 나쁜 결과라 경로마다 막아 둔다.
+        //
+        // OnExit 하나로는 부족하다. 아래 넷은 OnExit 를 거치지 않거나,
+        // 거치더라도 그 전에 프로세스가 사라질 수 있는 경로다.
+        private void RegisterShutdownGuards()
+        {
+            // 윈도우 종료·재시작·로그오프. 창을 닫는 절차를 밟지 않고 앱이 끝난다.
+            SessionEnding += (_, _) => RestoreSafely();
+
+            // UI 스레드에서 처리되지 않은 예외. 실제로 가장 자주 밟는 경로다.
+            // 일부러 Handled 로 덮지 않는다 — 상태가 깨진 채로 시험을 이어 가는 것보다,
+            // 감시와 DNS 를 정리하고 끝낸 뒤 다시 실행하는 편이 낫다.
+            DispatcherUnhandledException += (_, _) => RestoreSafely();
+
+            // 감시 콜백처럼 UI 가 아닌 스레드에서 터진 예외.
+            AppDomain.CurrentDomain.UnhandledException += (_, _) => RestoreSafely();
+
+            // Shutdown() 을 거치지 않고 프로세스가 내려가는 경우의 마지막 그물.
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => RestoreSafely();
+        }
+
+        // 여러 번 불려도 안전하다.
+        // Dispose 는 이미 정리된 것을 건너뛰고, Restore 는 백업 파일이 없으면 아무 일도 하지 않는다.
+        private static void RestoreSafely()
+        {
+            try { Service.ExamMonitorService.Instance.Dispose(); } catch { }
         }
 
         // 프로그램 종료 시 서버 연결을 끊고 네이티브 리소스를 정리한다.
