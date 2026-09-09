@@ -21,7 +21,8 @@ namespace ProfessorUI.View.Professor
         private readonly MenuEntry _policy = new("보안 정책");
         private readonly MenuEntry _settle = new("종료 및 정산");
         // 시험 단계와 무관한 기능이라 잠그지 않는다
-        private readonly MenuEntry _quiz = new("OX 퀴즈");
+        private readonly MenuEntry _quiz       = new("OX 퀴즈");
+        private readonly MenuEntry _monitoring = new("화면 모니터링");
 
         private readonly UiContext _ctx = UiContext.Instance;
 
@@ -29,7 +30,10 @@ namespace ProfessorUI.View.Professor
         {
             InitializeComponent();
 
-            MenuList.ItemsSource = new List<MenuEntry> { _dashboard, _prep, _manage, _policy, _settle, _quiz };
+            MenuList.ItemsSource = new List<MenuEntry>
+            {
+                _dashboard, _prep, _manage, _policy, _settle, _quiz, _monitoring
+            };
             ApplyPhaseGates();
             MenuList.SelectedIndex = 0;
 
@@ -69,6 +73,7 @@ namespace ProfessorUI.View.Professor
                 3 => new SecurityPolicyPage(),
                 4 => new ExamEndPage(),
                 5 => new OXQuizPage(),
+                6 => new ScreenMonitoringPage(),
                 _ => PageHost.Content
             };
 

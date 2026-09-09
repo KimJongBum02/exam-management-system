@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using NetworkLib;
 using System.Configuration;
 using System.Data;
@@ -23,10 +23,18 @@ namespace ProfessorUI
             var network = Service.NetworkService.Instance;
 
             network.StudentConnected += (sid, studentId, name, ip) =>
-                PostToUi(() => Service.StudentStore.Instance.AddOrUpdateConnected(sid, studentId, name, ip));
+                PostToUi(() =>
+                {
+                    Service.StudentStore.Instance.AddOrUpdateConnected(sid, studentId, name, ip);
+                    ViewModel.ScreenMonitoringViewModel.Instance.AddStudent(sid, studentId, name, ip);
+                });
 
             network.StudentDisconnected += (sid, studentId, name, reason) =>
-                PostToUi(() => Service.StudentStore.Instance.MarkDisconnected(sid));
+                PostToUi(() =>
+                {
+                    Service.StudentStore.Instance.MarkDisconnected(sid);
+                    ViewModel.ScreenMonitoringViewModel.Instance.RemoveStudent(sid);
+                });
 
             network.PacketReceived += (sid, studentId, name, type, payload, len) =>
             {
@@ -65,6 +73,13 @@ namespace ProfessorUI
                         Service.StudentStore.Instance.MarkCheatingDetected(studentId);
                         Service.AlertStore.Instance.Add(studentId, name, description);
                     });
+                }
+                else if (type == PacketType.ScreenCapture && len > 0)
+                {
+                    // 학생이 보낸 화면 캡처 JPEG → 모니터링 뷰모델에 전달
+                    byte[] jpeg = new byte[len];
+                    System.Runtime.InteropServices.Marshal.Copy(payload, jpeg, 0, (int)len);
+                    PostToUi(() => ViewModel.ScreenMonitoringViewModel.Instance.UpdateScreen(studentId, jpeg));
                 }
             };
 
