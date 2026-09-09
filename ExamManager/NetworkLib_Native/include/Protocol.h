@@ -45,6 +45,9 @@ enum class PacketType : uint32_t
     MonitorStatusReport      = 43,   // 학생 → 교수. 감시가 실제로 켜졌는지 알린다
                                      // (네이티브는 해석하지 않고 그대로 전달한다)
 
+    // 화면 모니터링 (70~79)
+    ScreenCapture            = 70,  // 학생 → 교수, payload = JPEG 바이너리
+
     // 퀴즈 (50~59)
     QuizQuestion             = 50,   // 가변 길이 페이로드
     QuizAnswer               = 51,

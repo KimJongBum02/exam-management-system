@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using NetworkLib;
 using StudentUI.Service;
 using StudentUI.ViewModel;
@@ -54,9 +54,16 @@ namespace StudentUI
             // 수신 사실은 대기 화면·시험 준비 화면이 ExamFileStore를 통해 표시하므로 별도 알림창은 띄우지 않는다.
             Service.NetworkService.Instance.FileReceived += (tid, senderId, fileName, tempPath, size, pw) =>
             {
-                byte[] payload = ExamStatusUpdatePayload.Encode(StudentStatus.FileReceived);
+                byte[] payload = BitConverter.GetBytes((uint)StudentStatus.FileReceived);
                 Service.NetworkService.Instance.SendPacket(PacketType.ExamStatusUpdate, payload);
             };
+
+            // ── 서버 연결 시 화면 캡처 시작, 연결 해제 시 정지 ──
+            Service.NetworkService.Instance.Connected += (ip, port) =>
+                Dispatcher.Invoke(() => Service.ScreenCaptureService.Instance.Start());
+
+            Service.NetworkService.Instance.Disconnected += reason =>
+                Service.ScreenCaptureService.Instance.Stop();
         }
 
         // 새 문제가 오면 앞 문제 창은 닫고 새로 띄운다.

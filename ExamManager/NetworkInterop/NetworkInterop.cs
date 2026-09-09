@@ -1,4 +1,4 @@
-﻿// NetworkInterop.cs
+// NetworkInterop.cs
 // UI 팀이 이 파일을 ProfessorUI 또는 StudentUI 프로젝트에 추가해서 사용합니다.
 // NetworkLib_Native.dll 이 실행 파일과 같은 폴더에 있어야 합니다.
 //
@@ -45,6 +45,9 @@ namespace NetworkLib
         ChatBroadcast           = 60,  // 교수 → 전체 학생
         ChatDirect              = 61,  // 교수 → 특정 학생
         ChatFromStudent         = 62,  // 학생 → 교수
+
+        // 화면 모니터링
+        ScreenCapture           = 70,  // 학생 → 교수, payload = JPEG 바이너리
 
         CommandAck              = 100,
     }
