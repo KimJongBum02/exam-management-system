@@ -12,12 +12,30 @@
                 <Setter Property="Margin" Value="0,0,0,11"/>
             </Style>
 
-            <!-- 프로세스 목록 한 줄: 이름 + 삭제 -->
-            <DataTemplate x:Key="ProcessRowTemplate">
-                <Grid Margin="0,0,0,2">
-                    <TextBlock Text="{Binding}" Style="{StaticResource Cell}"/>
-                </Grid>
-            </DataTemplate>
+            <!-- 스텝퍼 한 칸. 눌러서 그 단계로 바로 넘어갈 수 있으므로 버튼이다 -->
+            <Style x:Key="StepBox" TargetType="Button">
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                <!-- 현재 단계 표시는 코드비하인드가 이 두 값을 바꿔서 한다 -->
+                <Setter Property="BorderBrush" Value="{StaticResource BorderLight}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="White" CornerRadius="8" Padding="18,14"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}">
+                                <ContentPresenter HorizontalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgSubtle}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -26,49 +44,48 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 제목 -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,16">
-            <TextBlock Text="시험 준비 마법사" Style="{StaticResource PageTitle}"/>
-            <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Bottom" Margin="18,0,14,3">
-                <Run Text="마지막 갱신:"/><Run Text=" "/><Run Text="{Binding Overview.LastUpdatedText, Mode=OneWay}"/>
-            </TextBlock>
-            <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Bottom" Margin="0,0,0,3">
-                <Run Text="● 서버"/><Run Text=" "/><Run Text="{Binding Server.StatusText, Mode=OneWay}"/>
-            </TextBlock>
-        </StackPanel>
+        <!-- 제목 (마지막 갱신·서버 상태는 상단바에 있다) -->
+        <TextBlock Grid.Row="0" Text="시험 준비 마법사" Style="{StaticResource PageTitle}" Margin="0,0,0,16"/>
 
-        <!-- 4단계 스텝퍼 -->
-        <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,24">
-            <Border x:Name="Step1Box" Style="{StaticResource Card}" Padding="18,14" Margin="0,0,10,0">
+        <!-- 3단계 스텝퍼. 칸을 누르면 그 단계로 바로 넘어간다 -->
+        <UniformGrid Grid.Row="1" Columns="3" Margin="0,0,0,24">
+            <Button x:Name="Step1Box" Style="{StaticResource StepBox}" Margin="0,0,10,0" Click="GoStep1_Click"
+                    AutomationProperties.Name="1단계 시험 준비">
                 <StackPanel HorizontalAlignment="Center">
                     <TextBlock Text="1단계" Style="{StaticResource Caption}" HorizontalAlignment="Center" Margin="0,0,0,7"/>
-                    <TextBlock x:Name="Step1Name" Text="시험 준비" FontSize="14" HorizontalAlignment="Center"
-                               Foreground="{StaticResource TextPrimary}"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <TextBlock x:Name="Step1Name" Text="시험 준비" FontSize="14"
+                                   Foreground="{StaticResource TextPrimary}"/>
+                    </StackPanel>
                 </StackPanel>
-            </Border>
-            <Border x:Name="Step2Box" Style="{StaticResource Card}" Padding="18,14" Margin="0,0,10,0">
+            </Button>
+            <Button x:Name="Step2Box" Style="{StaticResource StepBox}" Margin="0,0,10,0" Click="GoStep2_Click"
+                    AutomationProperties.Name="2단계 파일 배포">
                 <StackPanel HorizontalAlignment="Center">
                     <TextBlock Text="2단계" Style="{StaticResource Caption}" HorizontalAlignment="Center" Margin="0,0,0,7"/>
-                    <TextBlock x:Name="Step2Name" Text="서버 열기" FontSize="14" HorizontalAlignment="Center"
-                               Foreground="{StaticResource TextPrimary}"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <TextBlock x:Name="Step2Name" Text="파일 배포" FontSize="14"
+                                   Foreground="{StaticResource TextPrimary}"/>
+                        <TextBlock x:Name="Step2Lock" Text="&#x1F512;" FontSize="12" Margin="7,0,0,0"
+                                   VerticalAlignment="Center" Visibility="Collapsed"/>
+                    </StackPanel>
                 </StackPanel>
-            </Border>
-            <Border x:Name="Step3Box" Style="{StaticResource Card}" Padding="18,14" Margin="0,0,10,0">
+            </Button>
+            <Button x:Name="Step3Box" Style="{StaticResource StepBox}" Click="GoStep3_Click"
+                    AutomationProperties.Name="3단계 시험 시작">
                 <StackPanel HorizontalAlignment="Center">
                     <TextBlock Text="3단계" Style="{StaticResource Caption}" HorizontalAlignment="Center" Margin="0,0,0,7"/>
-                    <TextBlock x:Name="Step3Name" Text="파일 배포" FontSize="14" HorizontalAlignment="Center"
-                               Foreground="{StaticResource TextPrimary}"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <TextBlock x:Name="Step3Name" Text="시험 시작" FontSize="14"
+                                   Foreground="{StaticResource TextPrimary}"/>
+                        <TextBlock x:Name="Step3Lock" Text="&#x1F512;" FontSize="12" Margin="7,0,0,0"
+                                   VerticalAlignment="Center" Visibility="Collapsed"/>
+                    </StackPanel>
                 </StackPanel>
-            </Border>
-            <Border x:Name="Step4Box" Style="{StaticResource Card}" Padding="18,14">
-                <StackPanel HorizontalAlignment="Center">
-                    <TextBlock Text="4단계" Style="{StaticResource Caption}" HorizontalAlignment="Center" Margin="0,0,0,7"/>
-                    <TextBlock x:Name="Step4Name" Text="시험 시작" FontSize="14" HorizontalAlignment="Center"
-                               Foreground="{StaticResource TextPrimary}"/>
-                </StackPanel>
-            </Border>
+            </Button>
         </UniformGrid>
 
         <Grid Grid.Row="2">
@@ -87,7 +104,7 @@
                         <StackPanel>
                             <TextBlock Text="현재 단계: 시험 파일 및 보안 정책 준비" Style="{StaticResource Body}" Margin="0,0,0,12"/>
                             <TextBlock Style="{StaticResource Body}" Margin="0,0,0,12"
-                                       Text="배포할 시험 파일을 지정하면 암호화·압축된 배포용 파일이 생성됩니다. 학생이 접속하기 전에 끝내 두는 단계입니다."/>
+                                       Text="배포할 시험 파일을 지정하면 암호화·압축된 배포용 파일이 생성됩니다. 서버는 프로그램을 켤 때 이미 열려 있으므로, 학생은 상단의 접속 주소로 언제든 접속할 수 있습니다."/>
                             <TextBlock Style="{StaticResource Body}"
                                        Text="허용·금지 프로세스 목록은 시험 시작 시 학생 PC에 함께 전달됩니다. 시험 중에도 보안 정책 화면에서 변경할 수 있습니다."/>
                         </StackPanel>
@@ -102,21 +119,30 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBox Grid.Column="0" Style="{StaticResource SearchBox}" IsReadOnly="True"
-                                         Foreground="{StaticResource TextPrimary}"
+                                <TextBox Grid.Column="0" Style="{StaticResource ReadOnlyBox}"
                                          Text="{Binding FileReady.SelectedFilesSummary, Mode=OneWay}"/>
                                 <Button Grid.Column="1" Content="찾아보기" Style="{StaticResource SecondaryButton}"
                                         Margin="10,0,0,0" Command="{Binding FileReady.SelectFilesCommand}"/>
                             </Grid>
 
+                            <!-- 어느 폴더에서 가져왔는지. 같은 이름의 파일을 헷갈리지 않으려면 필요하다 -->
+                            <TextBlock Text="원본 폴더" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Style="{StaticResource ReadOnlyBox}" Margin="0,0,0,14"
+                                     Text="{Binding FileReady.SourceFolder, Mode=OneWay}"/>
+
                             <!-- 고른 파일 이름들. 여러 개를 묶어 하나로 압축한다 -->
-                            <ItemsControl ItemsSource="{Binding FileReady.SelectedFileNames}" Margin="0,0,0,16">
+                            <ItemsControl ItemsSource="{Binding FileReady.SelectedFileNames}" Margin="0,0,0,14">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding}" Style="{StaticResource Caption}" Margin="0,0,0,3"/>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+
+                            <!-- 만들어진 배포용 묶음이 어디에 있는지. 학생에게 못 갔을 때 직접 찾아가야 한다 -->
+                            <TextBlock Text="배포용 파일 저장 위치" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Style="{StaticResource ReadOnlyBox}" Margin="0,0,0,16"
+                                     Text="{Binding FileReady.PackagePathText, Mode=OneWay}"/>
 
                             <Grid Margin="0,0,0,10">
                                 <TextBlock Text="암호화·압축 상태" Style="{StaticResource Body}"/>
@@ -140,7 +166,6 @@
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" Margin="0,0,0,10">
@@ -157,7 +182,6 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBox Grid.Column="0" Style="{StaticResource SearchBox}"
-                                     Foreground="{StaticResource TextPrimary}"
                                      Text="{Binding BlackList.InputProcessName, UpdateSourceTrigger=PropertyChanged}"/>
                             <Button Grid.Column="1" Content="목록에서 찾기" Style="{StaticResource SecondaryButton}"
                                     Margin="10,0,0,0" Click="PickBlack_Click"/>
@@ -203,7 +227,6 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBox Grid.Column="0" Style="{StaticResource SearchBox}"
-                                     Foreground="{StaticResource TextPrimary}"
                                      Text="{Binding WhiteList.InputProcessName, UpdateSourceTrigger=PropertyChanged}"/>
                             <Button Grid.Column="1" Content="목록에서 찾기" Style="{StaticResource SecondaryButton}"
                                     Margin="10,0,0,0" Click="PickWhite_Click"/>
@@ -234,140 +257,11 @@
                             </GridView>
                         </ListView.View>
                     </ListView>
-
-                    <Button Grid.Row="4" Content="다음: 서버 열기 단계로 이동" Style="{StaticResource PrimaryButton}"
-                            HorizontalAlignment="Right" Margin="0,20,0,0" Click="GoStep2_Click"/>
                 </Grid>
             </Grid>
 
-            <!-- ═══ 2단계: 학생 접속 — 서버 열기 + 접속 현황 ═══ -->
+            <!-- ═══ 2단계: 파일 배포 ═══ -->
             <Grid x:Name="Step2Panel" Visibility="Collapsed">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="30"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-
-                <StackPanel Grid.Column="0">
-                    <TextBlock Text="학생 접속 안내" Style="{StaticResource SectionTitle}"/>
-                    <Border Style="{StaticResource Card}" Margin="0,0,0,22">
-                        <StackPanel>
-                            <TextBlock Text="현재 단계: 서버 열기 및 학생 접속 대기" Style="{StaticResource Body}" Margin="0,0,0,12"/>
-                            <TextBlock Style="{StaticResource Body}" Margin="0,0,0,12"
-                                       Text="서버를 열면 학생이 아래 주소로 접속할 수 있습니다. 학생에게 주소를 안내하십시오."/>
-                            <TextBlock Style="{StaticResource Body}" Margin="0,0,0,12"
-                                       Text="접속한 학생의 상태가 모두 파악되면 다음 단계(파일 배포)로 이동할 수 있습니다."/>
-                            <TextBlock Style="{StaticResource Body}"
-                                       Text="지각생이 있을 경우 일부 학생만 접속된 상태로 다음 단계로 이동할 수 있으나, 미접속 학생은 이후 재배포를 통해 합류해야 합니다."/>
-                        </StackPanel>
-                    </Border>
-
-                    <TextBlock Text="서버 상태" Style="{StaticResource SectionTitle}"/>
-                    <Border Style="{StaticResource Card}">
-                        <StackPanel>
-                            <!-- 학생에게 불러 줘야 하는 값이라 이 화면에서 제일 크게 둔다 -->
-                            <Border Background="{StaticResource BgSubtle}" BorderBrush="{StaticResource BorderLight}"
-                                    BorderThickness="1" CornerRadius="6" Padding="20,16" Margin="0,0,0,18">
-                                <StackPanel>
-                                    <TextBlock Text="학생 접속 주소" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
-                                    <TextBlock Text="{Binding Server.Address}" FontSize="30" FontWeight="SemiBold"
-                                               Foreground="{StaticResource TextPrimary}"/>
-                                    <TextBlock Text="학생 프로그램의 접속 화면에 이 주소를 그대로 입력하게 하십시오."
-                                               Style="{StaticResource Caption}" Margin="0,8,0,0"/>
-                                </StackPanel>
-                            </Border>
-                            <Grid Margin="0,0,0,18">
-                                <TextBlock Text="서버 상태" Style="{StaticResource Body}"/>
-                                <TextBlock Text="{Binding Server.StatusText}" Style="{StaticResource Caption}"
-                                           HorizontalAlignment="Right"/>
-                            </Grid>
-                            <StackPanel Orientation="Horizontal">
-                                <Button Content="서버 열기" Style="{StaticResource PrimaryButton}" Margin="0,0,10,0"
-                                        Command="{Binding Server.StartCommand}"/>
-                                <Button Content="서버 닫기" Style="{StaticResource SecondaryButton}"
-                                        Command="{Binding Server.StopCommand}"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-
-                <Grid Grid.Column="2">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <TextBlock Grid.Row="0" Text="학생 접속 현황" Style="{StaticResource SectionTitle}"/>
-
-                    <UniformGrid Grid.Row="1" Columns="3" Margin="0,0,0,18">
-                        <Border Style="{StaticResource KpiCard}" Margin="0,0,10,0">
-                            <StackPanel HorizontalAlignment="Center">
-                                <TextBlock Text="전체" Style="{StaticResource Caption}" HorizontalAlignment="Center"/>
-                                <TextBlock Text="{Binding Overview.TotalCount}" Style="{StaticResource KpiValue}"
-                                           HorizontalAlignment="Center" Margin="0,6,0,4"/>
-                                <TextBlock Text="명" Style="{StaticResource Caption}" HorizontalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource KpiCard}" Margin="0,0,10,0">
-                            <StackPanel HorizontalAlignment="Center">
-                                <TextBlock Text="접속 완료" Style="{StaticResource Caption}" HorizontalAlignment="Center"/>
-                                <TextBlock Text="{Binding Overview.ConnectedCount}" Style="{StaticResource KpiValue}"
-                                           HorizontalAlignment="Center" Margin="0,6,0,4"/>
-                                <TextBlock Text="명" Style="{StaticResource Caption}" HorizontalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource KpiCard}">
-                            <StackPanel HorizontalAlignment="Center">
-                                <TextBlock Text="미접속" Style="{StaticResource Caption}" HorizontalAlignment="Center"/>
-                                <TextBlock Text="{Binding Overview.NotConnectedCount}" Style="{StaticResource KpiValue}"
-                                           HorizontalAlignment="Center" Margin="0,6,0,4"/>
-                                <TextBlock Text="명" Style="{StaticResource Caption}" HorizontalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
-                    </UniformGrid>
-
-                    <ListView Grid.Row="2" x:Name="ConnectTable" Style="{StaticResource FlatTable}" MinHeight="260">
-                        <ListView.View>
-                            <GridView ColumnHeaderContainerStyle="{StaticResource TableHeader}">
-                                <GridViewColumn Header="학번" Width="130">
-                                    <GridViewColumn.CellTemplate>
-                                        <DataTemplate><TextBlock Text="{Binding StudentId}" Style="{StaticResource Cell}"/></DataTemplate>
-                                    </GridViewColumn.CellTemplate>
-                                </GridViewColumn>
-                                <GridViewColumn Header="이름" Width="120">
-                                    <GridViewColumn.CellTemplate>
-                                        <DataTemplate><TextBlock Text="{Binding Name}" Style="{StaticResource Cell}"/></DataTemplate>
-                                    </GridViewColumn.CellTemplate>
-                                </GridViewColumn>
-                                <GridViewColumn Header="접속 상태" Width="140">
-                                    <GridViewColumn.CellTemplate>
-                                        <DataTemplate><TextBlock Text="{Binding ConnectionText}" Style="{StaticResource Cell}"/></DataTemplate>
-                                    </GridViewColumn.CellTemplate>
-                                </GridViewColumn>
-                                <GridViewColumn Header="접속 시각" Width="130">
-                                    <GridViewColumn.CellTemplate>
-                                        <DataTemplate><TextBlock Text="{Binding LastUpdate}" Style="{StaticResource Cell}"/></DataTemplate>
-                                    </GridViewColumn.CellTemplate>
-                                </GridViewColumn>
-                            </GridView>
-                        </ListView.View>
-                    </ListView>
-
-                    <TextBlock Grid.Row="3" Style="{StaticResource Caption}" Margin="0,12,0,0"
-                               Text="미접속 학생이 있어도 다음 단계로 이동할 수 있습니다. 늦게 온 학생은 시험 관리 창에서 재배포로 합류시킵니다."/>
-
-                    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
-                        <Button Content="이전: 시험 준비 단계" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0" Click="GoStep1_Click"/>
-                        <Button Content="다음: 파일 배포 단계로 이동" Style="{StaticResource PrimaryButton}" Click="GoStep3_Click"/>
-                    </StackPanel>
-                </Grid>
-            </Grid>
-
-            <!-- ═══ 3단계: 파일 배포 ═══ -->
-            <Grid x:Name="Step3Panel" Visibility="Collapsed">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="30"/>
@@ -399,11 +293,16 @@
                                 <TextBlock Text="{Binding Overview.FileReceivedCount}" Style="{StaticResource Caption}"
                                            HorizontalAlignment="Right"/>
                             </Grid>
-                            <Grid Margin="0,0,0,16">
+                            <Grid Margin="0,0,0,12">
                                 <TextBlock Text="아직 못 받은 학생" Style="{StaticResource Body}"/>
                                 <TextBlock Text="{Binding Overview.FileMissingCount}" Style="{StaticResource Caption}"
                                            HorizontalAlignment="Right"/>
                             </Grid>
+
+                            <!-- 얼마나 기다려야 하는지 모르면 멈춘 줄 알고 다시 누르게 된다 -->
+                            <TextBlock Style="{StaticResource Caption}" Margin="0,0,0,14" TextWrapping="Wrap"
+                                       Text="한 명당 1~2초 정도 걸립니다. 30명이면 1분 안쪽으로 끝납니다."/>
+
                             <TextBlock Text="{Binding Distribute.DeployStatusMessage}" Style="{StaticResource Caption}"
                                        Margin="0,0,0,6" TextWrapping="Wrap"/>
                             <TextBlock Text="{Binding Distribute.ValidationMessage}" Style="{StaticResource Body}"
@@ -416,6 +315,20 @@
                                 <Button Content="전체 해제" Style="{StaticResource SecondaryButton}"
                                         Command="{Binding Distribute.DeselectAllCommand}"/>
                             </StackPanel>
+
+                            <!-- 앞 단계를 끝내지 않아 잠긴 이유를 그 자리에서 알려 준다 -->
+                            <TextBlock Text="&#x1F512; 1단계에서 시험 파일 암호화·압축을 끝내야 배포할 수 있습니다.">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource LockNote}">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Distribute.IsContainerEnabled}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -423,13 +336,42 @@
                 <Grid Grid.Column="2">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Row="0" Text="학생별 다운로드 상태" Style="{StaticResource SectionTitle}"/>
-                    <ListView Grid.Row="1" x:Name="DownloadTable" Style="{StaticResource FlatTable}" MinHeight="340">
+
+                    <!-- 표를 한 줄씩 세지 않아도 되도록 위에 숫자로 먼저 보여 준다 -->
+                    <UniformGrid Grid.Row="1" Columns="3" Margin="0,0,0,14">
+                        <Border Style="{StaticResource KpiCard}" Margin="0,0,10,0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="전체" Style="{StaticResource Caption}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding Overview.TotalCount}" Style="{StaticResource KpiValue}"
+                                           HorizontalAlignment="Center" Margin="0,6,0,4"/>
+                                <TextBlock Text="명" Style="{StaticResource Caption}" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource KpiCard}" Margin="0,0,10,0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="접속 완료" Style="{StaticResource Caption}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding Overview.ConnectedCount}" Style="{StaticResource KpiValue}"
+                                           HorizontalAlignment="Center" Margin="0,6,0,4"/>
+                                <TextBlock Text="명" Style="{StaticResource Caption}" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource KpiCard}">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="미접속" Style="{StaticResource Caption}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding Overview.NotConnectedCount}" Style="{StaticResource KpiValue}"
+                                           HorizontalAlignment="Center" Margin="0,6,0,4"/>
+                                <TextBlock Text="명" Style="{StaticResource Caption}" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+
+                    <ListView Grid.Row="2" x:Name="DownloadTable" Style="{StaticResource FlatTable}" MinHeight="300">
                         <ListView.View>
                             <GridView ColumnHeaderContainerStyle="{StaticResource TableHeader}">
                                 <GridViewColumn Header="대상" Width="60">
@@ -465,18 +407,13 @@
                         </ListView.View>
                     </ListView>
 
-                    <TextBlock Grid.Row="2" Style="{StaticResource Caption}" Margin="0,12,0,0"
+                    <TextBlock Grid.Row="3" Style="{StaticResource Caption}" Margin="0,12,0,0" TextWrapping="Wrap"
                                Text="전송 실패 학생이 남아 있어도 다음 단계로 이동할 수 있습니다. 시험 관리 창에서 다시 배포하십시오."/>
-
-                    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
-                        <Button Content="이전: 서버 열기 단계" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0" Click="GoStep2_Click"/>
-                        <Button Content="다음: 시험 시작 단계로 이동" Style="{StaticResource PrimaryButton}" Click="GoStep4_Click"/>
-                    </StackPanel>
                 </Grid>
             </Grid>
 
-            <!-- ═══ 4단계: 시험 시작 ═══ -->
-            <Grid x:Name="Step4Panel" Visibility="Collapsed">
+            <!-- ═══ 3단계: 시험 시작 ═══ -->
+            <Grid x:Name="Step3Panel" Visibility="Collapsed">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="30"/>
@@ -498,11 +435,15 @@
                     <TextBlock Text="최종 점검" Style="{StaticResource SectionTitle}"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
-                            <Grid Style="{StaticResource CheckRow}">
+                            <Grid Margin="0,0,0,4">
                                 <TextBlock Text="● 시험 파일 암호화·압축" Style="{StaticResource Body}"/>
                                 <TextBlock Text="{Binding FileReady.CurrentStatusMessage}" Style="{StaticResource Caption}"
                                            HorizontalAlignment="Right"/>
                             </Grid>
+                            <!-- 어떤 파일이 나가는지 경로까지 확인하고 시작해야 엉뚱한 시험지를 배포하지 않는다 -->
+                            <TextBlock Text="{Binding FileReady.PackagePathText}" Style="{StaticResource Caption}"
+                                       Margin="12,0,0,11" TextWrapping="Wrap"/>
+
                             <Grid Style="{StaticResource CheckRow}">
                                 <TextBlock Text="● 허용 프로세스" Style="{StaticResource Body}"/>
                                 <TextBlock Text="{Binding WhiteList.WhiteList.Count}" Style="{StaticResource Caption}"
@@ -538,7 +479,6 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Row="0" Text="시작 대상 요약" Style="{StaticResource SectionTitle}"/>
@@ -572,20 +512,41 @@
 
                     <Border Grid.Row="2" Style="{StaticResource Card}" Background="{StaticResource BgSubtle}">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource Body}" Margin="0,0,0,8"
+                            <TextBlock Style="{StaticResource Body}"
                                        Text="시험 시작 후 합류하는 학생은 시험 관리 창의 파일 재배포로 처리합니다."/>
-                            <TextBlock x:Name="StartHint" Style="{StaticResource Caption}"
-                                       Text="파일 배포를 한 번이라도 실행해야 시험을 시작할 수 있습니다."/>
+                            <TextBlock Text="&#x1F512; 2단계에서 파일 배포를 한 번 이상 실행해야 시험을 시작할 수 있습니다.">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource LockNote}">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ExamStart.IsStartButtonEnabled}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                         </StackPanel>
                     </Border>
-
-                    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
-                        <Button Content="이전: 파일 배포 단계" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0" Click="GoStep3_Click"/>
-                        <Button x:Name="StartExamButton" Content="시험 시작 실행" Style="{StaticResource PrimaryButton}"
-                                IsEnabled="{Binding ExamStart.IsStartButtonEnabled}" Click="StartExam_Click"/>
-                    </StackPanel>
                 </Grid>
             </Grid>
+        </Grid>
+
+        <!-- ═══ 하단 이동 바 ═══
+             이전은 언제나 왼쪽 아래, 다음은 오른쪽 아래. 단계마다 자리가 달라지면 찾게 된다 -->
+        <Grid Grid.Row="3" Margin="0,22,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <Button Content="대시보드로" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0"
+                        Click="GoDashboard_Click"/>
+                <Button x:Name="PrevButton" Style="{StaticResource SecondaryButton}" Click="GoPrev_Click"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="NextButton" Style="{StaticResource PrimaryButton}" Click="GoNext_Click"/>
+                <Button x:Name="StartExamButton" Content="시험 시작 실행" Style="{StaticResource PrimaryButton}"
+                        Visibility="Collapsed"
+                        IsEnabled="{Binding ExamStart.IsStartButtonEnabled}" Click="StartExam_Click"/>
+            </StackPanel>
         </Grid>
     </Grid>
 </UserControl>

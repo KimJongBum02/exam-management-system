@@ -12,209 +12,61 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 제목 + 갱신 상태 -->
-        <Grid Grid.Row="0" Margin="0,0,0,18">
-            <TextBlock Text="시험 운영 대시보드" Style="{StaticResource PageTitle}"/>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                <TextBlock Style="{StaticResource Caption}" Margin="0,0,14,0">
-                    <Run Text="마지막 갱신:"/><Run Text=" "/><Run Text="{Binding Overview.LastUpdatedText, Mode=OneWay}"/>
-                </TextBlock>
-                <TextBlock Style="{StaticResource Caption}">
-                    <Run Text="● 서버"/><Run Text=" "/><Run Text="{Binding Server.StatusText, Mode=OneWay}"/>
-                </TextBlock>
-            </StackPanel>
-        </Grid>
+        <!-- 마지막 갱신과 서버 상태는 상단바로 올렸다. 여기서는 제목만 둔다 -->
+        <TextBlock Grid.Row="0" Text="실시간 학생 현황" Style="{StaticResource PageTitle}" Margin="0,0,0,18"/>
 
-        <!-- KPI 4종 -->
-        <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,26">
-            <Border Style="{StaticResource KpiCard}" Margin="0,0,12,0">
-                <StackPanel>
-                    <TextBlock Text="시험 운영 상태" Style="{StaticResource FieldLabel}"/>
-                    <TextBlock Text="{Binding Overview.PhaseText}" FontSize="21" FontWeight="Bold"
-                               Foreground="{StaticResource TextPrimary}" Margin="0,2,0,6"/>
-                    <TextBlock Text="{Binding Overview.PhaseSubText}" Style="{StaticResource Caption}"/>
-                </StackPanel>
-            </Border>
-            <Border Style="{StaticResource KpiCard}" Margin="0,0,12,0">
-                <StackPanel>
-                    <TextBlock Text="접속 학생" Style="{StaticResource FieldLabel}"/>
-                    <TextBlock Text="{Binding Overview.ConnectedText}" Style="{StaticResource KpiValue}" Margin="0,0,0,6"/>
-                    <TextBlock Text="{Binding Overview.NotConnectedText}" Style="{StaticResource Caption}"/>
-                </StackPanel>
-            </Border>
-            <Border Style="{StaticResource KpiCard}" Margin="0,0,12,0">
-                <StackPanel>
-                    <TextBlock Text="부정행위 경고" Style="{StaticResource FieldLabel}"/>
-                    <TextBlock Text="{Binding Overview.AlertText}" Style="{StaticResource KpiValue}" Margin="0,0,0,6"/>
-                    <TextBlock Text="{Binding Overview.AlertStudentText}" Style="{StaticResource Caption}"/>
-                </StackPanel>
-            </Border>
-            <Border Style="{StaticResource KpiCard}">
-                <StackPanel>
-                    <TextBlock Text="답안 수집" Style="{StaticResource FieldLabel}"/>
-                    <TextBlock Text="{Binding Overview.CollectedText}" Style="{StaticResource KpiValue}" Margin="0,0,0,6"/>
-                    <TextBlock Text="{Binding Overview.CollectedSubText}" Style="{StaticResource Caption}"/>
-                </StackPanel>
-            </Border>
-        </UniformGrid>
-
-        <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="30"/>
-                <ColumnDefinition Width="410"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- 좌: 실시간 학생 현황 -->
-            <Grid Grid.Column="0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <TextBlock Grid.Row="0" Text="실시간 학생 현황" Style="{StaticResource SectionTitle}"/>
-
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12" VerticalAlignment="Bottom">
-                    <TextBox Width="290" Text="학번 또는 이름 검색" Style="{StaticResource SearchBox}"/>
-                    <StackPanel Margin="14,0,0,0">
-                        <TextBlock Text="상태 필터" Style="{StaticResource FieldLabel}"/>
-                        <ComboBox Style="{StaticResource FilterCombo}" SelectedIndex="0">
-                            <ComboBoxItem Content="전체"/>
-                            <ComboBoxItem Content="접속 중"/>
-                            <ComboBoxItem Content="미접속"/>
-                        </ComboBox>
-                    </StackPanel>
-                </StackPanel>
-
-                <ListView Grid.Row="2" x:Name="StudentTable" Style="{StaticResource FlatTable}">
-                    <ListView.View>
-                        <GridView ColumnHeaderContainerStyle="{StaticResource TableHeader}">
-                            <GridViewColumn Header="학번" Width="120">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding StudentId}" Style="{StaticResource Cell}"/>
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="이름" Width="110">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Name}" Style="{StaticResource Cell}"/>
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="접속 상태" Width="130">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding ConnectionText}" Style="{StaticResource Cell}"/>
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="시험 상태" Width="140">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Status}" Style="{StaticResource Cell}"/>
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="최근 갱신" Width="120">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding LastUpdate}" Style="{StaticResource Cell}"/>
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                        </GridView>
-                    </ListView.View>
-                </ListView>
-            </Grid>
-
-            <!-- 우: 우선 대응 + 보안 요약 + 마법사 진입 -->
-            <Grid Grid.Column="2">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-
-                <TextBlock Grid.Row="0" Text="우선 대응 항목" Style="{StaticResource SectionTitle}"/>
-
-                <ItemsControl Grid.Row="1" x:Name="PriorityList">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Style="{StaticResource Card}" Padding="16,13" Margin="0,0,0,10">
-                                <Grid>
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Title}" FontSize="13"
-                                                   Foreground="{StaticResource TextPrimary}" Margin="0,0,0,5"/>
-                                        <TextBlock Text="{Binding Detail}" Style="{StaticResource Caption}"/>
-                                    </StackPanel>
-                                    <TextBlock Text="{Binding Badge}" Style="{StaticResource Caption}"
-                                               HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-
-                <TextBlock Grid.Row="2" Text="보안 이벤트 요약" Style="{StaticResource SectionTitle}" Margin="0,14,0,10"/>
-
-                <Border Grid.Row="3" Style="{StaticResource Card}" Padding="16,14">
-                    <StackPanel>
-                        <Grid Margin="0,0,0,9">
-                            <TextBlock Text="누적 부정행위 경고" FontSize="13" Foreground="{StaticResource TextSecondary}"/>
-                            <TextBlock Text="{Binding Overview.AlertText}" FontSize="13" HorizontalAlignment="Right"
-                                       Foreground="{StaticResource TextPrimary}"/>
-                        </Grid>
-                        <Grid Margin="0,0,0,9">
-                            <TextBlock Text="경고 발생 학생" FontSize="13" Foreground="{StaticResource TextSecondary}"/>
-                            <TextBlock Text="{Binding Overview.AlertStudentCount}" FontSize="13" HorizontalAlignment="Right"
-                                       Foreground="{StaticResource TextPrimary}"/>
-                        </Grid>
-                        <Grid>
-                            <TextBlock Text="파일 미수신 학생" FontSize="13" Foreground="{StaticResource TextSecondary}"/>
-                            <TextBlock Text="{Binding Overview.FileMissingCount}" FontSize="13" HorizontalAlignment="Right"
-                                       Foreground="{StaticResource TextPrimary}"/>
-                        </Grid>
-                    </StackPanel>
-                </Border>
-
-                <StackPanel Grid.Row="5" Margin="0,18,0,0">
-                    <!-- 서버는 마법사 2단계에서도 열 수 있지만, 수업 중 OX 퀴즈만 쓰려는 경우
-                         마법사를 거치지 않아도 되도록 여기에도 둔다 -->
-                    <Border Style="{StaticResource Card}" Padding="16,14" Margin="0,0,0,12">
+        <!-- 한 명이 한 칸. 강의실을 훑듯이 훑어 누가 빠졌는지 바로 찾는다.
+             Top 으로 붙이지 않으면 UniformGrid 가 남는 세로 공간을 행마다 나눠 가져
+             학생이 적을 때 칸이 우스꽝스럽게 길어진다. -->
+        <ItemsControl Grid.Row="1" x:Name="StudentCards" VerticalAlignment="Top">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Columns="5"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border x:Name="CardBox" Style="{StaticResource StudentCard}">
                         <StackPanel>
-                            <Grid Margin="0,0,0,10">
-                                <TextBlock Text="서버" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding Server.StatusText}" Style="{StaticResource Caption}"
-                                           HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                            </Grid>
-                            <TextBlock Text="{Binding Server.Address}" FontSize="18" FontWeight="SemiBold"
-                                       Foreground="{StaticResource TextPrimary}" Margin="0,0,0,12"/>
-                            <StackPanel Orientation="Horizontal">
-                                <Button Content="서버 열기" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"
-                                        Command="{Binding Server.StartCommand}"/>
-                                <Button Content="서버 닫기" Style="{StaticResource SecondaryButton}"
-                                        Command="{Binding Server.StopCommand}"/>
-                            </StackPanel>
+                            <TextBlock x:Name="IdText" Text="{Binding StudentId}" Style="{StaticResource StudentCardId}"/>
+                            <TextBlock x:Name="NameText" Text="{Binding Name}" Style="{StaticResource StudentCardName}"
+                                       Margin="0,0,0,10"/>
+                            <Border x:Name="Badge" Style="{StaticResource StudentCardBadge}" Margin="0,0,0,7">
+                                <TextBlock x:Name="BadgeText" Text="{Binding ConnectionText}" FontSize="11.5"
+                                           FontWeight="Bold" Foreground="White"/>
+                            </Border>
+                            <TextBlock x:Name="StatusText" Text="{Binding Status}" Style="{StaticResource Caption}"
+                                       TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
                     </Border>
 
-                    <Button Content="강의실 현황판 열기" Style="{StaticResource SecondaryButton}"
-                            HorizontalAlignment="Stretch" Margin="0,0,0,12" Click="OpenMonitorBoard_Click"/>
+                    <DataTemplate.Triggers>
+                        <!-- 미접속이면 칸 전체를 흐리게 해 접속한 학생 사이에서 눈에 띄게 한다 -->
+                        <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                            <Setter TargetName="CardBox" Property="Background" Value="{StaticResource BgSubtle}"/>
+                            <Setter TargetName="NameText" Property="Foreground" Value="{StaticResource TextMuted}"/>
+                            <Setter TargetName="Badge" Property="Background" Value="{StaticResource Placeholder}"/>
+                            <Setter TargetName="BadgeText" Property="Foreground" Value="{StaticResource TextSecondary}"/>
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
 
-                    <Button Content="시험 준비 화면으로 이동" Style="{StaticResource PrimaryButton}"
-                            Click="StartWizard_Click"/>
-                </StackPanel>
-            </Grid>
-        </Grid>
+        <!-- 학생이 한 명도 붙지 않았을 때. 빈 화면만 두면 고장인지 대기인지 알 수 없다 -->
+        <TextBlock Grid.Row="1" x:Name="EmptyNote" Style="{StaticResource Caption}"
+                   HorizontalAlignment="Center" Margin="0,60,0,0" Visibility="Collapsed"
+                   Text="아직 접속한 학생이 없습니다. 학생이 접속하면 이 자리에 한 명씩 나타납니다."/>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">
+            <Button Content="강의실 현황판 열기" Style="{StaticResource SecondaryButton}"
+                    Margin="0,0,10,0" Click="OpenMonitorBoard_Click"/>
+            <Button Content="시험 준비 화면으로 이동" Style="{StaticResource PrimaryButton}"
+                    Click="StartWizard_Click"/>
+        </StackPanel>
     </Grid>
 </UserControl>

@@ -55,6 +55,26 @@ namespace ProfessorUI.ViewModel
             set { _currentFileNameDisplay = value; OnPropertyChanged(); }
         }
 
+        // 고른 파일들이 있던 폴더.
+        // 파일 열기 창은 한 폴더 안에서만 여러 개를 고를 수 있으므로 폴더는 언제나 하나다.
+        private string _sourceFolder = "선택된 파일 없음";
+        public string SourceFolder
+        {
+            get => _sourceFolder;
+            private set { _sourceFolder = value; OnPropertyChanged(); }
+        }
+
+        // 배포용 묶음이 만들어지는 곳. 압축 전에도 어디에 생기는지 미리 알려 준다.
+        public static string PackageFolder { get; } = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "시험 파일");
+
+        private string _packagePathText = PackageFolder + @"\  (압축 실행 시 생성)";
+        public string PackagePathText
+        {
+            get => _packagePathText;
+            private set { _packagePathText = value; OnPropertyChanged(); }
+        }
+
         private bool _isProcessing = false;
 
         public ICommand SelectFilesCommand { get; }
@@ -87,6 +107,7 @@ namespace ProfessorUI.ViewModel
                     SelectedFileNames.Add($"- {Path.GetFileName(filePath)}"); // 파일 이름만 추출
                 }
 
+                SourceFolder = Path.GetDirectoryName(openFileDialog.FileNames[0]) ?? "-";
                 SelectedFilesSummary = $"{SelectedFilePaths.Count}개의 파일이 선택되었습니다.";
                 CurrentStatusMessage = "파일 선택 완료. 준비되었습니다.";
                 CurrentFileNameDisplay = "대기 중...";
@@ -112,8 +133,7 @@ namespace ProfessorUI.ViewModel
 
             string examId = "Exam_" + DateTime.Now.ToString("yyyyMMdd_HHmm");
             // 배포용 묶음을 만들어 두는 곳. 교수가 바로 확인할 수 있도록 바탕화면에 둔다.
-            string packageDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "시험 파일");
+            string packageDir = PackageFolder;
             string output = Path.Combine(packageDir, examId + ".7z");
 
             string? password;
@@ -142,6 +162,7 @@ namespace ProfessorUI.ViewModel
                 ProgressText = "100%";
                 CurrentFileNameDisplay = "모든 파일 처리 완료";
                 CurrentStatusMessage = "압축 및 암호화 완료!";
+                PackagePathText = output;   // 실제로 만들어진 파일의 전체 경로
 
                 // 배포 단계가 읽도록 공용 저장소에 보관
                 FileDeployState.ExamId = examId;

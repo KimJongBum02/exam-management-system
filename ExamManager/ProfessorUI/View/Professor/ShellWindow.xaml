@@ -27,41 +27,36 @@
                 <TextBlock Text="시험 운영" FontSize="17" FontWeight="Bold"
                            Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <!-- 서버 연결 상태. 어느 화면에 있어도 보이도록 상단바에 둔다 -->
+                    <!-- 마지막 갱신과 서버 상태. 어느 화면에 있어도 보이도록 상단바에 둔다.
+                         서버 상태에는 학생 접속 주소가 붙어 있어 여기서 바로 불러 줄 수 있다 -->
+                    <TextBlock Style="{StaticResource Caption}" Margin="0,0,16,0" VerticalAlignment="Center">
+                        <Run Text="마지막 갱신:"/><Run Text=" "/><Run Text="{Binding Overview.LastUpdatedText, Mode=OneWay}"/>
+                    </TextBlock>
                     <TextBlock FontSize="13" Foreground="{StaticResource TextSecondary}"
-                               Margin="0,0,22,0" VerticalAlignment="Center">
+                               Margin="0,0,20,0" VerticalAlignment="Center">
                         <Run Text="● 서버"/><Run Text=" "/><Run Text="{Binding Server.StatusText, Mode=OneWay}"/>
                     </TextBlock>
 
                     <!-- 알림. 다른 화면에 있을 때 경고·채팅이 왔음을 알리는 유일한 자리라 개수를 함께 띄운다 -->
-                    <Button x:Name="NotifyButton" Click="ToggleNotifyPane_Click" Cursor="Hand"
-                            Margin="0,0,22,0" VerticalAlignment="Center"
+                    <Button x:Name="NotifyButton" Click="ToggleNotifyPane_Click"
+                            Style="{StaticResource SecondaryButton}" Padding="14,7"
+                            Margin="0,0,8,0" VerticalAlignment="Center"
                             AutomationProperties.Name="알림">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <StackPanel Orientation="Horizontal" Background="Transparent">
-                                    <TextBlock Text="알림" FontSize="13" VerticalAlignment="Center"
-                                               Foreground="{StaticResource TextPrimary}" TextDecorations="Underline"/>
-                                    <Border x:Name="Badge" Background="{StaticResource BtnDark}" CornerRadius="9"
-                                            MinWidth="18" Height="18" Padding="6,0" Margin="7,0,0,0"
-                                            VerticalAlignment="Center">
-                                        <TextBlock FontSize="11" Foreground="White"
-                                                   Text="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"
-                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                </StackPanel>
-                                <ControlTemplate.Triggers>
-                                    <!-- 알릴 것이 없으면 배지를 숨긴다 -->
-                                    <Trigger Property="Tag" Value="0">
-                                        <Setter TargetName="Badge" Property="Visibility" Value="Collapsed"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="알림" FontSize="13" VerticalAlignment="Center" Foreground="White"/>
+                            <!-- 검은 버튼 안이라 배지는 색을 뒤집어야 읽힌다 -->
+                            <Border x:Name="Badge" Background="White" CornerRadius="9"
+                                    MinWidth="18" Height="18" Padding="6,0" Margin="7,0,0,0"
+                                    VerticalAlignment="Center">
+                                <TextBlock FontSize="11" FontWeight="Bold" Foreground="{StaticResource BtnDark}"
+                                           Text="{Binding Tag, RelativeSource={RelativeSource AncestorType=Button}}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </StackPanel>
                     </Button>
 
-                    <TextBlock Text="프로필" FontSize="13" Foreground="{StaticResource TextPrimary}"
-                               TextDecorations="Underline" VerticalAlignment="Center"/>
+                    <Button Content="프로필" Style="{StaticResource SecondaryButton}" Padding="14,7"
+                            VerticalAlignment="Center"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -107,7 +102,7 @@
                                     <TextBlock x:Name="Label" Text="{Binding Name}" FontSize="14.5"
                                                Foreground="{StaticResource TextSecondary}"
                                                TextDecorations="Underline"/>
-                                    <TextBlock x:Name="Lock" Text="잠김" FontSize="11" Margin="9,0,0,0"
+                                    <TextBlock x:Name="Lock" Text="&#x1F512; 잠김" FontSize="11" Margin="9,0,0,0"
                                                VerticalAlignment="Center" Foreground="#C4C7CC"
                                                Visibility="Collapsed"/>
                                 </StackPanel>

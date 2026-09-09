@@ -19,18 +19,8 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 제목 + 갱신/새로고침 -->
-        <Grid Grid.Row="0" Margin="0,0,0,18">
-            <TextBlock Text="시험 관리 창" Style="{StaticResource PageTitle}"/>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                <TextBlock Style="{StaticResource Caption}" Margin="0,0,14,0" VerticalAlignment="Center">
-                    <Run Text="마지막 갱신:"/><Run Text=" "/><Run Text="{Binding Overview.LastUpdatedText, Mode=OneWay}"/>
-                </TextBlock>
-                <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center">
-                    <Run Text="● 서버"/><Run Text=" "/><Run Text="{Binding Server.StatusText, Mode=OneWay}"/>
-                </TextBlock>
-            </StackPanel>
-        </Grid>
+        <!-- 제목 (마지막 갱신·서버 상태는 상단바에 있다) -->
+        <TextBlock Grid.Row="0" Text="시험 관리 창" Style="{StaticResource PageTitle}" Margin="0,0,0,18"/>
 
         <!-- KPI 6종 -->
         <UniformGrid Grid.Row="1" Columns="7" Margin="0,0,0,22">
