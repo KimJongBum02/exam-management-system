@@ -8,39 +8,36 @@
 
     <Button x:Name="Login_Button"
             IsDefault="True"
-            Height="48"
+            Height="44"
             BorderThickness="0"
             Cursor="Hand"
             Command="{Binding LoginCommand}">
         <Button.Template>
             <ControlTemplate TargetType="Button">
                 <Border x:Name="ButtonBorder"
-                        Background="#1A56DB"
-                        CornerRadius="10">
+                        Background="#2A2D31"
+                        CornerRadius="6">
                     <ContentPresenter HorizontalAlignment="Center"
                                       VerticalAlignment="Center"/>
                 </Border>
                 <ControlTemplate.Triggers>
                     <Trigger Property="IsMouseOver" Value="True">
-                        <Setter TargetName="ButtonBorder" Property="Background" Value="#1D4ED8"/>
+                        <Setter TargetName="ButtonBorder" Property="Background" Value="#3D4147"/>
                     </Trigger>
                     <Trigger Property="IsPressed" Value="True">
-                        <Setter TargetName="ButtonBorder" Property="Background" Value="#1E40AF"/>
+                        <Setter TargetName="ButtonBorder" Property="Background" Value="#1F2328"/>
+                    </Trigger>
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter TargetName="ButtonBorder" Property="Background" Value="#9CA3AF"/>
                     </Trigger>
                 </ControlTemplate.Triggers>
             </ControlTemplate>
         </Button.Template>
 
-        <StackPanel Orientation="Horizontal">
-            <TextBlock Text="Login"
-                       FontSize="15"
-                       FontWeight="SemiBold"
-                       Foreground="White"
-                       VerticalAlignment="Center"/>
-            <TextBlock Text=" →"
-                       FontSize="15"
-                       Foreground="White"
-                       VerticalAlignment="Center"/>
-        </StackPanel>
+        <TextBlock Text="로그인"
+                   FontSize="13"
+                   FontWeight="Bold"
+                   Foreground="White"
+                   VerticalAlignment="Center"/>
     </Button>
 </UserControl>

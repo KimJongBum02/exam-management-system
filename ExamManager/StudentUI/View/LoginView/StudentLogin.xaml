@@ -7,12 +7,13 @@
              mc:Ignorable="d">
 
     <StackPanel>
-        <!-- 학생 로그인 -->
-        <TextBlock Text="학생 로그인"
-                   FontSize="26"
+        <TextBlock Text="로그인"
+                   FontSize="28"
                    FontWeight="Bold"
-                   Foreground="#1E293B"
-                   HorizontalAlignment="Center"/>
-
+                   Foreground="#1F2328"
+                   Margin="0,0,0,6"/>
+        <TextBlock Text="시험에 참여하려면 아래 정보를 입력하세요."
+                   FontSize="13"
+                   Foreground="#6B7280"/>
     </StackPanel>
 </UserControl>
