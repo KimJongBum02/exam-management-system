@@ -5,6 +5,12 @@
 #include <ws2tcpip.h>
 #include <cwctype>
 
+// 이 SDK 구성에서는 mstcpip.h 가 SIO_UDP_CONNRESET 을 내보내지 않는다.
+// 값이 고정된 제어 코드라 직접 정의해도 안전하다.
+#ifndef SIO_UDP_CONNRESET
+#define SIO_UDP_CONNRESET _WSAIOW(IOC_VENDOR, 12)
+#endif
+
 // ws2_32.lib 를 링커에 자동 추가 (Windows 기본 제공, 별도 SDK 불필요)
 #pragma comment(lib, "ws2_32.lib")
 
@@ -121,6 +127,16 @@ bool NetworkMonitor::Start()
     DWORD timeout = LISTEN_TIMEOUT_MS;
     setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
 
+    // 우리가 보낸 응답이 이미 닫힌 포트로 가면 윈도우는 ICMP Port Unreachable 을 받고,
+    // 그것을 '다음' recvfrom 의 WSAECONNRESET 으로 알려 준다.
+    // UDP 에는 연결이 없으니 소켓이 망가졌다는 뜻이 아니라, 직전에 보낸 것 하나가
+    // 되돌아왔다는 통지일 뿐이다. 브라우저는 응답이 조금만 늦어도 포트를 닫고 다시
+    // 물어보기 때문에 이 일이 흔하다. 통지 자체를 꺼 둔다.
+    BOOL reportConnReset = FALSE;
+    DWORD ignored = 0;
+    WSAIoctl(s, SIO_UDP_CONNRESET, &reportConnReset, sizeof(reportConnReset),
+             nullptr, 0, &ignored, nullptr, nullptr);
+
     m_listenSocket = (std::uintptr_t)s;
 
     {
@@ -173,8 +189,21 @@ void NetworkMonitor::CaptureThreadFunc()
 
         if (n == SOCKET_ERROR)
         {
-            if (WSAGetLastError() == WSAETIMEDOUT) continue;   // 타임아웃 → m_running 재확인
-            break;                                             // 소켓 닫힘 등 → 종료
+            int err = WSAGetLastError();
+
+            if (err == WSAETIMEDOUT) continue;   // 조회가 없었을 뿐 → m_running 재확인
+
+            // 질의 하나가 어긋났을 뿐, 소켓은 멀쩡한 경우들.
+            //
+            // 여기서 루프를 끝내면 학생 PC 의 DNS 는 127.0.0.1 을 가리키는데 듣는 쪽이
+            // 사라진다. 그러면 모든 사이트가 열리지 않고 감시도 조용히 멈춘 채,
+            // 교수에게는 아무 알림도 가지 않는다. 끝내지 말고 다음 질의를 계속 받는다.
+            if (err == WSAECONNRESET ||   // 응답이 닫힌 포트로 되돌아옴 (위 WSAIoctl 로 대개 막힌다)
+                err == WSAEMSGSIZE  ||    // 버퍼보다 큰 조회 → 이 건만 버린다
+                err == WSAEINTR)          // 블로킹 호출이 중단됨
+                continue;
+
+            break;   // 소켓이 닫힌 경우 등 실제로 계속할 수 없는 오류
         }
         if (n <= 0) continue;
 

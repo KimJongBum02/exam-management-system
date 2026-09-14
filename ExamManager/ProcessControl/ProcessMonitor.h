@@ -20,6 +20,7 @@ using DetectCallback = std::function<void(int type, const std::wstring& processN
 // matchName은 확장자를 뗀 이름("notepad", 리스트 비교 전용)이다.
 // path와 originalName은 이름 위조 탐지용이며, 얻지 못하면 빈 문자열이다.
 // (시스템 프로세스는 경로를, 버전 리소스가 없는 파일은 originalName을 얻을 수 없다)
+// productLabel은 제품명 키워드 비교용이며, 버전 리소스가 없으면 빈 문자열이다.
 // isNew는 감시 시작(= 시험 시작) 이후에 실행된 프로세스라는 뜻이다.
 struct ProcessInfo
 {
@@ -27,8 +28,16 @@ struct ProcessInfo
     std::wstring matchName;
     std::wstring path;
     std::wstring originalName;  // 버전 리소스의 OriginalFilename, 확장자 제거된 상태
+    std::wstring productLabel;  // 버전 리소스의 ProductName|FileDescription, 공백 제거·소문자
     DWORD pid;
     bool isNew;
+};
+
+// 실행 파일의 버전 리소스에서 읽어 둔 값. 경로별로 캐시한다.
+struct VersionStrings
+{
+    std::wstring originalName;
+    std::wstring productLabel;
 };
 
 class ProcessMonitor
@@ -50,7 +59,8 @@ private:
 
     std::vector<ProcessInfo> GetRunningProcesses();
     bool IsInList(const std::wstring& name, const std::vector<std::wstring>& list);
-    bool IsBlacklisted(const ProcessInfo& proc, const std::vector<std::wstring>& blacklist);
+    bool IsBlacklisted(const ProcessInfo& proc, const std::vector<std::wstring>& blacklist,
+                       const std::vector<std::wstring>& keywords, const std::vector<std::wstring>& whitelist);
     bool IsWhitelisted(const ProcessInfo& proc, const std::vector<std::wstring>& whitelist);
 
     // 지금 화면에 창을 띄우고 있는 프로세스들의 PID.
@@ -61,6 +71,9 @@ private:
     // 확장자를 뗀 상태로 보관한다(Set*list에서 정규화).
     std::vector<std::wstring> m_blacklist;
     std::vector<std::wstring> m_whitelist;
+
+    // 금지 목록 중 제품명 키워드("제품명:" 표시가 붙은 항목). 공백을 빼고 소문자로 보관한다.
+    std::vector<std::wstring> m_blacklistKeywords;
     std::mutex m_listMutex;
 
     std::atomic<bool> m_running;
@@ -89,11 +102,11 @@ private:
     // 종료만 하고 부정행위로 알리지 않는다.
     bool m_firstCheck = true;
 
-    // 경로 → OriginalFilename(확장자 제거) 캐시.
+    // 경로 → 버전 리소스 값(OriginalFilename, 제품명) 캐시.
     // 버전 리소스 조회는 디스크를 읽으므로 매 검사(500ms)마다 하면 부하가 크다.
     // 같은 파일의 값은 변하지 않으니 경로 기준으로 한 번만 읽는다.
     // 감시 스레드에서만 접근하므로 별도 락이 필요 없다.
-    std::map<std::wstring, std::wstring> m_originalNameCache;
+    std::map<std::wstring, VersionStrings> m_versionCache;
 
     // 화이트리스트 종료 감지용: 이전 검사 때 실행 중이던 화이트리스트 프로그램
     std::vector<std::wstring> m_prevRunningWhitelist;

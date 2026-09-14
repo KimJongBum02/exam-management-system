@@ -1,11 +1,15 @@
 <UserControl x:Class="ProfessorUI.View.Professor.SecurityPolicyPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:ProfessorUI.View.Professor">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/ProfessorUI;component/View/Professor/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- 금지 목록의 "제품명:ChatGPT" 를 "ChatGPT" 로 보여 준다 -->
+            <local:ProgramListNameConverter x:Key="ProgramListName"/>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -88,7 +92,7 @@
                                 <GridView ColumnHeaderContainerStyle="{StaticResource TableHeader}">
                                     <GridViewColumn Header="프로세스 이름" Width="440">
                                         <GridViewColumn.CellTemplate>
-                                            <DataTemplate><TextBlock Text="{Binding}" Style="{StaticResource Cell}"/></DataTemplate>
+                                            <DataTemplate><TextBlock Text="{Binding Converter={StaticResource ProgramListName}}" Style="{StaticResource Cell}"/></DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
                                     <GridViewColumn Header="관리" Width="110">

@@ -3,8 +3,12 @@
 
 #include <tlhelp32.h>
 #include <chrono>
+#include <cwctype>
+#include <shlobj.h>
 
 #pragma comment(lib, "version.lib")
+#pragma comment(lib, "shell32.lib")
+#pragma comment(lib, "ole32.lib")
 
 // 파일명에서 마지막 확장자 하나를 제거한다.
 // 교수 UI는 .NET Process.ProcessName(확장자 없음)을 보내지만 스냅샷은
@@ -38,24 +42,79 @@ static bool QueryProcessDetail(DWORD pid, std::wstring& path, FILETIME& creation
     return gotCreation;
 }
 
-// 실행 파일의 버전 리소스에서 OriginalFilename을 읽어 확장자를 뗀 채 돌려준다.
-// 이 값은 컴파일 시점에 박히므로 파일 이름을 바꿔도 따라 변하지 않는다.
-// 버전 리소스가 아예 없는 실행 파일이 흔하므로 빈 문자열도 정상 결과다.
+// 제품명 키워드 비교용으로 다듬는다. 공백을 모두 빼고 소문자로 바꾼다.
+// 교수 쪽 프로그램 검색(ProgramCatalog)과 같은 규칙이다.
+// 제품명의 띄어쓰기는 사람마다 다르게 기억하므로 "tcp/ipping"도 "TCP/IP Ping"에 걸려야 한다.
+static std::wstring NormalizeLabel(const std::wstring& text)
+{
+    std::wstring result;
+    result.reserve(text.size());
+    for (wchar_t c : text)
+        if (!std::iswspace(c)) result.push_back(static_cast<wchar_t>(std::towlower(c)));
+    return result;
+}
+
+// 이 표시로 시작하는 금지 항목은 실행 파일 이름이 아니라 제품명 키워드다.
+// 교수 UI 의 ProgramControlStore.ProductKeywordPrefix 와 글자까지 같아야 한다.
+// 소스 파일 인코딩에 휘둘리지 않도록 한글을 코드값으로 적는다("제품명:").
+// 한글을 그대로 적으면 컴파일러가 이 파일을 어떤 코드페이지로 읽느냐에 따라 값이 바뀐다.
+static const std::wstring kProductKeywordPrefix = { wchar_t(0xC81C), wchar_t(0xD488), wchar_t(0xBA85), L':' };
+
+// Microsoft 가 배포한 Store 앱의 실행 파일인지.
+//   <Program Files>\WindowsApps\<패키지 폴더>_8wekyb3d8bbwe\...
+// WindowsApps 는 TrustedInstaller 소유라 학생이 파일을 넣거나 바꿀 수 없고,
+// 폴더 이름 끝의 8wekyb3d8bbwe 는 Microsoft 서명 키에서 나오는 발행자 ID 라 다른 패키지가 쓸 수 없다.
+// 위치를 Program Files 로 못 박아야 한다. 사용자 폴더에 같은 이름의 폴더를 만드는 위장을 막기 위함이다.
+// 교수 UI 의 ProgramCatalog.IsMicrosoftStorePackage 와 같은 규칙이어야 한다.
+static bool IsMicrosoftStorePackage(const std::wstring& path)
+{
+    static const std::wstring appsDir = []
+    {
+        std::wstring dir;
+        PWSTR programFiles = nullptr;
+        if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_ProgramFiles, 0, nullptr, &programFiles)))
+            dir = std::wstring(programFiles) + L"\\WindowsApps\\";
+        CoTaskMemFree(programFiles);
+        return dir;
+    }();
+
+    if (appsDir.empty() || path.size() <= appsDir.size()
+        || _wcsnicmp(path.c_str(), appsDir.c_str(), appsDir.size()) != 0)
+        return false;
+
+    // WindowsApps 바로 아래 폴더(패키지 폴더)의 이름이 발행자 ID 로 끝나야 한다.
+    size_t end = path.find(L'\\', appsDir.size());
+    if (end == std::wstring::npos) return false;
+
+    static const std::wstring kMicrosoftPublisher = L"_8wekyb3d8bbwe";
+    std::wstring package = path.substr(appsDir.size(), end - appsDir.size());
+    return package.size() > kMicrosoftPublisher.size()
+        && _wcsicmp(package.c_str() + package.size() - kMicrosoftPublisher.size(), kMicrosoftPublisher.c_str()) == 0;
+}
+
+// 실행 파일의 버전 리소스에서 판정에 쓰는 값을 읽는다.
+// 버전 리소스가 아예 없는 실행 파일이 흔하므로 빈 값도 정상 결과다.
+//
+// originalName — OriginalFilename 에서 확장자를 뗀 것.
+//   컴파일 시점에 박히므로 파일 이름을 바꿔도 따라 변하지 않는다.
+// productLabel — ProductName 과 FileDescription 을 NormalizeLabel 로 다듬어 '|' 로 이은 것.
+//   두 값 사이의 '|' 는 경계를 넘는 일치를 막는다. 키워드에는 '|' 가 들어올 수 없다(목록 구분자).
 //
 // FILE_VER_GET_NEUTRAL이 반드시 필요하다. 이 플래그가 없으면 MUI(다국어 리소스)
 // 리다이렉션이 일어나 System32\ko-KR\ping.exe.mui 쪽 값을 읽고,
 // OriginalFilename이 "ping.exe.mui"로 나와 매칭에 실패한다.
-static std::wstring QueryOriginalName(const std::wstring& path)
+static VersionStrings QueryVersionStrings(const std::wstring& path)
 {
-    if (path.empty()) return std::wstring();
+    VersionStrings result;
+    if (path.empty()) return result;
 
     DWORD ignored = 0;
     DWORD size = GetFileVersionInfoSizeExW(FILE_VER_GET_NEUTRAL, path.c_str(), &ignored);
-    if (size == 0) return std::wstring();
+    if (size == 0) return result;
 
     std::vector<BYTE> data(size);
     if (!GetFileVersionInfoExW(FILE_VER_GET_NEUTRAL, path.c_str(), 0, size, data.data()))
-        return std::wstring();
+        return result;
 
     // 문자열 블록은 언어/코드페이지별로 나뉘어 있어, 번역 테이블을 먼저 읽어야
     // 조회할 경로를 만들 수 있다. 첫 번째로 값이 나오는 언어를 쓴다.
@@ -65,22 +124,28 @@ static std::wstring QueryOriginalName(const std::wstring& path)
 
     if (!VerQueryValueW(data.data(), L"\\VarFileInfo\\Translation",
                         reinterpret_cast<void**>(&translations), &translationBytes))
-        return std::wstring();
+        return result;
 
-    for (UINT i = 0; i < translationBytes / sizeof(LangCodePage); i++)
+    auto query = [&](const wchar_t* key) -> std::wstring
     {
-        wchar_t subBlock[64];
-        swprintf_s(subBlock, L"\\StringFileInfo\\%04x%04x\\OriginalFilename",
-                   translations[i].language, translations[i].codePage);
+        for (UINT i = 0; i < translationBytes / sizeof(LangCodePage); i++)
+        {
+            wchar_t subBlock[64];
+            swprintf_s(subBlock, L"\\StringFileInfo\\%04x%04x\\%ls",
+                       translations[i].language, translations[i].codePage, key);
 
-        wchar_t* value = nullptr;
-        UINT valueLen = 0;
+            wchar_t* value = nullptr;
+            UINT valueLen = 0;
 
-        if (VerQueryValueW(data.data(), subBlock, reinterpret_cast<void**>(&value), &valueLen) && valueLen > 0)
-            return StripExtension(std::wstring(value, wcsnlen(value, valueLen)));
-    }
+            if (VerQueryValueW(data.data(), subBlock, reinterpret_cast<void**>(&value), &valueLen) && valueLen > 0)
+                return std::wstring(value, wcsnlen(value, valueLen));
+        }
+        return std::wstring();
+    };
 
-    return std::wstring();
+    result.originalName = StripExtension(query(L"OriginalFilename"));
+    result.productLabel = NormalizeLabel(query(L"ProductName")) + L"|" + NormalizeLabel(query(L"FileDescription"));
+    return result;
 }
 
 ProcessMonitor::ProcessMonitor()
@@ -95,14 +160,27 @@ ProcessMonitor::~ProcessMonitor()
 
 void ProcessMonitor::SetBlacklist(const std::vector<std::wstring>& list)
 {
-    // 매 검사마다 정규화하지 않도록 보관 시점에 한 번만 확장자를 뗀다.
-    std::vector<std::wstring> normalized;
-    normalized.reserve(list.size());
+    // 매 검사마다 정규화하지 않도록 보관 시점에 한 번만 다듬는다.
+    // 제품명 키워드는 확장자를 떼지 않는다. "Claude 3.5"의 ".5"는 확장자가 아니다.
+    std::vector<std::wstring> names, keywords;
+    names.reserve(list.size());
     for (const auto& item : list)
-        normalized.push_back(StripExtension(item));
+    {
+        if (item.compare(0, kProductKeywordPrefix.size(), kProductKeywordPrefix) == 0)
+        {
+            // 표시만 있고 비어 있으면 모든 프로그램의 제품명에 걸리므로 버린다.
+            std::wstring keyword = NormalizeLabel(item.substr(kProductKeywordPrefix.size()));
+            if (!keyword.empty()) keywords.push_back(std::move(keyword));
+        }
+        else
+        {
+            names.push_back(StripExtension(item));
+        }
+    }
 
     std::lock_guard<std::mutex> lock(m_listMutex);
-    m_blacklist = std::move(normalized);
+    m_blacklist = std::move(names);
+    m_blacklistKeywords = std::move(keywords);
 }
 
 void ProcessMonitor::SetWhitelist(const std::vector<std::wstring>& list)
@@ -203,16 +281,25 @@ std::vector<ProcessInfo> ProcessMonitor::GetRunningProcesses()
             FILETIME creation = {};
             bool gotCreation = QueryProcessDetail(pe.th32ProcessID, path, creation);
 
-            // 경로 조회는 커널 호출이라 매번 해도 싸지만, OriginalFilename은
+            // 경로 조회는 커널 호출이라 매번 해도 싸지만, 버전 리소스는
             // 디스크를 읽으므로 경로를 키로 캐시한다. 처음 보는 파일일 때만 실제로 읽는다.
-            std::wstring originalName;
+            VersionStrings version;
             if (!path.empty())
             {
-                auto cached = m_originalNameCache.find(path);
-                if (cached == m_originalNameCache.end())
-                    cached = m_originalNameCache.emplace(path, QueryOriginalName(path)).first;
+                auto cached = m_versionCache.find(path);
+                if (cached == m_versionCache.end())
+                {
+                    VersionStrings read = QueryVersionStrings(path);
 
-                originalName = cached->second;
+                    // 버전 정보가 없는 Microsoft Store 앱(메모장·그림판·캡처 도구)은 설치 위치가
+                    // 신원을 보증하므로 실행 파일 이름을 원래 이름으로 대신 쓴다. 허용 판정이 이 값을 본다.
+                    if (read.originalName.empty() && IsMicrosoftStorePackage(path))
+                        read.originalName = StripExtension(name);
+
+                    cached = m_versionCache.emplace(path, std::move(read)).first;
+                }
+
+                version = cached->second;
             }
 
             // 생성 시각을 못 얻으면 신규로 보지 않는다. 핸들을 못 여는 건 SYSTEM 권한
@@ -220,7 +307,8 @@ std::vector<ProcessInfo> ProcessMonitor::GetRunningProcesses()
             // 전부 오탐으로 올라온다. 학생이 띄운 프로세스는 항상 열 수 있다.
             bool isNew = gotCreation && CompareFileTime(&creation, &m_startTime) > 0;
 
-            running.push_back({ name, StripExtension(name), path, originalName, pe.th32ProcessID, isNew });
+            running.push_back({ name, StripExtension(name), path, version.originalName, version.productLabel,
+                                pe.th32ProcessID, isNew });
         } while (Process32NextW(snapshot, &pe));
     }
 
@@ -240,13 +328,49 @@ bool ProcessMonitor::IsInList(const std::wstring& name, const std::vector<std::w
     return false;
 }
 
+// C:\Windows\ 아래의 실행 파일인지. 제품명 키워드가 윈도우 구성요소를 건드리지 않게 하는 데 쓴다.
+static bool IsUnderWindowsDir(const std::wstring& path)
+{
+    static const std::wstring windowsDir = []
+    {
+        wchar_t buffer[MAX_PATH];
+        UINT length = GetSystemWindowsDirectoryW(buffer, MAX_PATH);
+        std::wstring dir(buffer, length);
+        if (!dir.empty() && dir.back() != L'\\') dir += L'\\';
+        return dir;
+    }();
+
+    return !windowsDir.empty() && path.size() > windowsDir.size()
+        && _wcsnicmp(path.c_str(), windowsDir.c_str(), windowsDir.size()) == 0;
+}
+
 // 파일명과 OriginalFilename 중 하나만 걸려도 차단 대상으로 본다. 파일명을 바꿔도
 // OriginalFilename은 남으므로, cheat.exe로 위장한 notepad도 여기서 잡힌다.
 // 종료 판정과 신규 보고 제외가 같은 기준을 써야 하므로 함수로 묶는다.
-bool ProcessMonitor::IsBlacklisted(const ProcessInfo& proc, const std::vector<std::wstring>& blacklist)
+//
+// 제품명 키워드는 ProductName·FileDescription 안에 그 단어가 들어 있으면 걸린다.
+// 실행 파일 이름의 철자를 몰라도, 이름을 바꿔도 잡힌다.
+// 대신 포함 여부로 보는 만큼 넓게 걸리므로 허용 목록에 있는 프로그램은 빼 준다.
+// 시험에 쓰는 도구가 키워드 하나 때문에 강제 종료되면 안 된다.
+bool ProcessMonitor::IsBlacklisted(const ProcessInfo& proc, const std::vector<std::wstring>& blacklist,
+                                   const std::vector<std::wstring>& keywords, const std::vector<std::wstring>& whitelist)
 {
-    return IsInList(proc.matchName, blacklist)
-        || (!proc.originalName.empty() && IsInList(proc.originalName, blacklist));
+    if (IsInList(proc.matchName, blacklist)
+        || (!proc.originalName.empty() && IsInList(proc.originalName, blacklist)))
+        return true;
+
+    // 윈도우 폴더 안의 프로그램은 제품명 키워드로 끄지 않는다.
+    // 윈도우 구성요소는 제품명이 거의 모두 "Microsoft Windows Operating System"이라,
+    // "제품명:Windows" 한 줄이면 작업 표시줄·입력기까지 꺼진다(개발 PC 에서 18개 확인).
+    // 이름으로 콕 집어 넣은 것(cmd.exe 등)은 교수의 뜻이므로 위에서 그대로 막는다.
+    if (IsUnderWindowsDir(proc.path)) return false;
+
+    for (const auto& keyword : keywords)
+    {
+        if (proc.productLabel.find(keyword) != std::wstring::npos)
+            return !IsWhitelisted(proc, whitelist);
+    }
+    return false;
 }
 
 // 화이트리스트는 블랙리스트와 반대로 엄격하게 본다.
@@ -319,10 +443,11 @@ void ProcessMonitor::CheckOnce()
 {
     std::vector<ProcessInfo> running = GetRunningProcesses();
 
-    std::vector<std::wstring> blacklist, whitelist;
+    std::vector<std::wstring> blacklist, blacklistKeywords, whitelist;
     {
         std::lock_guard<std::mutex> lock(m_listMutex);
         blacklist = m_blacklist;
+        blacklistKeywords = m_blacklistKeywords;
         whitelist = m_whitelist;
     }
 
@@ -345,7 +470,7 @@ void ProcessMonitor::CheckOnce()
     {
         // 리스트와 비교할 때만 정규화된 이름을 쓴다.
         // 아래 currentBlacklist는 스냅샷끼리의 비교라 원본 이름 그대로 다뤄도 일관된다.
-        if (IsBlacklisted(proc, blacklist))
+        if (IsBlacklisted(proc, blacklist, blacklistKeywords, whitelist))
         {
             // Windows 자체 구성요소는 목록에 들어와도 종료하지 않는다.
             // explorer.exe를 죽이면 바탕화면과 작업표시줄이 통째로 사라진다.
@@ -416,7 +541,7 @@ void ProcessMonitor::CheckOnce()
     for (const auto& proc : running)
     {
         if (!proc.isNew) continue;
-        if (IsBlacklisted(proc, blacklist)) continue;        // 이미 type 0으로 보고됨
+        if (IsBlacklisted(proc, blacklist, blacklistKeywords, whitelist)) continue;        // 이미 type 0으로 보고됨
         if (IsWhitelisted(proc, whitelist)) continue;        // 시험에 필요한 프로그램
         if (IsSystemComponent(proc.matchName)) continue;     // Windows 자체 구성요소
         if (m_reportedNew.count(proc.pid)) continue;         // PID당 한 번만 알린다

@@ -17,6 +17,8 @@ namespace ProfessorUI.Service
         Installed,   // 시작 메뉴 바로가기에서 찾음
         Running,     // 지금 실행 중인 프로세스
         Picked,      // 교수가 파일 선택창에서 직접 고름
+        Known,       // 사전에 적어 둔 이름 — 이 PC 에는 없다
+        BuiltIn,     // 윈도우 기본 앱 — C:\Windows 안이라 위 경로에서는 숨기고 표로 보여 준다
     }
 
     // 감시 목록에 넣을 후보 하나.
@@ -37,6 +39,10 @@ namespace ProfessorUI.Service
         // 버전 리소스가 없는 실행 파일도 흔해서 빈 문자열이 정상 결과다.
         public string OriginalName { get; init; } = string.Empty;
 
+        // 이 프로그램을 찾을 때 쓰일 다른 이름들("챗지피티", "VSCode" 처럼).
+        // 파일에 박힌 설명과 사전의 별칭이 여기 함께 담긴다.
+        public string Aliases { get; set; } = string.Empty;
+
         // 실행 파일 이름과 원래 이름이 달라 목록에 두 개를 넣어야 하는 경우
         public bool HasDistinctOriginalName =>
             OriginalName.Length > 0 &&
@@ -48,6 +54,8 @@ namespace ProfessorUI.Service
         {
             ProgramSource.Running => "실행 중",
             ProgramSource.Picked => "직접 선택",
+            ProgramSource.Known => "미설치",
+            ProgramSource.BuiltIn => "윈도우 기본",
             _ => "설치됨",
         };
 
@@ -76,17 +84,25 @@ namespace ProfessorUI.Service
             }
         }
 
+        // 견주기 전에 공백을 모두 없앤다.
+        private static string Squeeze(string text) =>
+            new string(text.Where(c => !char.IsWhiteSpace(c)).ToArray());
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         // 한글 이름과 실행 파일명 어느 쪽으로 쳐도 걸리게 한다.
         // "카카오"로도 "kakao"로도 찾을 수 있어야 하기 때문이다.
+        //
+        // 띄어쓰기는 무시한다. "비주얼 스튜디오"와 "비주얼스튜디오"를 다르게 볼 이유가 없고,
+        // 프로그램 이름의 띄어쓰기는 사람마다 다르게 기억한다.
         public bool Matches(string keyword)
         {
             if (string.IsNullOrWhiteSpace(keyword)) return true;
 
-            string k = keyword.Trim();
-            return DisplayName.Contains(k, StringComparison.OrdinalIgnoreCase)
-                || ExecutableName.Contains(k, StringComparison.OrdinalIgnoreCase);
+            string k = Squeeze(keyword);
+            return Squeeze(DisplayName).Contains(k, StringComparison.OrdinalIgnoreCase)
+                || Squeeze(ExecutableName).Contains(k, StringComparison.OrdinalIgnoreCase)
+                || Squeeze(Aliases).Contains(k, StringComparison.OrdinalIgnoreCase);
         }
     }
 
@@ -115,6 +131,33 @@ namespace ProfessorUI.Service
                     found.Source = ProgramSource.Running;
                 else
                     byExe[entry.ExecutableName] = entry;
+            }
+
+            // 이 PC 에 없는 것도 고를 수 있어야 한다.
+            //
+            // 목록을 짜는 곳은 교수 PC 이고 감시가 도는 곳은 학생 PC 라, 학생 PC 에만
+            // 깔린 프로그램은 위 두 경로로는 영영 나타나지 않는다. 사전에 적어 둔 이름을
+            // 후보로 함께 올려 이름만으로도 고를 수 있게 한다.
+            foreach (var known in KnownPrograms.All())
+            {
+                // 이미 설치돼 찾은 것은 실제 경로와 아이콘을 갖고 있으므로 덮지 않는다.
+                // 다만 사전에 적어 둔 한글 이름과 별칭은 그쪽에 없으므로 보태 준다.
+                // 이것을 빼먹으면 설치된 VS Code 를 "브이에스코드" 로 찾지 못하고,
+                // 실행 중인 Store 메모장(버전 정보가 없어 "Notepad" 로만 잡힘)을 "메모장" 으로 찾지 못한다.
+                if (byExe.TryGetValue(known.ExecutableName, out var installed))
+                {
+                    installed.Aliases = $"{installed.Aliases} {known.DisplayName} {known.Aliases}".Trim();
+                    continue;
+                }
+
+                byExe[known.ExecutableName] = new ProgramEntry
+                {
+                    DisplayName = known.DisplayName,
+                    ExecutableName = known.ExecutableName,
+                    OriginalName = known.EffectiveOriginalName,
+                    Aliases = known.Aliases,
+                    Source = known.Kind == KnownProgramKind.WindowsApp ? ProgramSource.BuiltIn : ProgramSource.Known,
+                };
             }
 
             // 현재 문화권(ko-KR) 기준이라 한글 가나다가 먼저, 그다음 영문 순으로 놓인다.
@@ -159,6 +202,7 @@ namespace ProfessorUI.Service
 
                     string exe = Path.GetFileName(target);
                     if (IsUninstaller(exe)) continue;
+                    if (IsWindowsComponent(target)) continue;   // 고를 만한 것은 KnownPrograms.WindowsApps 로 보여 준다
 
                     yield return new ProgramEntry
                     {
@@ -166,6 +210,11 @@ namespace ProfessorUI.Service
                         ExecutableName = exe,
                         ExecutablePath = target,
                         OriginalName = ReadOriginalName(target),
+                        // 바로가기 이름이 늘 교수가 떠올리는 이름은 아니다.
+                        // ("VS Code" 로 만들어 둔 바로가기를 "Visual Studio Code" 로 찾는 식)
+                        // 파일에 박힌 설명을 검색어로 더해 둔다. 보이는 이름은 그대로 둔다 —
+                        // 시작 메뉴에 뜨는 이름이 교수가 실제로 보아 온 이름이기 때문이다.
+                        Aliases = ReadDescription(target, name),
                         Source = ProgramSource.Installed,
                         Icon = LoadIcon(target),
                     };
@@ -231,6 +280,50 @@ namespace ProfessorUI.Service
             catch { return null; }
         }
 
+        // 실행 파일에 박힌 설명(FileDescription). "Visual Studio Code" 처럼
+        // 사람이 부르는 이름이 들어 있다. 원래 이름(OriginalFilename)과는 다르다 —
+        // VS Code 는 원래 이름이 electron.exe 지만 설명은 Visual Studio Code 다.
+        //
+        // 이미 보이는 이름과 같으면 검색어로 더할 필요가 없어 비워 둔다.
+        private static string ReadDescription(string path, string displayName)
+        {
+            try
+            {
+                string? description = FileVersionInfo.GetVersionInfo(path).FileDescription;
+                if (string.IsNullOrWhiteSpace(description)) return string.Empty;
+                if (string.Equals(description.Trim(), displayName, StringComparison.OrdinalIgnoreCase))
+                    return string.Empty;
+
+                return description.Trim();
+            }
+            catch
+            {
+                // 버전 정보가 없거나 못 읽는 파일이 흔하다. 검색어가 하나 줄 뿐이다.
+                return string.Empty;
+            }
+        }
+
+        // C:\Windows 안의 실행 파일인지. 이런 것은 목록에 올리지 않는다.
+        private static readonly string WindowsDir =
+            Environment.GetFolderPath(Environment.SpecialFolder.Windows).TrimEnd('\\') + "\\";
+
+        private static bool IsWindowsComponent(string path)
+            => path.StartsWith(WindowsDir, StringComparison.OrdinalIgnoreCase);
+
+        // Microsoft 가 배포한 Store 앱의 실행 파일인지(<Program Files>\WindowsApps\<패키지 폴더>_8wekyb3d8bbwe\...).
+        // 규칙과 이유는 ProcessMonitor.cpp 의 IsMicrosoftStorePackage 에 적었다. 두 곳이 같아야 한다.
+        private static readonly string WindowsAppsDir =
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "WindowsApps") + "\\";
+
+        private static bool IsMicrosoftStorePackage(string path)
+        {
+            if (!path.StartsWith(WindowsAppsDir, StringComparison.OrdinalIgnoreCase)) return false;
+
+            int end = path.IndexOf('\\', WindowsAppsDir.Length);
+            return end > 0 && path.Substring(WindowsAppsDir.Length, end - WindowsAppsDir.Length)
+                                  .EndsWith("_8wekyb3d8bbwe", StringComparison.OrdinalIgnoreCase);
+        }
+
         private static bool IsUninstaller(string text)
             => text.Contains("제거") || text.Contains("uninstall", StringComparison.OrdinalIgnoreCase);
 
@@ -256,6 +349,10 @@ namespace ProfessorUI.Service
                     // 권한이 모자라 못 읽는 시스템 프로세스가 있다. 그런 것은 건너뛴다.
                 }
                 if (string.IsNullOrEmpty(path)) continue;
+
+                // 윈도우가 알아서 돌리는 구성요소(svchost, RuntimeBroker 등)는 목록을 덮기만 한다.
+                // 교수가 고를 만한 윈도우 앱은 KnownPrograms.WindowsApps 로 따로 보여 준다.
+                if (IsWindowsComponent(path)) continue;
 
                 yield return new ProgramEntry
                 {
@@ -302,6 +399,14 @@ namespace ProfessorUI.Service
         // 리다이렉션되어 "ping.exe.mui" 같은 값이 나오고, 네이티브 쪽 값과 달라진다.
 
         private static string ReadOriginalName(string path)
+        {
+            // 버전 정보가 없는 Microsoft Store 앱(메모장·그림판·캡처 도구)은 설치 위치가 신원을 보증하므로
+            // 실행 파일 이름을 대신 쓴다. 학생 PC 의 ProcessMonitor 도 같은 규칙으로 허용 판정을 한다.
+            string original = ReadVersionOriginalName(path);
+            return original.Length == 0 && IsMicrosoftStorePackage(path) ? Path.GetFileName(path) : original;
+        }
+
+        private static string ReadVersionOriginalName(string path)
         {
             if (path.Length == 0) return string.Empty;
 

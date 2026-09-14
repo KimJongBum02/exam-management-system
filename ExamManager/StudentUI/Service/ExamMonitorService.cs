@@ -38,6 +38,14 @@ namespace StudentUI.Service
             "chatgpt.com", "openai.com", "claude.ai", "anthropic.com",
             "gemini.google.com", "bard.google.com", "copilot.microsoft.com",
             "perplexity.ai", "wrtn.ai", "poe.com",
+
+            // 명령줄 AI 도구와 편집기 확장이 부르는 API 주소.
+            // node.exe 나 허용된 편집기(VS Code) 안에서 돌아 프로세스 감시로는 잡을 수 없다.
+            // googleapis.com 을 통째로 막으면 크롬 업데이트 같은 다른 구글 서비스까지 끊겨 필요한 것만 적는다.
+            "generativelanguage.googleapis.com",    // Gemini API (API 키로 쓸 때)
+            "cloudcode-pa.googleapis.com",          // Gemini CLI · Gemini Code Assist (구글 계정으로 쓸 때)
+            "githubcopilot.com",                    // GitHub Copilot (VS Code 확장 포함)
+            "copilot-proxy.githubusercontent.com",  // GitHub Copilot 옛 경로
         };
 
         private ExamMonitorService() { }
@@ -200,7 +208,8 @@ namespace StudentUI.Service
         }
 
         // 금지 도메인 조회를 잡았을 때. 프로세스 적발과 같은 경로로 보고한다.
-        // 조회를 막지는 않으므로 학생 쪽 화면 안내도 같은 문구를 쓴다.
+        // 조회 자체는 네이티브가 "그런 주소 없음"으로 답해 매번 막고, 여기서는 시도한 사실을 알린다.
+        // 알림은 도메인마다 한 번만 올라온다(NetworkMonitor 참고). 학생 쪽 화면 안내도 같은 문구를 쓴다.
         private void OnDomainDetected(string domain)
         {
             string description = $"금지된 사이트 접속 시도: {domain}";
