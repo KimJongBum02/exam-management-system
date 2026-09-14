@@ -56,7 +56,10 @@ namespace StudentUI
             // 수신 사실은 대기 화면·시험 준비 화면이 ExamFileStore를 통해 표시하므로 별도 알림창은 띄우지 않는다.
             Service.NetworkService.Instance.FileReceived += (tid, senderId, fileName, tempPath, size, pw) =>
             {
-                byte[] payload = BitConverter.GetBytes((uint)StudentStatus.FileReceived);
+                // ExamStatusUpdate 는 276바이트 고정 형식이다([학번 16][status 4][detail 256]).
+                // status 를 4바이트만 보내면 교수 쪽 TryDecode 가 길이 검사에서 걸러 버려,
+                // 파일을 받았는데도 배포 단계의 '수신' 숫자가 움직이지 않는다.
+                byte[] payload = ExamStatusUpdatePayload.Encode(StudentStatus.FileReceived);
                 Service.NetworkService.Instance.SendPacket(PacketType.ExamStatusUpdate, payload);
             };
 
