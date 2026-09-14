@@ -4,38 +4,78 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:local="clr-namespace:StudentUI.View.LoginView"
-       xmlns:vm="clr-namespace:StudentUI.ViewModel"
+      xmlns:vm="clr-namespace:StudentUI.ViewModel"
       mc:Ignorable="d">
-    
-    <UserControl.Background>
-        <ImageBrush ImageSource="/View/LoginView/Assets/loginbackground.png"
-                Stretch="UniformToFill"/>
-    </UserControl.Background>
 
     <Grid>
-        <!-- 반투명 흰색 레이어 -->
-        <Rectangle Fill="White" Opacity="0.5"/>
+        <!-- 배경 그라데이션 -->
+        <Grid.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#EEF2FF" Offset="0"/>
+                <GradientStop Color="#E0E7FF" Offset="0.5"/>
+                <GradientStop Color="#F0F9FF" Offset="1"/>
+            </LinearGradientBrush>
+        </Grid.Background>
 
-        <!-- 로그인 테두리 -->
-        <Border Background="White"
-                CornerRadius="12"
-                Padding="40,36"
-                Width="420"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Opacity="0.92"
-                >
+        <!-- 배경 장식: 좌상단 큰 원 -->
+        <Ellipse Width="480" Height="480"
+                 HorizontalAlignment="Left" VerticalAlignment="Top"
+                 Margin="-160,-160,0,0"
+                 Opacity="0.45">
+            <Ellipse.Fill>
+                <RadialGradientBrush>
+                    <GradientStop Color="#C7D2FE" Offset="0"/>
+                    <GradientStop Color="Transparent" Offset="1"/>
+                </RadialGradientBrush>
+            </Ellipse.Fill>
+        </Ellipse>
+
+        <!-- 배경 장식: 우하단 원 -->
+        <Ellipse Width="380" Height="380"
+                 HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                 Margin="0,0,-120,-120"
+                 Opacity="0.40">
+            <Ellipse.Fill>
+                <RadialGradientBrush>
+                    <GradientStop Color="#A5F3FC" Offset="0"/>
+                    <GradientStop Color="Transparent" Offset="1"/>
+                </RadialGradientBrush>
+            </Ellipse.Fill>
+        </Ellipse>
+
+        <!-- 배경 장식: 중앙 우측 작은 원 -->
+        <Ellipse Width="200" Height="200"
+                 HorizontalAlignment="Right" VerticalAlignment="Top"
+                 Margin="0,80,-60,0"
+                 Opacity="0.30">
+            <Ellipse.Fill>
+                <RadialGradientBrush>
+                    <GradientStop Color="#818CF8" Offset="0"/>
+                    <GradientStop Color="Transparent" Offset="1"/>
+                </RadialGradientBrush>
+            </Ellipse.Fill>
+        </Ellipse>
+
+        <!-- 로그인 카드 -->
+        <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                Width="400"
+                Background="White"
+                CornerRadius="16"
+                Padding="40,36,40,40">
             <Border.Effect>
-                <DropShadowEffect Color="#000000" Opacity="0.08"
-                                  BlurRadius="20" ShadowDepth="4"/>
+                <DropShadowEffect Color="#6366F1"
+                                  Direction="270"
+                                  ShadowDepth="8"
+                                  BlurRadius="40"
+                                  Opacity="0.12"/>
             </Border.Effect>
 
             <StackPanel>
-                <local:StudentLogin Margin="0,0,0,16"/>
-                <local:StudentInputName x:Name="NameInput" Margin="0,0,0,12"/>
-                <local:StudentInputNumber x:Name="NumberInput" Margin="0,0,0,12"/>
+                <local:StudentLogin Margin="0,0,0,24"/>
+                <local:StudentInputName x:Name="NameInput" Margin="0,0,0,16"/>
+                <local:StudentInputNumber x:Name="NumberInput" Margin="0,0,0,28"/>
                 <local:LoginButton x:Name="LoginBtn"/>
             </StackPanel>
         </Border>
     </Grid>
-</UserControl>
+</UserControl>
