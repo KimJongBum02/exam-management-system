@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using ProfessorUI.Service;
 
@@ -22,6 +23,12 @@ namespace ProfessorUI.ViewModel
         public ObservableCollection<ProcessDisplayItem> FilteredProcesses { get; } = new();
 
         public ObservableCollection<string> BlackList => ProgramControlStore.BlackList;
+
+        // 기본으로 들어 있는 항목과 교수가 직접 넣은 항목을 따로 보여 준다.
+        // 저장은 한 목록(ProgramControlStore.BlackList) 그대로이고 보여 줄 때만 가른다.
+        // 시험 준비·보안 정책 두 화면이 이 뷰모델 하나를 함께 쓰므로 여기서 한 번만 만든다.
+        public ICollectionView DefaultItems { get; }
+        public ICollectionView AddedItems { get; }
 
         public string InputProcessName
         {
@@ -49,6 +56,7 @@ namespace ProfessorUI.ViewModel
         public ICommand AddCommand { get; }
         public ICommand RemoveCommand { get; }
         public ICommand ClearAllCommand { get; } // 전체 삭제 커맨드
+        public ICommand RestoreDefaultsCommand { get; } // 기본값 복원 커맨드
         public ICommand OpenPickerCommand { get; }
         public ICommand ClosePickerCommand { get; }
         public ICommand ConfirmPickerCommand { get; }
@@ -58,10 +66,20 @@ namespace ProfessorUI.ViewModel
             AddCommand = new RelayCommand(_ => AddProcess());
             RemoveCommand = new RelayCommand(param => RemoveProcess(param as string));
             ClearAllCommand = new RelayCommand(_ => ClearAll());
+            RestoreDefaultsCommand = new RelayCommand(_ => ProgramControlStore.RestoreBlackListDefaults());
 
             OpenPickerCommand = new RelayCommand(_ => OpenPicker());
             ClosePickerCommand = new RelayCommand(_ => IsProcessPickerOpen = false);
             ConfirmPickerCommand = new RelayCommand(param => ConfirmSelection(param as IList));
+
+            DefaultItems = new ListCollectionView(ProgramControlStore.BlackList)
+            {
+                Filter = item => item is string entry && ProgramControlStore.IsDefaultBlack(entry),
+            };
+            AddedItems = new ListCollectionView(ProgramControlStore.BlackList)
+            {
+                Filter = item => item is string entry && !ProgramControlStore.IsDefaultBlack(entry),
+            };
         }
 
 

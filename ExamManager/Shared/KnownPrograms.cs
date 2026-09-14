@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 
-namespace ProfessorUI.Service
+// 교수·학생이 함께 쓰는 프로그램 사전. 두 UI 가 같은 친숙한 이름을 보이도록 공용 폴더에 둔다.
+// (교수 알림·목록 표시, 학생 화면 경고가 모두 이 표의 이름을 쓴다)
+namespace ExamManager.Shared
 {
     public enum KnownProgramKind
     {
@@ -120,6 +122,38 @@ namespace ProfessorUI.Service
             foreach (var p in Ai) yield return p;
             foreach (var p in DevTools) yield return p;
             foreach (var p in WindowsApps) yield return p;
+        }
+
+        // 실행 파일 이름 → 사람이 부르는 이름. 실행 파일 이름과 원래 이름 양쪽을 키로 넣는다.
+        // (허용 목록은 "Code.exe"와 원래 이름 "electron.exe"를 둘 다 쓰므로 둘 다 매핑해야 한다)
+        // 목록 표시(ProgramListNameConverter)와 부정행위 알림 표시가 같은 표를 쓰도록 한곳에 둔다.
+        private static readonly System.Collections.Generic.Dictionary<string, string> DisplayByExe = BuildDisplayLookup();
+
+        private static System.Collections.Generic.Dictionary<string, string> BuildDisplayLookup()
+        {
+            var map = new System.Collections.Generic.Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase);
+            foreach (var program in All())
+            {
+                map[program.ExecutableName] = program.DisplayName;
+                if (program.EffectiveOriginalName.Length > 0)
+                    map[program.EffectiveOriginalName] = program.DisplayName;
+            }
+            return map;
+        }
+
+        // 아는 프로그램이면 사람이 부르는 이름, 모르면 null.
+        public static string? DisplayNameFor(string exeName)
+            => DisplayByExe.TryGetValue(exeName, out var name) ? name : null;
+
+        // 프로그램 이름/라벨("Calculator (CalculatorApp.exe)" 이나 "mspaint.exe")에서 실행 파일 이름을
+        // 찾아, 아는 프로그램이면 사람이 부르는 이름("계산기")으로 바꾼다. 모르면 원래 값 그대로.
+        // 학생 화면 경고가 이 값을 쓰고, 교수 알림도 같은 규칙(App.FriendlyAlert)으로 맞춘다.
+        public static string FriendlyLabel(string label)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(
+                label, @"[^\s():]+\.exe", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (!match.Success) return label;
+            return DisplayNameFor(match.Value) ?? label;
         }
     }
 }

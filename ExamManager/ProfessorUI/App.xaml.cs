@@ -64,13 +64,28 @@ namespace ProfessorUI
                     PostToUi(() => Service.StudentStore.Instance.MarkMonitorStatus(
                         studentId, processOn, networkOn, monitorDetail));
                 }
+                else if (type == PacketType.InstalledProgramsReport &&
+                         InstalledProgramsPayload.TryDecode(payload, len, out var programs))
+                {
+                    // 강의실 PC 에 설치된 프로그램 목록. 프로그램 선택창의 후보로 쓰도록 모아 둔다.
+                    // 화면에 묶인 데이터가 아니고 파일 저장이 끼어 있어, 화면 스레드로 넘기지 않고 여기서 처리한다.
+                    Service.ClassroomPrograms.Merge(programs);
+                }
                 else if (type == PacketType.CheatingAlert)
                 {
                     // 누가 보냈는지는 로그인 때 등록된 세션 정보로 알 수 있으므로 페이로드에서 읽지 않는다.
-                    string description = ReadAlertDescription(payload, len);
+                    // 학생이 보낸 문구는 실행 파일 이름 기준이라, 아는 프로그램은 사람이 부르는 이름으로 바꿔 보여 준다.
+                    string description = FriendlyAlert(ReadAlertDescription(payload, len));
+
+                    // 허용 프로그램 종료는 참고용이다. 빌드를 마쳤거나 할 일을 끝내 닫았을 수 있어
+                    // 알림 목록에만 남기고 학생을 '부정행위 감지'로 바꾸지 않는다.
+                    // 금지 프로그램 실행 등 나머지는 그대로 부정행위로 표시한다.
+                    bool isReference = ReadAlertType(payload, len) == CheatingAlertType.RequiredProcessTerminated;
+
                     PostToUi(() =>
                     {
-                        Service.StudentStore.Instance.MarkCheatingDetected(studentId);
+                        if (!isReference)
+                            Service.StudentStore.Instance.MarkCheatingDetected(studentId);
                         Service.AlertStore.Instance.Add(studentId, name, description);
                     });
                 }
@@ -129,6 +144,34 @@ namespace ProfessorUI
             string text = System.Runtime.InteropServices.Marshal.PtrToStringUTF8(
                               payload + DescriptionOffset, available) ?? "";
             return text.Split('\0')[0];
+        }
+
+        // 알림 문구 속 실행 파일 이름을 사람이 부르는 이름으로 바꾼다.
+        // 예: "금지된 프로그램 실행: Windows Command Processor (cmd.exe)" → "금지된 프로그램 실행: 명령 프롬프트".
+        // 아는 프로그램(KnownPrograms)일 때만 바꾸고, 없으면 학생이 보낸 문구를 그대로 둔다.
+        // 사이트 접속 시도(도메인)처럼 실행 파일 이름이 없는 알림은 그대로 지나간다.
+        private static string FriendlyAlert(string description)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(
+                description, @"[^\s():]+\.exe", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (!match.Success) return description;
+
+            string? friendly = ExamManager.Shared.KnownPrograms.DisplayNameFor(match.Value);
+            if (friendly == null) return description;
+
+            // "…: <프로그램명>" 에서 이름 부분만 친숙한 이름으로 갈아 끼운다.
+            int separator = description.LastIndexOf(": ", System.StringComparison.Ordinal);
+            return separator < 0 ? friendly : description.Substring(0, separator + 2) + friendly;
+        }
+
+        // 부정행위 알림 패킷에서 종류를 꺼낸다. 길이가 모자라면 null.
+        // CheatingAlertPayload = [studentId 16][studentName 64][alertType 4][description 256]
+        private static CheatingAlertType? ReadAlertType(IntPtr payload, uint len)
+        {
+            const int AlertTypeOffset = 80;
+            if (payload == IntPtr.Zero || len < AlertTypeOffset + 4) return null;
+
+            return (CheatingAlertType)(uint)System.Runtime.InteropServices.Marshal.ReadInt32(payload + AlertTypeOffset);
         }
 
         // 프로그램 종료 시 서버를 멈추고 네이티브 리소스를 정리한다.

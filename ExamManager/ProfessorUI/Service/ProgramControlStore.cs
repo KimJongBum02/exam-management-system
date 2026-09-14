@@ -1,4 +1,7 @@
-﻿using System.Collections.ObjectModel;
+﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using ExamManager.Shared;
 
 namespace ProfessorUI.Service
 {
@@ -24,15 +27,27 @@ namespace ProfessorUI.Service
         // 학생 PC 의 ProcessMonitor 가 같은 글자로 알아보므로 한쪽만 바꾸면 안 된다.
         public const string ProductKeywordPrefix = "제품명:";
 
+        // 이 표시로 시작하는 금지 항목은 디지털 서명 게시자다. 파일 이름·원본 이름을 바꿔도
+        // 서명은 위조할 수 없어 게시자로 잡힌다. 학생 PC 의 ProcessMonitor 가 같은 글자로 알아본다.
+        public const string SignaturePrefix = "서명:";
+
+        // 기본으로 채우는 금지 항목 — 생성형 AI 의 실행 파일 이름과 제품명 키워드.
+        // 화면이 기본 항목과 교수가 직접 넣은 항목을 나눠 보여 줄 때도 이 목록으로 가른다.
+        //
+        // 같은 AI 가 두 줄씩 들어가는 것은 의도한 것이다. 실행 파일 이름("ChatGPT.exe")은 버전 정보가
+        // 없는 파일도 잡고, 제품명 키워드("제품명:ChatGPT")는 이름을 바꾸거나 철자가 다른 실행 파일도 잡는다.
+        public static IReadOnlyList<string> DefaultBlackList { get; } =
+            KnownPrograms.Ai.Select(program => program.ExecutableName)
+                .Concat(KnownPrograms.AiProductKeywords.Select(keyword => ProductKeywordPrefix + keyword))
+                .ToList();
+
+        public static bool IsDefaultBlack(string entry) => DefaultBlackList.Contains(entry);
+
         // 기본값을 다시 채운다. 이미 들어 있는 것은 건드리지 않는다.
         public static void LoadDefaults()
         {
-            foreach (var program in KnownPrograms.Ai)
-                AddToBlackList(program.ExecutableName);
-
-            // 실행 파일 이름의 철자를 몰라도 걸리도록 제품명으로도 막는다.
-            foreach (string keyword in KnownPrograms.AiProductKeywords)
-                AddToBlackList(ProductKeywordPrefix + keyword);
+            foreach (string entry in DefaultBlackList)
+                AddToBlackList(entry);
 
             // 허용은 실행 파일 이름과 원래 이름이 모두 목록에 있어야 인정된다.
             // 하나만 넣으면 학생 PC 에서 허용으로 잡히지 않아 '목록에 없는 프로그램'
@@ -70,6 +85,14 @@ namespace ProfessorUI.Service
                 return true;
             }
             return false;
+        }
+
+        // 기본 제공 금지 항목 중 지워진 것을 다시 채운다. 이미 있는 것은 건드리지 않는다.
+        // 교수가 실수로 지운 AI 기본값을 손으로 다시 타이핑하지 않아도 되게 한다.
+        public static void RestoreBlackListDefaults()
+        {
+            foreach (string entry in DefaultBlackList)
+                AddToBlackList(entry);
         }
 
         // 전체 삭제 메서드

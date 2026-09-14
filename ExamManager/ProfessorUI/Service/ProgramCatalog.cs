@@ -4,11 +4,11 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using ExamManager.Shared;
 
 namespace ProfessorUI.Service
 {
@@ -19,6 +19,7 @@ namespace ProfessorUI.Service
         Picked,      // 교수가 파일 선택창에서 직접 고름
         Known,       // 사전에 적어 둔 이름 — 이 PC 에는 없다
         BuiltIn,     // 윈도우 기본 앱 — C:\Windows 안이라 위 경로에서는 숨기고 표로 보여 준다
+        Classroom,   // 강의실 PC 에 설치된 것 — 학생 PC 가 보내 온 목록(ClassroomPrograms)
     }
 
     // 감시 목록에 넣을 후보 하나.
@@ -43,6 +44,10 @@ namespace ProfessorUI.Service
         // 파일에 박힌 설명과 사전의 별칭이 여기 함께 담긴다.
         public string Aliases { get; set; } = string.Empty;
 
+        // 디지털 서명 게시자(예: "Google LLC"). 서명이 없으면 빈 문자열.
+        // 직접 찾아보기로 파일을 고를 때만 읽는다. 게시자 차단 규칙("서명:")을 제안하는 데 쓴다.
+        public string Publisher { get; init; } = string.Empty;
+
         // 실행 파일 이름과 원래 이름이 달라 목록에 두 개를 넣어야 하는 경우
         public bool HasDistinctOriginalName =>
             OriginalName.Length > 0 &&
@@ -56,6 +61,7 @@ namespace ProfessorUI.Service
             ProgramSource.Picked => "직접 선택",
             ProgramSource.Known => "미설치",
             ProgramSource.BuiltIn => "윈도우 기본",
+            ProgramSource.Classroom => "강의실 PC",
             _ => "설치됨",
         };
 
@@ -133,11 +139,27 @@ namespace ProfessorUI.Service
                     byExe[entry.ExecutableName] = entry;
             }
 
+            // 강의실 PC 에 설치된 것. 학생 PC 가 로그인할 때 보내 와 저장해 둔 목록이다.
+            // 이 PC 에도 있으면 실제 경로와 아이콘을 가진 위의 것을 남긴다.
+            foreach (var program in ClassroomPrograms.All())
+            {
+                if (byExe.ContainsKey(program.ExecutableName)) continue;
+
+                byExe[program.ExecutableName] = new ProgramEntry
+                {
+                    DisplayName = program.DisplayName,
+                    ExecutableName = program.ExecutableName,
+                    OriginalName = program.OriginalName,
+                    Aliases = program.Description,
+                    Source = ProgramSource.Classroom,
+                };
+            }
+
             // 이 PC 에 없는 것도 고를 수 있어야 한다.
             //
             // 목록을 짜는 곳은 교수 PC 이고 감시가 도는 곳은 학생 PC 라, 학생 PC 에만
-            // 깔린 프로그램은 위 두 경로로는 영영 나타나지 않는다. 사전에 적어 둔 이름을
-            // 후보로 함께 올려 이름만으로도 고를 수 있게 한다.
+            // 깔린 프로그램은 학생이 한 번도 접속하지 않았으면 위 경로로는 나타나지 않는다.
+            // 사전에 적어 둔 이름을 후보로 함께 올려 이름만으로도 고를 수 있게 한다.
             foreach (var known in KnownPrograms.All())
             {
                 // 이미 설치돼 찾은 것은 실제 경로와 아이콘을 갖고 있으므로 덮지 않는다.
@@ -167,58 +189,22 @@ namespace ProfessorUI.Service
         }
 
         // ── 시작 메뉴 바로가기 ────────────────────────────────────────
+        // 읽는 방식은 학생 PC 와 같아야 해서 StartMenuPrograms 에 한 벌만 둔다.
 
         private static IEnumerable<ProgramEntry> ReadStartMenu()
         {
-            string[] roots =
+            foreach (var (program, path) in StartMenuPrograms.Read())
             {
-                Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu),
-                Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
-            };
-
-            object? shell = CreateShell();
-            if (shell == null) yield break;
-
-            foreach (string root in roots)
-            {
-                if (!Directory.Exists(root)) continue;
-
-                // 시작 메뉴 밑에는 접근이 막힌 옛 폴더("...\Start Menu\프로그램")가 있다.
-                // 그냥 훑으면 거기서 예외가 나 뒤쪽 진짜 목록까지 통째로 놓치므로
-                // 못 읽는 폴더는 건너뛰도록 일러 준다.
-                var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true };
-
-                string[] links;
-                try { links = Directory.GetFiles(root, "*.lnk", options); }
-                catch { continue; }
-
-                foreach (string link in links)
+                yield return new ProgramEntry
                 {
-                    string name = Path.GetFileNameWithoutExtension(link);
-                    if (IsUninstaller(name)) continue;   // "카카오톡 제거" 같은 항목은 감시 대상이 아니다
-
-                    string? target = ResolveShortcut(shell, link);
-                    if (target == null || !target.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) continue;
-
-                    string exe = Path.GetFileName(target);
-                    if (IsUninstaller(exe)) continue;
-                    if (IsWindowsComponent(target)) continue;   // 고를 만한 것은 KnownPrograms.WindowsApps 로 보여 준다
-
-                    yield return new ProgramEntry
-                    {
-                        DisplayName = name,
-                        ExecutableName = exe,
-                        ExecutablePath = target,
-                        OriginalName = ReadOriginalName(target),
-                        // 바로가기 이름이 늘 교수가 떠올리는 이름은 아니다.
-                        // ("VS Code" 로 만들어 둔 바로가기를 "Visual Studio Code" 로 찾는 식)
-                        // 파일에 박힌 설명을 검색어로 더해 둔다. 보이는 이름은 그대로 둔다 —
-                        // 시작 메뉴에 뜨는 이름이 교수가 실제로 보아 온 이름이기 때문이다.
-                        Aliases = ReadDescription(target, name),
-                        Source = ProgramSource.Installed,
-                        Icon = LoadIcon(target),
-                    };
-                }
+                    DisplayName = program.DisplayName,
+                    ExecutableName = program.ExecutableName,
+                    ExecutablePath = path,
+                    OriginalName = program.OriginalName,
+                    Aliases = program.Description,
+                    Source = ProgramSource.Installed,
+                    Icon = LoadIcon(path),
+                };
             }
         }
 
@@ -233,10 +219,10 @@ namespace ProfessorUI.Service
             {
                 if (!path.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase)) return null;
 
-                object? shell = CreateShell();
+                object? shell = StartMenuPrograms.CreateShell();
                 if (shell == null) return null;
 
-                target = ResolveShortcut(shell, path);
+                target = StartMenuPrograms.ResolveShortcut(shell, path);
                 if (target == null || !target.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                     return null;
             }
@@ -246,86 +232,31 @@ namespace ProfessorUI.Service
                 DisplayName = Path.GetFileNameWithoutExtension(target),
                 ExecutableName = Path.GetFileName(target),
                 ExecutablePath = target,
-                OriginalName = ReadOriginalName(target),
+                OriginalName = StartMenuPrograms.ReadOriginalName(target),
+                Publisher = ReadPublisher(target),
                 Source = ProgramSource.Picked,
                 Icon = LoadIcon(target),
             };
         }
 
-        // 바로가기를 읽는 데 WScript.Shell 을 쓴다. 참조를 늘리지 않으려고 늦은 바인딩으로 부른다.
-        private static object? CreateShell()
+        // 실행 파일의 디지털 서명 게시자(CN)를 읽는다. 서명이 없으면 빈 문자열.
+        // 교수 쪽은 게시자를 '추출'만 하고, 서명이 진짜 유효한지는 학생 PC 의 감시가 검증한다.
+        // (학생 PC 의 QueryPublisher 가 CertGetNameString(SimpleDisplay)으로 얻는 값과 같은 CN 이다)
+        private static string ReadPublisher(string path)
         {
             try
             {
-                Type? type = Type.GetTypeFromProgID("WScript.Shell");
-                return type == null ? null : Activator.CreateInstance(type);
-            }
-            catch { return null; }
-        }
-
-        private static string? ResolveShortcut(object shell, string linkPath)
-        {
-            try
-            {
-                object? link = shell.GetType().InvokeMember(
-                    "CreateShortcut", BindingFlags.InvokeMethod, null, shell, new object[] { linkPath });
-                if (link == null) return null;
-
-                object? target = link.GetType().InvokeMember(
-                    "TargetPath", BindingFlags.GetProperty, null, link, null);
-
-                string? path = target as string;
-                return string.IsNullOrWhiteSpace(path) ? null : path;
-            }
-            catch { return null; }
-        }
-
-        // 실행 파일에 박힌 설명(FileDescription). "Visual Studio Code" 처럼
-        // 사람이 부르는 이름이 들어 있다. 원래 이름(OriginalFilename)과는 다르다 —
-        // VS Code 는 원래 이름이 electron.exe 지만 설명은 Visual Studio Code 다.
-        //
-        // 이미 보이는 이름과 같으면 검색어로 더할 필요가 없어 비워 둔다.
-        private static string ReadDescription(string path, string displayName)
-        {
-            try
-            {
-                string? description = FileVersionInfo.GetVersionInfo(path).FileDescription;
-                if (string.IsNullOrWhiteSpace(description)) return string.Empty;
-                if (string.Equals(description.Trim(), displayName, StringComparison.OrdinalIgnoreCase))
-                    return string.Empty;
-
-                return description.Trim();
+                using var cert = new System.Security.Cryptography.X509Certificates.X509Certificate2(
+                    System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(path));
+                return cert.GetNameInfo(
+                    System.Security.Cryptography.X509Certificates.X509NameType.SimpleName, false) ?? string.Empty;
             }
             catch
             {
-                // 버전 정보가 없거나 못 읽는 파일이 흔하다. 검색어가 하나 줄 뿐이다.
+                // 서명이 없거나 못 읽는 파일이 흔하다. 그럴 땐 게시자 규칙을 제안하지 않을 뿐이다.
                 return string.Empty;
             }
         }
-
-        // C:\Windows 안의 실행 파일인지. 이런 것은 목록에 올리지 않는다.
-        private static readonly string WindowsDir =
-            Environment.GetFolderPath(Environment.SpecialFolder.Windows).TrimEnd('\\') + "\\";
-
-        private static bool IsWindowsComponent(string path)
-            => path.StartsWith(WindowsDir, StringComparison.OrdinalIgnoreCase);
-
-        // Microsoft 가 배포한 Store 앱의 실행 파일인지(<Program Files>\WindowsApps\<패키지 폴더>_8wekyb3d8bbwe\...).
-        // 규칙과 이유는 ProcessMonitor.cpp 의 IsMicrosoftStorePackage 에 적었다. 두 곳이 같아야 한다.
-        private static readonly string WindowsAppsDir =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "WindowsApps") + "\\";
-
-        private static bool IsMicrosoftStorePackage(string path)
-        {
-            if (!path.StartsWith(WindowsAppsDir, StringComparison.OrdinalIgnoreCase)) return false;
-
-            int end = path.IndexOf('\\', WindowsAppsDir.Length);
-            return end > 0 && path.Substring(WindowsAppsDir.Length, end - WindowsAppsDir.Length)
-                                  .EndsWith("_8wekyb3d8bbwe", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool IsUninstaller(string text)
-            => text.Contains("제거") || text.Contains("uninstall", StringComparison.OrdinalIgnoreCase);
 
         // ── 실행 중인 프로세스 ────────────────────────────────────────
 
@@ -352,14 +283,14 @@ namespace ProfessorUI.Service
 
                 // 윈도우가 알아서 돌리는 구성요소(svchost, RuntimeBroker 등)는 목록을 덮기만 한다.
                 // 교수가 고를 만한 윈도우 앱은 KnownPrograms.WindowsApps 로 따로 보여 준다.
-                if (IsWindowsComponent(path)) continue;
+                if (StartMenuPrograms.IsWindowsComponent(path)) continue;
 
                 yield return new ProgramEntry
                 {
                     DisplayName = string.IsNullOrWhiteSpace(description) ? p.ProcessName : description!,
                     ExecutableName = Path.GetFileName(path),
                     ExecutablePath = path,
-                    OriginalName = ReadOriginalName(path),
+                    OriginalName = StartMenuPrograms.ReadOriginalName(path),
                     Source = ProgramSource.Running,
                     Icon = LoadIcon(path),
                 };
@@ -390,64 +321,6 @@ namespace ProfessorUI.Service
             catch { return null; }
             finally { if (handle != IntPtr.Zero) DestroyIcon(handle); }
         }
-
-        // ── 원래 이름 ─────────────────────────────────────────────────
-        // 학생 PC의 ProcessMonitor 가 읽는 것과 같은 값이어야 목록이 맞아떨어진다.
-        // 그래서 .NET 의 FileVersionInfo 대신 네이티브와 같은 방식으로 직접 읽는다.
-        //
-        // FILE_VER_GET_NEUTRAL 이 반드시 필요하다. 이 플래그가 없으면 다국어 리소스로
-        // 리다이렉션되어 "ping.exe.mui" 같은 값이 나오고, 네이티브 쪽 값과 달라진다.
-
-        private static string ReadOriginalName(string path)
-        {
-            // 버전 정보가 없는 Microsoft Store 앱(메모장·그림판·캡처 도구)은 설치 위치가 신원을 보증하므로
-            // 실행 파일 이름을 대신 쓴다. 학생 PC 의 ProcessMonitor 도 같은 규칙으로 허용 판정을 한다.
-            string original = ReadVersionOriginalName(path);
-            return original.Length == 0 && IsMicrosoftStorePackage(path) ? Path.GetFileName(path) : original;
-        }
-
-        private static string ReadVersionOriginalName(string path)
-        {
-            if (path.Length == 0) return string.Empty;
-
-            try
-            {
-                int size = GetFileVersionInfoSizeEx(FileVerGetNeutral, path, out _);
-                if (size == 0) return string.Empty;
-
-                var block = new byte[size];
-                if (!GetFileVersionInfoEx(FileVerGetNeutral, path, 0, (uint)size, block))
-                    return string.Empty;
-
-                // 문자열은 언어별로 나뉘어 있어 번역 테이블을 먼저 읽어야 조회 경로를 만들 수 있다.
-                if (!VerQueryValue(block, @"\VarFileInfo\Translation", out IntPtr table, out uint tableLen))
-                    return string.Empty;
-
-                for (int i = 0; i + 4 <= tableLen; i += 4)
-                {
-                    ushort language = (ushort)Marshal.ReadInt16(table, i);
-                    ushort codePage = (ushort)Marshal.ReadInt16(table, i + 2);
-                    string entry = $@"\StringFileInfo\{language:x4}{codePage:x4}\OriginalFilename";
-
-                    if (VerQueryValue(block, entry, out IntPtr value, out uint valueLen) && valueLen > 0)
-                        return (Marshal.PtrToStringUni(value, (int)valueLen) ?? "").TrimEnd('\0');
-                }
-            }
-            catch { }
-
-            return string.Empty;
-        }
-
-        private const uint FileVerGetNeutral = 0x02;
-
-        [DllImport("version.dll", CharSet = CharSet.Unicode, EntryPoint = "GetFileVersionInfoSizeExW")]
-        private static extern int GetFileVersionInfoSizeEx(uint flags, string file, out uint handle);
-
-        [DllImport("version.dll", CharSet = CharSet.Unicode, EntryPoint = "GetFileVersionInfoExW")]
-        private static extern bool GetFileVersionInfoEx(uint flags, string file, uint handle, uint length, byte[] data);
-
-        [DllImport("version.dll", CharSet = CharSet.Unicode, EntryPoint = "VerQueryValueW")]
-        private static extern bool VerQueryValue(byte[] block, string subBlock, out IntPtr buffer, out uint length);
 
         private const uint SHGFI_ICON = 0x000000100;
         private const uint SHGFI_SMALLICON = 0x000000001;

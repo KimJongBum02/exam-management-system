@@ -11,6 +11,8 @@ extern "C" {
     // 부정행위 감지 콜백
     // type: 0 = 블랙리스트 실행, 1 = 화이트리스트 종료,
     //       2 = 목록에 없는 신규 프로세스 (감시 시작 이후 실행됨, 종료하지 않고 알리기만 함)
+    // processName: 알림에 보일 이름. "Visual Studio Code (Code.exe)" 처럼 파일 설명 뒤에
+    //              파일명을 붙인다. 파일 설명이 없으면 파일명만 온다.
     typedef void(__stdcall* CheatCallback)(int type, const wchar_t* processName);
 
     // 리스트 설정 ("notepad.exe|chrome.exe" 형식)

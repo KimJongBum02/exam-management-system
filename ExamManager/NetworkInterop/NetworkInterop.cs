@@ -37,6 +37,7 @@ namespace NetworkLib
         ForceProcessKill        = 41,
         ShutdownPC              = 42,
         MonitorStatusReport     = 43,   // 학생 → 교수. 감시가 실제로 켜졌는지
+        InstalledProgramsReport = 44,   // 학생 → 교수. 학생 PC 에 설치된 프로그램 목록
         QuizQuestion            = 50,
         QuizAnswer              = 51,
         QuizResult              = 52,
@@ -192,7 +193,7 @@ namespace NetworkLib
                 && TryReadStrings(buffer, ref offset, blackCount, blacklist);
         }
 
-        private static void WriteString(BinaryWriter writer, string value)
+        internal static void WriteString(BinaryWriter writer, string value)
         {
             byte[] utf8 = Encoding.UTF8.GetBytes(value);
             writer.Write((ushort)utf8.Length);
@@ -201,7 +202,7 @@ namespace NetworkLib
 
         // 읽기 전에 매번 남은 크기를 확인한다.
         // 길이 값을 그대로 믿으면 손상된 패킷 하나로 버퍼 밖을 읽게 된다.
-        private static bool TryReadStrings(byte[] buffer, ref int offset, uint count, List<string> target)
+        internal static bool TryReadStrings(byte[] buffer, ref int offset, uint count, List<string> target)
         {
             for (uint i = 0; i < count; i++)
             {
@@ -213,6 +214,69 @@ namespace NetworkLib
                 target.Add(Encoding.UTF8.GetString(buffer, offset, length));
                 offset += length;
             }
+            return true;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  InstalledProgramsReport(44) 페이로드 — 학생 PC 에 설치된 프로그램 목록
+    //
+    //  교수의 프로그램 선택창은 교수 PC 에 설치된 것만 알아서, 강의실 PC 에만 깔린 프로그램은
+    //  실행 파일 이름을 직접 쳐야 했다. 학생 PC 가 로그인할 때 자기 목록을 보내 이 빈틈을 메운다.
+    //
+    //  개수가 정해져 있지 않아 ProcessListUpdate 와 같은 문자열 방식을 쓴다:
+    //    [uint32 프로그램 개수]
+    //    프로그램마다 문자열 4개: 보이는 이름, 실행 파일 이름, 원래 이름, 파일 설명
+    //    문자열은 각 [uint16 길이][길이만큼의 UTF-8 바이트]
+    // ══════════════════════════════════════════════════════════════════
+
+    // 원래 이름과 파일 설명은 버전 정보가 없는 실행 파일이면 빈 문자열이다.
+    public record InstalledProgram(string DisplayName, string ExecutableName, string OriginalName, string Description);
+
+    public static class InstalledProgramsPayload
+    {
+        private const int FieldsPerProgram = 4;
+
+        public static byte[] Encode(IReadOnlyList<InstalledProgram> programs)
+        {
+            using var stream = new MemoryStream();
+            using var writer = new BinaryWriter(stream);
+
+            writer.Write((uint)programs.Count);
+            foreach (var program in programs)
+            {
+                ProcessListPayload.WriteString(writer, program.DisplayName);
+                ProcessListPayload.WriteString(writer, program.ExecutableName);
+                ProcessListPayload.WriteString(writer, program.OriginalName);
+                ProcessListPayload.WriteString(writer, program.Description);
+            }
+
+            writer.Flush();
+            return stream.ToArray();
+        }
+
+        // 형식이 깨져 있으면 false 를 돌려준다. 반쯤 읽힌 목록은 쓰지 않는다.
+        public static bool TryDecode(IntPtr payload, uint payloadLen, out List<InstalledProgram> programs)
+        {
+            programs = new List<InstalledProgram>();
+            if (payload == IntPtr.Zero || payloadLen < 4) return false;
+
+            byte[] buffer = new byte[payloadLen];
+            Marshal.Copy(payload, buffer, 0, (int)payloadLen);
+
+            int offset = 0;
+            uint count = BitConverter.ToUInt32(buffer, offset); offset += 4;
+
+            // 문자열 하나는 길이 칸만으로도 2바이트다. 남은 크기로 담을 수 없는 개수면 손상된 패킷이다.
+            // (이걸 먼저 보지 않으면 큰 개수에 4를 곱하다 넘쳐 엉뚱한 개수로 읽힌다)
+            if (count > (payloadLen - 4) / (FieldsPerProgram * 2)) return false;
+
+            var fields = new List<string>();
+            if (!ProcessListPayload.TryReadStrings(buffer, ref offset, count * FieldsPerProgram, fields))
+                return false;
+
+            for (int i = 0; i < fields.Count; i += FieldsPerProgram)
+                programs.Add(new InstalledProgram(fields[i], fields[i + 1], fields[i + 2], fields[i + 3]));
             return true;
         }
     }

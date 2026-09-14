@@ -64,6 +64,10 @@ namespace StudentUI.ViewModel
             Encoding.UTF8.GetBytes(Student.StudentName).CopyTo(loginPayload, 16);
             NetworkService.Instance.SendPacket(PacketType.StudentLogin, loginPayload);
 
+            // 이 PC 에 설치된 프로그램 목록을 보낸다. 교수의 프로그램 선택창에 강의실 PC 것도 뜨게 한다.
+            // 로그인 패킷 뒤에 보내야 한다 — 교수 PC 는 로그인 전에 온 패킷을 버린다.
+            Service.InstalledProgramReport.Send();
+
             // 퀴즈 응답에 학번·이름을 실어 보낼 수 있도록 학생 정보를 넘겨 둔다.
             Service.QuizService.Instance.Student = Student;
 
