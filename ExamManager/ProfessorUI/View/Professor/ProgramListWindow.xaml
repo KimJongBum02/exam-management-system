@@ -1,0 +1,59 @@
+<Window x:Class="ProfessorUI.View.Professor.ProgramListWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:ProfessorUI.View.Professor"
+        Title="목록" Height="520" Width="520"
+        MinHeight="320" MinWidth="380"
+        WindowStartupLocation="CenterOwner"
+        Background="#FFFFFF"
+        FontFamily="{StaticResource AppFont}">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/ProfessorUI;component/View/Professor/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <local:ProgramListNameConverter x:Key="ProgramListName"/>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock x:Name="HeaderText" Grid.Row="0" Style="{StaticResource SectionTitle}" Margin="0,0,0,14"/>
+
+        <ListView x:Name="ProgramList" Grid.Row="1" Style="{StaticResource FlatTable}">
+            <ListView.View>
+                <GridView ColumnHeaderContainerStyle="{StaticResource TableHeader}">
+                    <GridViewColumn Header="프로그램 이름" Width="280">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource ProgramListName}}"
+                                           Style="{StaticResource Cell}" ToolTip="{Binding}"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="관리" Width="90">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Content="삭제" Style="{StaticResource CellLink}"
+                                        CommandParameter="{Binding}"
+                                        Command="{Binding RemoveCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                </GridView>
+            </ListView.View>
+        </ListView>
+
+        <TextBlock x:Name="EmptyText" Grid.Row="1" Text="목록이 비어 있습니다." Style="{StaticResource Caption}"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+
+        <Button Grid.Row="2" Content="닫기" Style="{StaticResource PrimaryButton}"
+                HorizontalAlignment="Right" Margin="0,14,0,0" IsCancel="True" Padding="20,8"/>
+    </Grid>
+</Window>

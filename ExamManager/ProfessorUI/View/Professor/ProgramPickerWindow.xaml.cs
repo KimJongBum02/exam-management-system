@@ -88,6 +88,11 @@ namespace ProfessorUI.View.Professor
                 program.IsChosen = chosenExecutables.Contains(program.ExecutableName);
             }
 
+            // 아직 목록에 없어 지금 고를 수 있는 것을 위로 올린다.
+            // 이미 추가됐거나(추가됨) 넣을 수 없는(허용 불가) 항목은 손댈 수 없으니 아래로 내린다.
+            // OrderBy 는 안정 정렬이라 같은 그룹 안에서는 원래의 가나다 순서가 그대로 유지된다.
+            programs = programs.OrderBy(p => (p.IsAlreadyAdded || p.CannotBeAllowed) ? 1 : 0).ToList();
+
             ProgramList.ItemsSource = programs;
             _view = CollectionViewSource.GetDefaultView(programs);
             _view.Filter = o => o is ProgramEntry e && e.Matches(SearchBox.Text);
@@ -199,7 +204,7 @@ namespace ProfessorUI.View.Professor
 
         private void UpdateChosenView()
         {
-            ChosenTitle.Text = $"고른 프로그램 {_chosen.Count}개";
+            ChosenTitle.Text = $"선택한 프로그램 {_chosen.Count}개";
             ChosenEmptyText.Visibility = _chosen.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             ConfirmButton.IsEnabled = _chosen.Count > 0;
         }
@@ -243,6 +248,36 @@ namespace ProfessorUI.View.Professor
                 picked.CannotBeAllowed = _forWhiteList && picked.OriginalName.Length == 0;
 
             Add(listed ?? picked);
+
+            // 금지 목록이고 서명이 있으면, 게시자로도 막을지 물어본다.
+            // 이름을 바꾸거나 리소스를 지운 도구도 게시자로 잡을 수 있어, 실행 파일 이름 하나보다 넓게 막는다.
+            OfferPublisherRule(picked);
+        }
+
+        // 고른 파일이 서명돼 있으면 "이 게시자로 서명된 모든 프로그램 차단" 규칙을 제안한다.
+        // 허용 목록에는 쓰지 않는다(게시자 규칙은 금지 전용). 게시자가 없으면 조용히 넘어간다.
+        private void OfferPublisherRule(ProgramEntry picked)
+        {
+            if (_forWhiteList || picked.Publisher.Length == 0) return;
+
+            string rule = ProgramControlStore.SignaturePrefix + picked.Publisher;
+            if (_already.Contains(rule) || FindChosen(rule) != null) return;
+
+            var answer = MessageBox.Show(
+                $"이 파일은 '{picked.Publisher}'가 디지털 서명했습니다.\n" +
+                "이 게시자로 서명된 프로그램을 모두 금지 목록에 추가할까요?\n\n" +
+                "실행 파일 이름을 바꾼 도구도 게시자로 잡을 수 있습니다.\n" +
+                "(여러 프로그램을 만드는 큰 회사라면 관련 없는 것까지 막힐 수 있으니 주의하세요.)",
+                "게시자로도 차단", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (answer != MessageBoxResult.Yes) return;
+
+            // 저장·전송값은 "서명:게시자" 그대로다. 화면에는 변환기가 게시자만 보여 준다.
+            Add(new ProgramEntry
+            {
+                DisplayName = picked.Publisher,
+                ExecutableName = rule,
+                Source = ProgramSource.Picked,
+            });
         }
 
         // ── 확인 ─────────────────────────────────────────────────────

@@ -1,3 +1,4 @@
+using ExamManager.Shared;
 using NetworkLib;
 using System;
 using System.Collections.Generic;
@@ -223,10 +224,17 @@ namespace StudentUI.Service
         // 네이티브 감시 스레드에서 불린다. 화면은 직접 건드리지 않고 알리기만 한다.
         private void OnCheatDetected(int type, string processName)
         {
-            (CheatingAlertType alertType, string description) = Describe(type, processName);
+            // 학생 화면 경고와 교수 알림이 같은 이름을 보이도록, 아는 프로그램은 사람이 부르는 이름으로 바꾼다.
+            // 네이티브가 준 이름("Calculator (CalculatorApp.exe)")에서 실행 파일을 찾아 사전에 있으면 "계산기"로.
+            string friendlyName = KnownPrograms.FriendlyLabel(processName);
+            (CheatingAlertType alertType, string description) = Describe(type, friendlyName);
 
             NetworkService.Instance.SendPacket(PacketType.CheatingAlert, BuildAlertPayload(alertType, description));
-            CheatWarning?.Invoke(description);
+
+            // 허용 프로그램 종료는 학생이 스스로 닫은 것이라 학생 화면에는 띄우지 않는다.
+            // 학생 화면의 감시 알림은 부정행위 경고로 보이며, 원래 '왜 꺼졌는지' 알려 주려는 용도다.
+            if (alertType != CheatingAlertType.RequiredProcessTerminated)
+                CheatWarning?.Invoke(description);
         }
 
         // 적발 종류를 사람이 읽을 문구로 바꾼다.
@@ -235,7 +243,7 @@ namespace StudentUI.Service
             => type switch
             {
                 0 => (CheatingAlertType.BlacklistedProcessLaunched, $"금지된 프로그램 실행: {processName}"),
-                1 => (CheatingAlertType.RequiredProcessTerminated, $"시험에 필요한 프로그램 종료: {processName}"),
+                1 => (CheatingAlertType.RequiredProcessTerminated, $"[참고] 허용 프로그램 종료: {processName}"),
                 _ => (CheatingAlertType.UnauthorizedProcess, $"목록에 없는 프로그램 실행: {processName}"),
             };
 

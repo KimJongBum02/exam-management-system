@@ -8,8 +8,6 @@
                 <ResourceDictionary Source="pack://application:,,,/ProfessorUI;component/View/Professor/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- 금지 목록의 "제품명:ChatGPT" 를 "ChatGPT" 로 보여 준다 -->
-            <local:ProgramListNameConverter x:Key="ProgramListName"/>
 
             <!-- 점검 항목 한 줄: ● 이름 ......... 상태 -->
             <Style x:Key="CheckRow" TargetType="Grid">
@@ -167,17 +165,20 @@
                 <Grid Grid.Column="2">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" Margin="0,0,0,10">
                         <Grid>
                             <TextBlock Text="금지 프로세스 목록" Style="{StaticResource SectionTitle}"/>
-                            <Button Content="전체 삭제" Style="{StaticResource LinkButton}"
-                                    HorizontalAlignment="Right" VerticalAlignment="Center"
-                                    Command="{Binding BlackList.ClearAllCommand}"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button Content="기본값 복원" Style="{StaticResource LinkButton}"
+                                        Margin="0,0,12,0" Command="{Binding BlackList.RestoreDefaultsCommand}"/>
+                                <Button Content="전체 삭제" Style="{StaticResource LinkButton}"
+                                        Command="{Binding BlackList.ClearAllCommand}"/>
+                            </StackPanel>
                         </Grid>
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -194,28 +195,17 @@
                         </Grid>
                     </StackPanel>
 
-                    <ListView Grid.Row="1" ItemsSource="{Binding BlackList.BlackList}"
-                              Style="{StaticResource FlatTable}" MinHeight="150">
-                        <ListView.View>
-                            <GridView ColumnHeaderContainerStyle="{StaticResource TableHeader}">
-                                <GridViewColumn Header="프로세스 이름" Width="330">
-                                    <GridViewColumn.CellTemplate>
-                                        <DataTemplate><TextBlock Text="{Binding Converter={StaticResource ProgramListName}}" Style="{StaticResource Cell}"/></DataTemplate>
-                                    </GridViewColumn.CellTemplate>
-                                </GridViewColumn>
-                                <GridViewColumn Header="관리" Width="110">
-                                    <GridViewColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Button Content="삭제" Style="{StaticResource CellLink}"
-                                                    CommandParameter="{Binding}"
-                                                    Command="{Binding DataContext.BlackList.RemoveCommand,
-                                                              RelativeSource={RelativeSource AncestorType=UserControl}}"/>
-                                        </DataTemplate>
-                                    </GridViewColumn.CellTemplate>
-                                </GridViewColumn>
-                            </GridView>
-                        </ListView.View>
-                    </ListView>
+                    <!-- 목록은 길어서 펼치지 않고 [보기]로 팝업에 띄운다. 저장은 한 목록이다(BlackListViewModel) -->
+                    <StackPanel Grid.Row="1">
+                        <TextBlock Style="{StaticResource Caption}" Margin="0,0,0,10" TextWrapping="Wrap"
+                                   Text="목록은 [보기]를 눌러 창에서 확인·삭제합니다. 기본 제공 항목은 생성형 AI 입니다."/>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="기본 제공 목록 보기" Style="{StaticResource SecondaryButton}"
+                                    Click="ShowBlackDefaults_Click"/>
+                            <Button Content="직접 추가한 목록 보기" Style="{StaticResource SecondaryButton}"
+                                    Margin="8,0,0,0" Click="ShowBlackAdded_Click"/>
+                        </StackPanel>
+                    </StackPanel>
 
                     <StackPanel Grid.Row="2" Margin="0,20,0,10">
                         <Grid>
@@ -239,28 +229,8 @@
                         </Grid>
                     </StackPanel>
 
-                    <ListView Grid.Row="3" ItemsSource="{Binding WhiteList.WhiteList}"
-                              Style="{StaticResource FlatTable}" MinHeight="150">
-                        <ListView.View>
-                            <GridView ColumnHeaderContainerStyle="{StaticResource TableHeader}">
-                                <GridViewColumn Header="프로세스 이름" Width="330">
-                                    <GridViewColumn.CellTemplate>
-                                        <DataTemplate><TextBlock Text="{Binding}" Style="{StaticResource Cell}"/></DataTemplate>
-                                    </GridViewColumn.CellTemplate>
-                                </GridViewColumn>
-                                <GridViewColumn Header="관리" Width="110">
-                                    <GridViewColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Button Content="삭제" Style="{StaticResource CellLink}"
-                                                    CommandParameter="{Binding}"
-                                                    Command="{Binding DataContext.WhiteList.RemoveCommand,
-                                                              RelativeSource={RelativeSource AncestorType=UserControl}}"/>
-                                        </DataTemplate>
-                                    </GridViewColumn.CellTemplate>
-                                </GridViewColumn>
-                            </GridView>
-                        </ListView.View>
-                    </ListView>
+                    <Button Grid.Row="3" Content="허용 목록 보기" Style="{StaticResource SecondaryButton}"
+                            HorizontalAlignment="Left" Click="ShowWhite_Click"/>
                 </Grid>
             </Grid>
 

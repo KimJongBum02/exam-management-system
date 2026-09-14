@@ -13,6 +13,9 @@
 
   <ItemGroup>
     <Compile Include="..\NetworkInterop\NetworkInterop.cs" Link="NetworkInterop.cs" />
+    <!-- 학생 PC 와 같은 방식으로 설치 프로그램을 읽고, 같은 프로그램 사전을 쓰도록 한 벌을 나눠 쓴다 -->
+    <Compile Include="..\Shared\StartMenuPrograms.cs" Link="StartMenuPrograms.cs" />
+    <Compile Include="..\Shared\KnownPrograms.cs" Link="KnownPrograms.cs" />
   </ItemGroup>
 
   <!-- 두 UI가 공유하는 글꼴 (ExamManager\Fonts) -->

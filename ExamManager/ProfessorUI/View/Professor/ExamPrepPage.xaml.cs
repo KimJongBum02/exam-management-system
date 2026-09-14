@@ -123,5 +123,18 @@ namespace ProfessorUI.View.Professor
 
         private void PickBlack_Click(object sender, RoutedEventArgs e)
             => ProgramPickerWindow.PickInto(this, toWhiteList: false);
+
+        // 목록은 길어서 화면에 펼치지 않고 팝업으로 띄운다.
+        private void ShowBlackDefaults_Click(object sender, RoutedEventArgs e)
+            => new ProgramListWindow("기본 제공 항목 (생성형 AI)", _ctx.BlackList.DefaultItems, _ctx.BlackList.RemoveCommand)
+               { Owner = Window.GetWindow(this) }.ShowDialog();
+
+        private void ShowBlackAdded_Click(object sender, RoutedEventArgs e)
+            => new ProgramListWindow("직접 추가한 금지 항목", _ctx.BlackList.AddedItems, _ctx.BlackList.RemoveCommand)
+               { Owner = Window.GetWindow(this) }.ShowDialog();
+
+        private void ShowWhite_Click(object sender, RoutedEventArgs e)
+            => new ProgramListWindow("허용 프로세스 목록", _ctx.WhiteList.WhiteList, _ctx.WhiteList.RemoveCommand)
+               { Owner = Window.GetWindow(this) }.ShowDialog();
     }
 }
