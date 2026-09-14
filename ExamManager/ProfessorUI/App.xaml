@@ -1,44 +1,11 @@
-﻿<Application x:Class="ProfessorUI.App"
+<Application x:Class="ProfessorUI.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:ProfessorUI"
-             xmlns:status="clr-namespace:ProfessorUI.View.StudentStatusView"
-             xmlns:files="clr-namespace:ProfessorUI.View.FileReadyandDistributeView"
-             xmlns:exam="clr-namespace:ProfessorUI.View.ExamView"
-             xmlns:program="clr-namespace:ProfessorUI.View.ProgramControlView"
-             xmlns:attendance="clr-namespace:ProfessorUI.View.AttenandceView"
-             xmlns:viewmodels="clr-namespace:ProfessorUI.ViewModel"
-             xmlns:quiz="clr-namespace:ProfessorUI.View.QuizView"
              >
     <Application.Resources>
         <!-- 앱 전체 기본 글꼴 — 글꼴을 바꿀 때는 이 줄과 csproj의 Resource 항목만 수정하면 된다 -->
         <FontFamily x:Key="AppFont">pack://application:,,,/Fonts/#NEXON Lv2 Gothic</FontFamily>
 
-        <!-- ViewModel과 View 매핑 -->
-        <DataTemplate DataType="{x:Type viewmodels:StudentBoardViewModel}">
-            <status:StudentStatusView />
-        </DataTemplate>
-
-        <DataTemplate DataType="{x:Type viewmodels:FileDeployMainViewModel}">
-            <files:FileDeployMainView />
-        </DataTemplate>
-        
-        <DataTemplate DataType="{x:Type viewmodels:ExaminationMainViewModel}">
-            <exam:ExaminationMainView />
-        </DataTemplate>
-
-        <DataTemplate DataType="{x:Type viewmodels:ProgramControlMainViewModel}">
-            <program:ProgramControlMainView />
-        </DataTemplate>
-        
-        <DataTemplate DataType="{x:Type viewmodels:AttendanceMainViewModel}">
-            <attendance:StudentListView/>
-        </DataTemplate>
-
-        <DataTemplate DataType="{x:Type viewmodels:OXQuizViewModel}">
-            <quiz:OXQuizView/>
-        </DataTemplate>
-
-        <!-- 나머지 ViewModel-View 매핑도 동일하게 추가 -->
     </Application.Resources>
 </Application>

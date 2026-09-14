@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -12,12 +12,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="View\LoginView\Assets\JB.jpg" />
     <None Remove="View\LoginView\Assets\loginbackground.png" />
     <None Remove="View\LoginView\Assets\yuhan.png" />
-    <None Remove="View\LoginView\Assets\로그인배경.png" />
-    <None Remove="View\LoginView\Assets\유한대학교 로고.png" />
-    <None Remove="View\LoginView\Assets\유한대학교로고.png" />
   </ItemGroup>
 
   <ItemGroup>
