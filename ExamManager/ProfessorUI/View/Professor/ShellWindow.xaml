@@ -198,9 +198,9 @@
                         <TextBlock Text="전체 학생에게 공지" Style="{StaticResource FieldLabel}"/>
                         <TextBox Height="72" Style="{StaticResource NoteBox}"
                                  Foreground="{StaticResource TextPrimary}"
-                                 Text="{Binding Chat.InputMessage, UpdateSourceTrigger=PropertyChanged}"/>
+                                 Text="{Binding Chat.NoticeInput, UpdateSourceTrigger=PropertyChanged}"/>
                         <Button Content="전송" Style="{StaticResource PrimaryButton}"
-                                Command="{Binding Chat.SendMessageCommand}"
+                                Command="{Binding Chat.SendNoticeCommand}"
                                 HorizontalAlignment="Right" Margin="0,10,0,0"/>
                     </StackPanel>
                 </Grid>

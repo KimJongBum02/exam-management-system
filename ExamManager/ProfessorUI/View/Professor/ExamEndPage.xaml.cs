@@ -29,6 +29,6 @@ namespace ProfessorUI.View.Professor
         }
 
         private void ShowSummary_Click(object sender, RoutedEventArgs e)
-            => ShellWindow.From(this)?.Navigate(new EndSummaryPage(), 4);
+            => ShellWindow.From(this)?.Navigate(new EndSummaryPage(), 5);
     }
 }

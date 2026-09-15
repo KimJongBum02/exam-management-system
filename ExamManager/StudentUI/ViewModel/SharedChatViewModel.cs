@@ -34,6 +34,9 @@ namespace StudentUI.ViewModel
 
         public ICommand SendMessageCommand { get; }
 
+        // 교수의 채팅·공지가 도착했을 때. 화면이 채팅 버튼을 깜빡이는 데 쓴다. 화면 스레드에서 올라온다.
+        public event Action? MessageArrived;
+
         private SharedChatViewModel()
         {
             _messages = new ObservableCollection<ChatMessageModel>();
@@ -78,6 +81,12 @@ namespace StudentUI.ViewModel
                 string message = (Marshal.PtrToStringUTF8(payload, (int)payloadLen) ?? "").Split('\0')[0];
                 string senderName = (type == PacketType.ChatBroadcast) ? "[전체 공지]" : "[교수님]";
 
+                // 공지를 받았다고 교수에게 알린다. 교수 화면의 '수신 N명'이 이 회신으로 올라간다.
+                // 받은 것 자체를 세는 것이라 화면에 띄울 때까지 기다리지 않는다.
+                if (type == PacketType.ChatBroadcast && NoticePayload.TryReadId(payload, payloadLen, out uint noticeId))
+                    NetworkService.Instance.SendPacket(PacketType.CommandAck,
+                        CommandAckPayload.Encode(PacketType.ChatBroadcast, true, noticeId.ToString()));
+
                 // 콜백은 네이티브 스레드에서 올라오므로 UI 스레드로 넘겨 처리한다.
                 // 동기 Invoke는 종료 중 수신 스레드를 붙잡아 앱이 멈추므로 BeginInvoke를 쓴다.
                 var dispatcher = Application.Current?.Dispatcher;
@@ -92,6 +101,10 @@ namespace StudentUI.ViewModel
                         Timestamp = DateTime.Now,
                         IsMine = false
                     });
+
+                    // 창을 내려 두었거나 다른 창을 보고 있어도 알 수 있게 한다.
+                    MessageArrived?.Invoke();
+                    ExamManager.Shared.UiSignal.FlashTaskbar();
                 });
             }
         }

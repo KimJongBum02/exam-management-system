@@ -134,7 +134,7 @@
                     </Button>
 
                     <!-- 채팅 버튼 -->
-                    <Button Style="{StaticResource TopNavButton}" Command="{Binding ToggleChatCommand}" Content="채팅" Margin="0,0,8,0"/>
+                    <Button x:Name="ChatButton" Style="{StaticResource TopNavButton}" Command="{Binding ToggleChatCommand}" Content="채팅" Margin="0,0,8,0"/>
 
                     <!-- 프로필 -->
                     <Border BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="18" Padding="10,4" VerticalAlignment="Center" Margin="6,0,0,0" Background="#F8FAFC">

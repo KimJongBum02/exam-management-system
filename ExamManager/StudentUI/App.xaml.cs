@@ -84,6 +84,9 @@ namespace StudentUI
                 // 파일을 받았는데도 배포 단계의 '수신' 숫자가 움직이지 않는다.
                 byte[] payload = ExamStatusUpdatePayload.Encode(StudentStatus.FileReceived);
                 Service.NetworkService.Instance.SendPacket(PacketType.ExamStatusUpdate, payload);
+
+                // 창을 내려 두고 기다리는 학생도 시험 파일이 온 것을 알 수 있게 작업표시줄을 깜빡인다.
+                ExamManager.Shared.UiSignal.FlashTaskbar();
             };
 
             // ── 서버 연결 시 화면 캡처 시작, 연결 해제 시 정지 ──

@@ -469,6 +469,9 @@ namespace StudentUI.ViewModel
                     // 알림창이 닫혀 있으면 열어 준다. 왜 프로그램이 꺼졌는지 바로 보이게 한다.
                     IsNotificationOpen = true;
                     IsChatOpen = false;
+
+                    // 금지 프로그램 창에 가려 있어도 시험 화면이 알림을 띄웠음을 알 수 있게 한다.
+                    ExamManager.Shared.UiSignal.FlashTaskbar();
                 });
             }
 

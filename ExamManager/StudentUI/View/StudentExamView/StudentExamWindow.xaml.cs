@@ -11,6 +11,8 @@ using System.Windows;
 //using System.Windows.Media.Imaging;
 //using System.Windows.Navigation;
 //using System.Windows.Shapes;
+using ExamManager.Shared;
+using StudentUI.ViewModel;
 
 namespace StudentUI.View.StudentExamView
 {
@@ -19,6 +21,17 @@ namespace StudentUI.View.StudentExamView
         public StudentExamWindow()
         {
             InitializeComponent();
+
+            // 교수의 채팅·공지가 오면 채팅 버튼을 깜빡인다.
+            SharedChatViewModel.Instance.MessageArrived += OnMessageArrived;
+            Closed += (_, _) => SharedChatViewModel.Instance.MessageArrived -= OnMessageArrived;
+        }
+
+        // 채팅 창을 열어 두고 있으면 이미 보이므로 깜빡이지 않는다.
+        private void OnMessageArrived()
+        {
+            if (DataContext is StudentExamViewModel { IsChatOpen: true }) return;
+            UiSignal.Blink(ChatButton, BackgroundProperty, UiSignal.MessageSoftColor, times: 4);
         }
 
         // 화면 전환에 의한 닫힘이면 true — 이때는 종료 확인창을 띄우지 않는다.

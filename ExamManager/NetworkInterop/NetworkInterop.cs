@@ -467,6 +467,48 @@ namespace NetworkLib
     }
 
     // ══════════════════════════════════════════════════════════════════
+    //  ChatBroadcast(60) 페이로드 — 번호를 붙인 전체 공지
+    //
+    //  Protocol.h 의 ChatBroadcastPayload(char message[512]) 뒤에 공지 번호를 붙인다:
+    //    [char message[512]][uint32 noticeId] = 516바이트
+    //  학생은 받은 번호를 CommandAck(commandType=ChatBroadcast, message=번호)로 돌려보내고,
+    //  교수는 그 회신으로 공지마다 실제로 받은 학생 수를 센다.
+    //  메시지 칸은 그대로라, 번호를 모르는 쪽이 읽어도 공지 문구는 똑같이 보인다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class NoticePayload
+    {
+        private const int MessageSize = 512;
+        private const int IdOffset    = MessageSize;
+        public  const int Size        = IdOffset + 4;   // 516
+
+        public static byte[] Encode(uint noticeId, string message)
+        {
+            byte[] payload = new byte[Size];
+
+            // 길면 잘라 담는다. 마지막 1바이트는 문자열 끝 표시로 남겨 둔다.
+            // 한글은 3바이트라 글자 중간에서 자르면 학생 화면 끝에 깨진 글자가 붙는다.
+            // 잘리는 자리가 글자의 이어지는 바이트(10xxxxxx)면 그 글자의 첫 바이트까지 물러난다.
+            byte[] text = Encoding.UTF8.GetBytes(message);
+            int length = Math.Min(text.Length, MessageSize - 1);
+            while (length > 0 && length < text.Length && (text[length] & 0xC0) == 0x80) length--;
+            Array.Copy(text, payload, length);
+
+            BitConverter.GetBytes(noticeId).CopyTo(payload, IdOffset);
+            return payload;
+        }
+
+        // 번호가 붙지 않은 공지(네이티브 BroadcastChat 으로 보낸 것)면 false.
+        public static bool TryReadId(IntPtr payload, uint payloadLen, out uint noticeId)
+        {
+            noticeId = 0;
+            if (payload == IntPtr.Zero || payloadLen < Size) return false;
+
+            noticeId = (uint)Marshal.ReadInt32(payload, IdOffset);
+            return true;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
     //  퀴즈 — 수업 중 이해도 확인용 OX 문제
     //
     //  Protocol.h 에 구조가 이미 정의돼 있어 그 형식을 그대로 따른다.

@@ -17,7 +17,7 @@ namespace ProfessorUI.View.Professor
         }
 
         private void BackToEnd_Click(object sender, RoutedEventArgs e)
-            => ShellWindow.From(this)?.Navigate(new ExamEndPage(), 4);
+            => ShellWindow.From(this)?.Navigate(new ExamEndPage(), 5);
 
         // 모든 과정이 끝났으니 다음 시험을 위해 상태를 되돌린다.
         // 단계가 Waiting 이 되면서 시험 관리 / 종료 및 정산 메뉴가 다시 잠긴다.

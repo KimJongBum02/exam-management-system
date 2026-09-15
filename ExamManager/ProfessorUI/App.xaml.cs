@@ -34,6 +34,11 @@ namespace ProfessorUI
                 {
                     Service.StudentStore.Instance.MarkDisconnected(sid);
                     ViewModel.ScreenMonitoringViewModel.Instance.RemoveStudent(sid);
+
+                    // 시험 중에 끊긴 학생은 교수가 찾아가 봐야 한다. 창이 뒤에 있어도 알 수 있게 한다.
+                    // (로그인을 거절한 접속은 학번이 비어 있다 — 학생이 아니므로 알리지 않는다)
+                    if (Service.ExamState.IsExamStarted && studentId.Length > 0)
+                        ExamManager.Shared.UiSignal.FlashTaskbar();
                 });
 
             network.PacketReceived += (sid, studentId, name, type, payload, len) =>
@@ -104,8 +109,13 @@ namespace ProfessorUI
 
             // 답안 수집 구독 시작 — 학생이 보낸 답안을 저장하고 확인 회신을 보낸다.
             Service.AnswerCollectService.Instance.Start();
+            // 먼저 제출한 학생이 있으면 교수가 바로 알 수 있게 작업표시줄도 깜빡인다.
             Service.AnswerCollectService.Instance.AnswerCollected += (studentId, savedPath) =>
-                PostToUi(() => Service.StudentStore.Instance.MarkAnswerSubmitted(studentId));
+                PostToUi(() =>
+                {
+                    Service.StudentStore.Instance.MarkAnswerSubmitted(studentId);
+                    ExamManager.Shared.UiSignal.FlashTaskbar();
+                });
 
             // 서버는 앱을 켜는 순간 열어 둔다.
             // 교수가 따로 열어 줄 것이 없어야 학생이 접속하지 못하는 사고가 생기지 않는다.
