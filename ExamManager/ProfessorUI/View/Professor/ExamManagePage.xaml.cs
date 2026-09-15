@@ -1,4 +1,5 @@
-using System.ComponentModel;
+using System.Collections.Specialized;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -10,7 +11,7 @@ namespace ProfessorUI.View.Professor
     public partial class ExamManagePage : UserControl
     {
         private readonly UiContext _ctx = UiContext.Instance;
-        private readonly ICollectionView _studentView;
+        private readonly ListCollectionView _studentView;
 
         public ExamManagePage()
         {
@@ -18,18 +19,29 @@ namespace ProfessorUI.View.Professor
 
             DataContext = _ctx;
 
-            // 검색·필터는 원본 목록을 건드리지 않고 보기만 걸러 낸다.
-            _studentView = CollectionViewSource.GetDefaultView(_ctx.Overview.Students);
-            _studentView.Filter = MatchesFilter;
-            StudentTable.ItemsSource = _studentView;
+            // 재배포가 필요한 학생만 거른다.
+            // 종료·정산 화면도 같은 학생 목록을 쓰므로 기본 보기(GetDefaultView)에 필터를 걸면
+            // 그 화면 표까지 걸러진다. 이 화면만의 보기를 따로 만든다.
+            _studentView = new ListCollectionView(_ctx.Overview.Students) { Filter = MatchesFilter };
 
-            AlertList.ItemsSource = _ctx.Overview.Alerts;
-            ChatList.ItemsSource = _ctx.Chat.RecentMessages;
+            // 학생이 시험을 시작하거나 끊기면 목록에서 바로 빠지고 들어온다.
+            _studentView.IsLiveFiltering = true;
+            _studentView.LiveFilteringProperties.Add(nameof(StudentItemViewModel.HasExamStarted));
+            _studentView.LiveFilteringProperties.Add(nameof(StudentItemViewModel.IsAnswerSubmitted));
+            _studentView.LiveFilteringProperties.Add(nameof(StudentItemViewModel.IsConnected));
+
+            StudentTable.ItemsSource = _studentView;
+            ((INotifyCollectionChanged)_studentView).CollectionChanged += (_, _) => UpdateEmptyNote();
+            UpdateEmptyNote();
         }
 
         private bool MatchesFilter(object item)
         {
             if (item is not StudentItemViewModel student) return false;
+
+            // 재배포 대상: 답안을 내지 않았고, 이 접속에서 시험을 시작하지 못한 학생.
+            // (늦게 들어왔거나, 파일을 받기 전에 끊겼거나, 다시 켰는데 이어 받을 기록이 없는 학생)
+            if (student.IsAnswerSubmitted || student.HasExamStarted) return false;
 
             string keyword = SearchBox?.Text?.Trim() ?? string.Empty;
             if (keyword.Length > 0 &&
@@ -41,9 +53,6 @@ namespace ProfessorUI.View.Professor
             if (conn == "접속 중" && !student.IsConnected) return false;
             if (conn == "미접속" && student.IsConnected) return false;
 
-            string state = SelectedText(StateFilter);
-            if (state.Length > 0 && state != "전체" && student.Status != state) return false;
-
             return true;
         }
 
@@ -52,15 +61,26 @@ namespace ProfessorUI.View.Professor
 
         private void Filter_Changed(object sender, RoutedEventArgs e) => _studentView?.Refresh();
 
-        private void AlertDetail_Click(object sender, RoutedEventArgs e)
+        private void UpdateEmptyNote()
+            => EmptyNote.Visibility = _studentView.IsEmpty ? Visibility.Visible : Visibility.Collapsed;
+
+        // 목록에 보이는 학생 중 접속 중인 학생에게 모두 다시 보낸다.
+        // 끊긴 학생은 보낼 수 없으므로 뺀다 — 다시 들어오면 그때 보낸다.
+        private void RedeployAll_Click(object sender, RoutedEventArgs e)
         {
-            // 누른 카드의 경고를 상세 화면으로 넘긴다.
-            var alert = (sender as FrameworkElement)?.DataContext as Service.AlertItem;
-            ShellWindow.From(this)?.Navigate(new CheatAlertDetailPage(alert), 2);
+            var targets = _studentView.Cast<StudentItemViewModel>().Where(s => s.IsConnected).ToList();
+            if (targets.Count == 0)
+            {
+                MessageBox.Show("다시 보낼 수 있는 학생이 없습니다.\n접속이 끊긴 학생은 다시 접속한 뒤에 보낼 수 있습니다.",
+                                "재배포", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            _ctx.Distribute.RedeployMany(targets);
         }
 
         private void SecurityPolicy_Click(object sender, RoutedEventArgs e)
-            => ShellWindow.From(this)?.Navigate(new SecurityPolicyPage(), 3);
+            => ShellWindow.From(this)?.Navigate(new SecurityPolicyPage(), 4);
 
         // 시험 종료 실행. 학생 PC의 감시를 멈추는 신호까지 AnswerCollectViewModel 이 보낸다.
         // 교수가 확인 창에서 취소하면 단계가 그대로이므로 화면도 옮기지 않는다.
@@ -72,7 +92,7 @@ namespace ProfessorUI.View.Professor
             command.Execute(null);
 
             if (Service.ExamState.CurrentPhase >= NetworkLib.ExamPhase.SubmitRequested)
-                ShellWindow.From(this)?.Navigate(new ExamEndPage(), 4);
+                ShellWindow.From(this)?.Navigate(new ExamEndPage(), 5);
         }
     }
 }

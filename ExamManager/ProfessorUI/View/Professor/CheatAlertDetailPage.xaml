@@ -19,11 +19,12 @@
         <!-- 브레드크럼 -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,14">
             <Button Content="시험 관리 창으로" Style="{StaticResource LinkButton}" Click="BackToManage_Click"/>
-            <TextBlock Text=" / 부정행위 알림 상세" FontSize="13" Foreground="{StaticResource TextMuted}"
+            <TextBlock Text=" / 보안 경고 상세" FontSize="13" Foreground="{StaticResource TextMuted}"
                        VerticalAlignment="Center"/>
         </StackPanel>
 
-        <TextBlock Grid.Row="1" Text="부정행위 알림 상세" Style="{StaticResource PageTitle}" Margin="0,0,0,18"/>
+        <!-- 부정행위만이 아니라 차단 실패·연결 끊김도 여기로 온다 -->
+        <TextBlock Grid.Row="1" Text="보안 경고 상세" Style="{StaticResource PageTitle}" Margin="0,0,0,18"/>
 
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
@@ -36,7 +37,7 @@
             <StackPanel Grid.Column="0">
                 <Border Style="{StaticResource Card}" Margin="0,0,0,20">
                     <StackPanel>
-                        <TextBlock Text="위반 학생 정보" Style="{StaticResource SectionTitle}" Margin="0,0,0,18"/>
+                        <TextBlock Text="학생 정보" Style="{StaticResource SectionTitle}" Margin="0,0,0,18"/>
                         <UniformGrid Columns="3" Margin="0,0,0,20">
                             <StackPanel>
                                 <TextBlock Text="학번" Style="{StaticResource FieldLabel}"/>
@@ -61,10 +62,11 @@
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <TextBlock Text="감지 내용" Style="{StaticResource SectionTitle}" Margin="0,0,0,18"/>
-                        <TextBlock Text="학생 프로그램이 보낸 내용" Style="{StaticResource FieldLabel}"/>
-                        <TextBlock Text="{Binding Description}" Style="{StaticResource Body}" Margin="0,0,0,18"/>
-                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
-                                   Text="차단은 학생 PC에서 이미 이루어졌습니다. 이 화면에서는 확인 여부만 기록합니다."/>
+                        <TextBlock Text="내용" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding Description}" Style="{StaticResource Body}" Margin="0,0,0,18"
+                                   TextWrapping="Wrap"/>
+                        <!-- 안내는 경고 종류마다 다르다(AlertItem.Guide) -->
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Text="{Binding Guide}"/>
                     </StackPanel>
                 </Border>
             </StackPanel>

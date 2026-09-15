@@ -22,10 +22,11 @@ namespace ProfessorUI.View.Professor
         private void SelectAll_Click(object sender, RoutedEventArgs e) => SetAll(true);
         private void DeselectAll_Click(object sender, RoutedEventArgs e) => SetAll(false);
 
+        // 승인할 수 없는 학생(미수집·이미 승인)은 전체 선택에서도 빠진다.
         private void SetAll(bool selected)
         {
             foreach (var student in _ctx.Overview.Students)
-                student.IsSelected = selected;
+                student.IsSelected = selected && student.CanApprove;
         }
 
         private void ShowSummary_Click(object sender, RoutedEventArgs e)

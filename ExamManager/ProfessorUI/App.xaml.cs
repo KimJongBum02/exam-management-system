@@ -38,7 +38,17 @@ namespace ProfessorUI
                     // 시험 중에 끊긴 학생은 교수가 찾아가 봐야 한다. 창이 뒤에 있어도 알 수 있게 한다.
                     // (로그인을 거절한 접속은 학번이 비어 있다 — 학생이 아니므로 알리지 않는다)
                     if (Service.ExamState.IsExamStarted && studentId.Length > 0)
+                    {
                         ExamManager.Shared.UiSignal.FlashTaskbar();
+
+                        // 답안을 내지 않고 끊겼으면 보안 경고로도 남긴다.
+                        // 학생 프로그램이 꺼진 것이라면 인터넷 차단도 함께 풀려 있다(FirewallGuard).
+                        bool submitted = Service.StudentStore.Instance.Students
+                            .Any(s => s.StudentId == studentId && s.IsAnswerSubmitted);
+                        if (!submitted)
+                            Service.AlertStore.Instance.Add(studentId, name,
+                                "시험 중 연결 끊김 (답안 미제출)", Service.AlertKind.Security);
+                    }
                 });
 
             network.PacketReceived += (sid, studentId, name, type, payload, len) =>
@@ -61,13 +71,29 @@ namespace ProfessorUI
                 else if (type == PacketType.MonitorStatusReport &&
                          MonitorStatusPayload.TryDecode(payload, len, out MonitorFlags flags, out string monitorDetail))
                 {
+                    // 답안 제출 뒤 네트워크 차단을 풀었다는 보고. 정상 절차라 경고로 올리지 않는다.
+                    // (아래 감시 상태 보고로 읽으면 두 감시가 모두 꺼진 것으로 보여 잘못된 경고가 뜬다)
+                    if (flags.HasFlag(MonitorFlags.NetworkReleased)) return;
+
                     // 감시가 실제로 켜졌는지 학생이 알려 온다.
                     // 이게 없으면 교수는 감시가 도는 줄 알고 시험을 진행하게 된다.
                     bool processOn = flags.HasFlag(MonitorFlags.ProcessMonitor);
                     bool networkOn = flags.HasFlag(MonitorFlags.NetworkMonitor);
 
-                    PostToUi(() => Service.StudentStore.Instance.MarkMonitorStatus(
-                        studentId, processOn, networkOn, monitorDetail));
+                    PostToUi(() =>
+                    {
+                        Service.StudentStore.Instance.MarkMonitorStatus(studentId, processOn, networkOn, monitorDetail);
+
+                        // 감시가 걸리지 않은 학생은 보안 경고로 올린다. 학생 표에는 감시 칸이 없다.
+                        // 실패 이유는 학생이 차단 실패 때만 적어 보낸다.
+                        if (!networkOn)
+                            Service.AlertStore.Instance.Add(studentId, name,
+                                monitorDetail.Length > 0 ? $"인터넷 차단 실패: {monitorDetail}" : "인터넷 차단 실패",
+                                Service.AlertKind.Security);
+                        if (!processOn)
+                            Service.AlertStore.Instance.Add(studentId, name,
+                                "프로그램 감시를 켜지 못함", Service.AlertKind.Security);
+                    });
                 }
                 else if (type == PacketType.InstalledProgramsReport &&
                          InstalledProgramsPayload.TryDecode(payload, len, out var programs))
@@ -91,7 +117,8 @@ namespace ProfessorUI
                     {
                         if (!isReference)
                             Service.StudentStore.Instance.MarkCheatingDetected(studentId);
-                        Service.AlertStore.Instance.Add(studentId, name, description);
+                        Service.AlertStore.Instance.Add(studentId, name, description,
+                            isReference ? Service.AlertKind.Reference : Service.AlertKind.Cheating);
                     });
                 }
                 else if (type == PacketType.ScreenCapture && len > 0)

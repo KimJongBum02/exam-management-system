@@ -82,6 +82,19 @@ namespace ProfessorUI.ViewModel
             OnPropertyChanged(nameof(NetworkMonitorOn));
             OnPropertyChanged(nameof(MonitorDetail));
             OnPropertyChanged(nameof(MonitorText));
+            OnPropertyChanged(nameof(HasExamStarted));
+        }
+
+        // 이 접속에서 학생 PC 가 시험을 시작했는지. 시험 관리 화면의 재배포 대상이 이 값으로 갈린다.
+        // 학생은 시험을 시작하면(이어 받기 포함) 감시 상태를 보고하므로, 보고가 왔으면 시작한 것이다.
+        // 끊기면 모르는 상태로 돌린다 — 다시 켠 학생이 이어 받았는지는 새 보고로 안다.
+        public bool HasExamStarted => _monitorReported;
+
+        public void ClearMonitorStatus()
+        {
+            _monitorReported = false;
+            OnPropertyChanged(nameof(MonitorText));
+            OnPropertyChanged(nameof(HasExamStarted));
         }
 
         // 학생 PC 에 시험 파일이 남았다는 보고를 받았는지.
@@ -120,8 +133,11 @@ namespace ProfessorUI.ViewModel
         public bool IsApproved
         {
             get => _isApproved;
-            set { _isApproved = value; OnPropertyChanged(); OnPropertyChanged(nameof(ShutdownText)); }
+            set { _isApproved = value; OnPropertyChanged(); OnPropertyChanged(nameof(ShutdownText)); OnPropertyChanged(nameof(CanApprove)); }
         }
+
+        // 종료 화면에서 고를 수 있는 학생인지. 답안을 걷었고 아직 승인하지 않은 학생만 승인 대상이다.
+        public bool CanApprove => IsAnswerSubmitted && !IsApproved;
 
         // 이 학생의 답안을 받아 저장까지 끝냈는지.
         // IsFileReceived와 헷갈리기 쉬운데 방향이 반대다 —
@@ -136,6 +152,7 @@ namespace ProfessorUI.ViewModel
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(CollectText));
                 OnPropertyChanged(nameof(CleanupText));
+                OnPropertyChanged(nameof(CanApprove));
             }
         }
 
