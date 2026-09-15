@@ -73,10 +73,8 @@ namespace StudentUI.ViewModel
                     _isConnected = value;
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(ConnectionStatusText));
-                    OnPropertyChanged(nameof(SessionCheckText));
                     OnPropertyChanged(nameof(SecurityPolicyCheckText));
                     OnPropertyChanged(nameof(NetworkCheckText));
-                    OnPropertyChanged(nameof(IsSessionValid));
                     OnPropertyChanged(nameof(IsSecurityPolicyValid));
                     OnPropertyChanged(nameof(IsNetworkValid));
                 }
@@ -85,15 +83,13 @@ namespace StudentUI.ViewModel
             public string ConnectionStatusText => IsConnected ? "실시간 연결 중" : "서버 미연결";
 
             // 조건 점검 항목 상태 (정상 여부)
-            public bool IsSessionValid => IsConnected;
             public bool IsSecurityPolicyValid => IsConnected;
             public bool IsNetworkValid => IsConnected;
             public bool IsFileReadyValid => ExamFile.IsReceived;
 
             // 조건 점검 항목 텍스트
-            public string SessionCheckText => IsSessionValid ? "완료" : "미연결";
             public string SecurityPolicyCheckText => IsSecurityPolicyValid ? "완료" : "미완료";
-            public string NetworkCheckText => IsNetworkValid ? "정상" : "단절";
+            public string NetworkCheckText => IsNetworkValid ? "접속" : "미접속";
             public string FileReadyCheckText => IsFileReadyValid ? "완료" : "수신 대기";
 
             // 단계(스텝퍼) 계산 (1: 대기, 2: 준비, 3: 파일 배포, 4: 시험 시작)
@@ -264,7 +260,7 @@ namespace StudentUI.ViewModel
                     StatusItems.Add(new ExamFileStatusItem
                     {
                         Icon = "📦",
-                        Category = "시험 문제지",
+                        Category = "시험 파일",
                         Name = fileName,
                         Status = fileStatus,
                         StatusLevel = fileReceived ? "Success" : "Normal",
@@ -279,7 +275,7 @@ namespace StudentUI.ViewModel
                     StatusItems.Add(new ExamFileStatusItem
                     {
                         Icon = "📁",
-                        Category = "내 작업 공간",
+                        Category = "시험 파일 경로",
                         Name = string.IsNullOrEmpty(folderPath) ? "C:\\Exam" : folderPath,
                         Status = folderStatus,
                         StatusLevel = isExtracted ? "Success" : (fileReceived ? "Info" : "Normal"),
@@ -293,7 +289,7 @@ namespace StudentUI.ViewModel
                     StatusItems.Add(new ExamFileStatusItem
                     {
                         Icon = "📤",
-                        Category = "답안 제출",
+                        Category = "답안 파일",
                         Name = $"{Student.StudentNumber}_답안.zip",
                         Status = submitText,
                         StatusLevel = submitLevel,
@@ -306,8 +302,8 @@ namespace StudentUI.ViewModel
                     StatusItems.Add(new ExamFileStatusItem
                     {
                         Icon = "🛡️",
-                        Category = "보안 감독",
-                        Name = "실시간 프로세스 & 웹 차단",
+                        Category = "보안 정책",
+                        Name = "실시간 프로그램 & 웹 차단",
                         Status = isSecure ? "정상 감독 중" : "서버 미연결",
                         StatusLevel = isSecure ? "Success" : "Warning",
                         Description = "비인가 프로그램 및 생성형 AI 사이트 접근이 실시간 감시/차단됩니다.",
@@ -335,7 +331,7 @@ namespace StudentUI.ViewModel
                     StatusItems.Add(new ExamFileStatusItem
                     {
                         Icon = "🌐",
-                        Category = "인터넷",
+                        Category = "네트워크 차단",
                         Name = "외부 인터넷 차단 (교수님 PC 연결만 허용)",
                         Status = networkStatus,
                         StatusLevel = networkLevel,

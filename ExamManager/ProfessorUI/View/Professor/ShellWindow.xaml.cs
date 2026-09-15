@@ -2,11 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Windows;
-using System.Windows.Media;
 using ExamManager.Shared;
 using System.Windows.Controls;
 using System.Windows.Threading;
-using NetworkLib;
 using ProfessorUI.Service;
 
 namespace ProfessorUI.View.Professor
@@ -23,7 +21,7 @@ namespace ProfessorUI.View.Professor
         private readonly MenuEntry _manage = new("시험 관리");
         // 수업 중에도 채팅·공지를 쓰므로 잠그지 않는다
         private readonly MenuEntry _chat = new("알림·채팅");
-        private readonly MenuEntry _policy = new("보안 정책");
+        private readonly MenuEntry _policy = new("프로그램 관리");
         private readonly MenuEntry _settle = new("종료 및 정산");
         // 시험 단계와 무관한 기능이라 잠그지 않는다
         private readonly MenuEntry _quiz       = new("OX 퀴즈");
@@ -43,26 +41,16 @@ namespace ProfessorUI.View.Professor
             MenuList.SelectedIndex = 0;
 
             DataContext = _ctx;
-            PaneAlertList.ItemsSource = _ctx.Overview.Alerts;
-            PaneChatList.ItemsSource = _ctx.Chat.RecentMessages;
 
-            // 경고와 채팅은 서로 다른 곳에서 올라오므로 배지는 둘을 합쳐 센다.
+            // 경고·채팅이 오면 창이 뒤에 있거나 최소화돼 있어도 알 수 있게 작업표시줄 아이콘을 깜빡인다.
             _ctx.Overview.Alerts.CollectionChanged += (_, e) =>
             {
-                UpdateNotifications();
-                if (e.Action == NotifyCollectionChangedAction.Add) Signal(UiSignal.AlertColor);
+                if (e.Action == NotifyCollectionChangedAction.Add) UiSignal.FlashTaskbar();
             };
             _ctx.Chat.RecentMessages.CollectionChanged += (_, e) =>
             {
-                UpdateNotifications();
-                if (e.Action == NotifyCollectionChangedAction.Add) Signal(UiSignal.MessageColor);
+                if (e.Action == NotifyCollectionChangedAction.Add) UiSignal.FlashTaskbar();
             };
-            // 알림·채팅 화면에서 대화를 열면 목록은 그대로인데 안 읽은 수만 줄어든다. 그래서 숫자도 따로 듣는다.
-            _ctx.Chat.PropertyChanged += (_, e) =>
-            {
-                if (e.PropertyName == nameof(ProfessorUI.ViewModel.ChatViewModel.UnreadCount)) UpdateNotifications();
-            };
-            UpdateNotifications();
 
             ExamState.StateChanged += ApplyPhaseGates;
             Closed += (_, _) => ExamState.StateChanged -= ApplyPhaseGates;
@@ -72,11 +60,12 @@ namespace ProfessorUI.View.Professor
         private void ApplyPhaseGates()
         {
             bool started = ExamState.IsExamStarted;                                  // 시험 시작 이후
-            bool ended = ExamState.CurrentPhase >= ExamPhase.SubmitRequested;        // 시험 종료 이후
 
             _prep.SetGate(!started, "시험이 시작되어 준비 단계는 끝났습니다. 지각생 파일 전송은 시험 관리 창의 파일 재배포를 쓰십시오.");
             _manage.SetGate(started, "시험을 시작하면 열립니다. 시험 준비 마법사를 4단계까지 진행하십시오.");
-            _settle.SetGate(ended, "시험을 종료하면 열립니다. 시험 관리 창에서 시험 종료를 실행하십시오.");
+            // 먼저 답안을 낸 학생을 시험 중에 승인·종료해야 하므로 시험 종료를 기다리지 않고 연다.
+            // 시험 중 [답안 일괄 수집]은 AnswerCollectViewModel 이 따로 막는다.
+            _settle.SetGate(started, "시험을 시작하면 열립니다. 먼저 답안을 낸 학생은 시험 중에도 여기서 승인합니다.");
         }
 
         private void MenuList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -114,49 +103,6 @@ namespace ProfessorUI.View.Professor
             MenuList.SelectedIndex = menuIndex;
             PageHost.Content = page;
             ScrollPageToTop();
-        }
-
-        // 배지에는 미확인 경고와 안 읽은 채팅을 합쳐 적는다. 0이면 배지가 숨는다.
-        private void UpdateNotifications()
-        {
-            int count = _ctx.Overview.UnreadAlertCount + _ctx.Chat.UnreadCount;
-            NotifyButton.Tag = count.ToString();
-            // 알릴 것이 없으면 배지를 숨긴다
-            Badge.Visibility = count == 0 ? Visibility.Collapsed : Visibility.Visible;
-            PaneAlertTitle.Text = $"부정행위 경고 (미확인 {_ctx.Overview.UnreadAlertCount})";
-            PaneChatTitle.Text = $"학생 채팅 ({_ctx.Chat.UnreadCount})";
-        }
-
-        // 경고(빨강)·채팅(파랑)이 오면 어느 화면에 있든 상단 [알림] 버튼을 깜빡이고,
-        // 창이 뒤에 있거나 최소화돼 있으면 작업표시줄 아이콘도 깜빡인다.
-        private void Signal(Color color)
-        {
-            UiSignal.Blink(NotifyButton, BackgroundProperty, color);
-            UiSignal.FlashTaskbar();
-        }
-
-        private void ToggleNotifyPane_Click(object sender, RoutedEventArgs e)
-        {
-            bool opening = NotifyPane.Visibility != Visibility.Visible;
-            NotifyPane.Visibility = opening ? Visibility.Visible : Visibility.Collapsed;
-
-            // 열어서 읽었으므로 안 읽음 표시를 지운다.
-            if (opening)
-            {
-                _ctx.Chat.MarkAllRead();
-                UpdateNotifications();
-            }
-        }
-
-        // 알림 패널에서 바로 경고 상세로 넘어간다. 패널은 닫아 화면을 가리지 않게 한다.
-        // 경고는 시험 중에만 올라오므로, 시험 관리가 잠긴 동안에는 이동하지 않는다.
-        private void PaneAlertDetail_Click(object sender, RoutedEventArgs e)
-        {
-            if (!_manage.Enabled) return;
-
-            var alert = (sender as FrameworkElement)?.DataContext as Service.AlertItem;
-            NotifyPane.Visibility = Visibility.Collapsed;
-            Navigate(new CheatAlertDetailPage(alert), 2);
         }
 
         // 현재 화면이 속한 셸을 찾는다. 화면 쪽 코드비하인드에서 사용한다.

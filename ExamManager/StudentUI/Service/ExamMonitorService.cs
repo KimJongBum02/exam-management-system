@@ -24,7 +24,7 @@ namespace StudentUI.Service
     //
     // 프로세스 감시와 네트워크 차단을 같은 자리에서 켠다.
     // 교수가 따로 누를 것이 없도록 시험 시작 신호에 그대로 묶었다.
-    // 푸는 시점은 다르다. 프로세스 감시는 시험 종료(③)에, 네트워크 차단은 답안 제출이 끝난 뒤에 푼다.
+    // 푸는 시점은 다르다. 프로세스 감시는 시험 종료(③)나 답안 제출 중 먼저 오는 때에, 네트워크 차단은 답안 제출이 끝난 뒤에 푼다.
     //
     // ②에서 '해제가 끝난 뒤'가 중요하다. 감시를 먼저 켜면 압축 해제에 쓰는
     // 7za.exe가 시험 중 새로 실행된 프로그램으로 적발된다.
@@ -57,7 +57,7 @@ namespace StudentUI.Service
         // 네트워크 차단에서 뺄 교수 PC 주소. 로그인 때 접속한 주소를 그대로 쓴다.
         private string _professorIp = string.Empty;
 
-        // 학생 화면의 '인터넷' 줄이 보여 줄 상태. 사이트가 안 열리는 이유를 학생이 알 수 있게 한다.
+        // 학생 화면의 '네트워크 차단' 줄이 보여 줄 상태. 사이트가 안 열리는 이유를 학생이 알 수 있게 한다.
         public NetworkBlockState NetworkState { get; private set; } = NetworkBlockState.NotApplied;
         public event Action? NetworkStateChanged;
 
@@ -97,7 +97,7 @@ namespace StudentUI.Service
             _whitelist = whitelist;
             _blacklist = blacklist;
 
-            // 시험 중에 목록이 바뀌면(보안 정책 [적용]) 이어 받기 기록도 맞춘다.
+            // 시험 중에 목록이 바뀌면(프로그램 관리 [적용]) 이어 받기 기록도 맞춘다.
             if (ExamSessionStore.Load() is { } session)
             {
                 session.Whitelist = whitelist;
@@ -230,7 +230,7 @@ namespace StudentUI.Service
             // 네트워크 차단은 여기서 풀지 않는다(OnSubmitStateChanged 참고).
         }
 
-        // ── 답안 제출이 끝나면 네트워크 차단을 푼다 ──
+        // ── 답안 제출이 끝나면 감시를 멈추고 네트워크 차단을 푼다 ──
         // 시험 종료에서 풀면, 교수가 답안을 걷기 전까지 답안 폴더가 학생 PC 에 남은 채로 인터넷이 열린다.
         // 답안 전송은 교수 PC 로 가는 연결이라 차단 중에도 된다.
         //
@@ -244,6 +244,13 @@ namespace StudentUI.Service
 
             _resumeSession = null;
             ExamSessionStore.Clear();
+
+            // 프로그램 감시도 여기서 멈춘다. 먼저 낸 학생은 시험 종료(③)를 기다리는 동안
+            // 켜는 프로그램마다 교수에게 쓸데없는 경고가 올라간다. 답안은 이미 교수 PC 에 있다.
+            // 교수에게 따로 보고하지 않는다 — 교수 쪽은 '감시 꺼짐' 보고를 감시 실패 경고로 올린다.
+            // [제출] 버튼으로 낸 경우 화면 스레드에서 불리는데, 멈춤은 감시 스레드가 끝나길 기다리므로 따로 돌린다.
+            ProcessControlService? processControl = _processControl;
+            if (processControl != null) System.Threading.Tasks.Task.Run(processControl.StopMonitoring);
 
             if (NetworkState != NetworkBlockState.Blocked) return;
             if (!FirewallPolicyService.Restore()) return;

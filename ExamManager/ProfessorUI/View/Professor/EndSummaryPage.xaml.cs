@@ -23,6 +23,15 @@ namespace ProfessorUI.View.Professor
         // 단계가 Waiting 이 되면서 시험 관리 / 종료 및 정산 메뉴가 다시 잠긴다.
         private void RestartSession_Click(object sender, RoutedEventArgs e)
         {
+            // 종료 및 정산은 먼저 낸 학생을 승인하려고 시험 중에도 열린다.
+            // 시험 중에 초기화하면 아직 푸는 학생들이 있는데 시험 단계가 대기로 돌아가므로 막는다.
+            if (ExamState.CurrentPhase < NetworkLib.ExamPhase.SubmitRequested)
+            {
+                MessageBox.Show("시험이 아직 진행 중입니다. 시험 관리 화면에서 시험을 종료한 뒤 초기화하십시오.",
+                    "새 시험 준비", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             var confirm = MessageBox.Show(
                 "시험 단계와 학생별 진행 상태를 초기화합니다.\n걷은 답안 파일은 그대로 남습니다. 계속하시겠습니까?",
                 "새 시험 준비", MessageBoxButton.YesNo, MessageBoxImage.Question);

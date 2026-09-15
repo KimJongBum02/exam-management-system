@@ -338,6 +338,24 @@
         <Setter Property="Background" Value="White"/>
         <Setter Property="ItemContainerStyle" Value="{StaticResource TableRow}"/>
         <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+        <!-- 기본 뼈대는 마우스를 올리거나 포커스를 받으면 테두리를 파랗게 덧그린다.
+             평범한 Border 로 바꿔 위에서 정한 회색 테두리만 남긴다.
+             ScrollViewer 에 GridView 전용 스타일을 줘야 열 머리글이 나온다. -->
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListView">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="1" SnapsToDevicePixels="True">
+                        <ScrollViewer Style="{DynamicResource {x:Static GridView.GridViewScrollViewerStyleKey}}"
+                                      Focusable="False" Padding="{TemplateBinding Padding}">
+                            <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                        </ScrollViewer>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- 표 안의 셀 글자.

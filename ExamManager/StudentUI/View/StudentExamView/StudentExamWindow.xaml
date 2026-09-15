@@ -24,6 +24,7 @@
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -50,6 +51,7 @@
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
             <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -222,43 +224,8 @@
                             <TextBlock Text="응시 환경 점검" FontSize="14" FontWeight="Bold" Foreground="#0F172A" Margin="0,20,0,10"/>
                             <Border Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="18">
                                 <StackPanel>
-                                    <!-- 시험 세션 활성화 -->
+                                    <!-- 보안 정책 -->
                                     <Grid Margin="0,5">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Orientation="Horizontal">
-                                            <Ellipse Width="6" Height="6" VerticalAlignment="Center" Margin="0,0,8,0">
-                                                <Ellipse.Style>
-                                                    <Style TargetType="Ellipse">
-                                                        <Setter Property="Fill" Value="#EF4444"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsSessionValid}" Value="True">
-                                                                <Setter Property="Fill" Value="#16A34A"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Ellipse.Style>
-                                            </Ellipse>
-                                            <TextBlock Text="시험 세션 활성화" FontSize="12" Foreground="#334155" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                        <TextBlock Grid.Column="1" Text="{Binding SessionCheckText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="#EF4444"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsSessionValid}" Value="True">
-                                                            <Setter Property="Foreground" Value="#16A34A"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                    </Grid>
-
-                                    <!-- 보안 정책 로드 -->
-                                    <Grid Margin="0,7">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
@@ -276,7 +243,7 @@
                                                     </Style>
                                                 </Ellipse.Style>
                                             </Ellipse>
-                                            <TextBlock Text="보안 정책 로드" FontSize="12" Foreground="#334155" VerticalAlignment="Center"/>
+                                            <TextBlock Text="보안 정책" FontSize="12" Foreground="#334155" VerticalAlignment="Center"/>
                                         </StackPanel>
                                         <TextBlock Grid.Column="1" Text="{Binding SecurityPolicyCheckText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center">
                                             <TextBlock.Style>
@@ -292,7 +259,7 @@
                                         </TextBlock>
                                     </Grid>
 
-                                    <!-- 네트워크 연결 상태 -->
+                                    <!-- 서버 연결 상태 -->
                                     <Grid Margin="0,7">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -311,7 +278,7 @@
                                                     </Style>
                                                 </Ellipse.Style>
                                             </Ellipse>
-                                            <TextBlock Text="네트워크 연결 상태" FontSize="12" Foreground="#334155" VerticalAlignment="Center"/>
+                                            <TextBlock Text="서버 연결 상태" FontSize="12" Foreground="#334155" VerticalAlignment="Center"/>
                                         </StackPanel>
                                         <TextBlock Grid.Column="1" Text="{Binding NetworkCheckText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center">
                                             <TextBlock.Style>
@@ -327,7 +294,7 @@
                                         </TextBlock>
                                     </Grid>
 
-                                    <!-- 시험 파일 준비 여부 -->
+                                    <!-- 시험 파일 -->
                                     <Grid Margin="0,5">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -346,7 +313,7 @@
                                                     </Style>
                                                 </Ellipse.Style>
                                             </Ellipse>
-                                            <TextBlock Text="시험 파일 준비 여부" FontSize="12" Foreground="#334155" VerticalAlignment="Center"/>
+                                            <TextBlock Text="시험 파일" FontSize="12" Foreground="#334155" VerticalAlignment="Center"/>
                                         </StackPanel>
                                         <TextBlock Grid.Column="1" Text="{Binding FileReadyCheckText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center">
                                             <TextBlock.Style>
@@ -458,6 +425,7 @@
                                             Height="38" Padding="14,0" Cursor="Hand">
                                         <Button.Style>
                                             <Style TargetType="Button">
+                                                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
                                                 <Setter Property="Template">
                                                     <Setter.Value>
                                                         <ControlTemplate TargetType="Button">

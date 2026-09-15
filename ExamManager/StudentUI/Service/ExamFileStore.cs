@@ -200,12 +200,26 @@ namespace StudentUI.Service
         }
 
         // 수신된 임시 .7z를 지운다. 실패해도 기능에는 영향이 없으므로 무시한다.
-        private void DeleteArchive()
+        public void DeleteArchive()
         {
             if (string.IsNullOrEmpty(_archivePath)) return;
 
             try { File.Delete(_archivePath); } catch (Exception) { }
             _archivePath = string.Empty;
+        }
+
+        // 폴더를 통째로 지운다. 읽기 전용 항목이 하나라도 있으면 Directory.Delete 가 거기서 멈춰
+        // 폴더가 남는다(.NET 10 에서 확인). 7za 는 배포 파일의 읽기 전용 속성을 그대로 풀어 주므로 먼저 벗긴다.
+        // 제출 뒤 시험 폴더, 압축을 푸는 임시 폴더, 지난 실행이 남긴 임시 폴더를 모두 이걸로 지운다.
+        public static void DeleteFolder(string folder)
+        {
+            foreach (string path in Directory.GetFileSystemEntries(folder, "*", SearchOption.AllDirectories))
+            {
+                FileAttributes attributes = File.GetAttributes(path);
+                if (attributes.HasFlag(FileAttributes.ReadOnly))
+                    File.SetAttributes(path, attributes & ~FileAttributes.ReadOnly);
+            }
+            Directory.Delete(folder, true);
         }
 
         private void OnFileError(string transferId, string message) => Post(() =>
@@ -267,8 +281,10 @@ namespace StudentUI.Service
                     }
                     finally
                     {
+                        // 암호가 풀린 시험 파일이 들어 있어 반드시 지운다. 읽기 전용 파일이 섞여 있으면
+                        // Directory.Delete 만으로는 실패해, 옮기기까지 끝났는데도 '압축 해제 실패'로 끝났다.
                         if (Directory.Exists(staging))
-                            Directory.Delete(staging, true);
+                            DeleteFolder(staging);
                     }
                 });
             }

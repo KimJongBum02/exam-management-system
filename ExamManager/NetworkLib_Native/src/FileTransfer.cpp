@@ -359,7 +359,7 @@ void FileTransferReceiver::HandleComplete(const uint8_t* payload, uint32_t paylo
     std::string computedHash = ComputeSHA256(ctx.tempPath);
     if (_stricmp(computedHash.c_str(), ctx.sha256Hash.c_str()) != 0)
     {
-        DeleteFileA(ctx.tempPath.c_str());
+        DeleteFileW(Utf8ToWide(ctx.tempPath).c_str());
         if (onFileError) onFileError(ctx.transferId, "SHA-256 불일치 — 파일 손상");
         return;
     }
@@ -389,7 +389,7 @@ void FileTransferReceiver::AbortTransfer(const std::string& transferId, const st
         CloseHandle(ctx.hFile);
         ctx.hFile = INVALID_HANDLE_VALUE;
     }
-    DeleteFileA(ctx.tempPath.c_str());
+    DeleteFileW(Utf8ToWide(ctx.tempPath).c_str());
     contexts_.erase(it);
 
     if (onFileError) onFileError(transferId, reason);

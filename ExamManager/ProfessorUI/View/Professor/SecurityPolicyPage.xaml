@@ -19,23 +19,23 @@
         </Grid.RowDefinitions>
 
         <!-- 제목 (마지막 갱신·서버 상태는 상단바에 있다) -->
-        <TextBlock Grid.Row="0" Text="보안 정책 관리" Style="{StaticResource PageTitle}" Margin="0,0,0,18"/>
+        <TextBlock Grid.Row="0" Text="프로그램 관리" Style="{StaticResource PageTitle}" Margin="0,0,0,18"/>
 
         <!-- 현재 정책 상태 -->
         <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,22">
             <StackPanel>
-                <TextBlock Text="현재 보안 정책 상태" Style="{StaticResource SectionTitle}" Margin="0,0,0,16"/>
+                <TextBlock Text="현재 적용 상태" Style="{StaticResource SectionTitle}" Margin="0,0,0,16"/>
                 <UniformGrid Columns="4" Margin="0,0,0,16">
                     <StackPanel>
                         <TextBlock Text="정책 적용 상태" Style="{StaticResource FieldLabel}"/>
                         <TextBlock x:Name="PolicyStateText" Style="{StaticResource Body}"/>
                     </StackPanel>
                     <StackPanel>
-                        <TextBlock Text="허용 프로세스" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="허용 프로그램" Style="{StaticResource FieldLabel}"/>
                         <TextBlock Text="{Binding WhiteList.WhiteList.Count}" Style="{StaticResource Body}"/>
                     </StackPanel>
                     <StackPanel>
-                        <TextBlock Text="금지 프로세스" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="금지 프로그램" Style="{StaticResource FieldLabel}"/>
                         <TextBlock Text="{Binding BlackList.BlackList.Count}" Style="{StaticResource Body}"/>
                     </StackPanel>
                     <StackPanel>
@@ -44,7 +44,7 @@
                     </StackPanel>
                 </UniformGrid>
                 <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
-                           Text="목록을 고친 뒤 [학생 PC에 적용]을 눌러야 반영됩니다. 금지 프로세스 차단은 학생용 프로그램이 수행하며, 이 화면에서는 목록 편집과 전송만 합니다."/>
+                           Text="목록을 고친 뒤 [학생 PC에 적용]을 눌러야 반영됩니다. 금지 프로그램 차단은 학생용 프로그램이 수행하며, 이 화면에서는 목록 편집과 전송만 합니다."/>
             </StackPanel>
         </Border>
 
@@ -61,7 +61,7 @@
                     <StackPanel>
                         <Grid Margin="0,0,0,14">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="금지 프로세스 목록" Style="{StaticResource SectionTitle}" Margin="0,0,12,0"
+                                <TextBlock Text="금지 프로그램 목록" Style="{StaticResource SectionTitle}" Margin="0,0,12,0"
                                            VerticalAlignment="Center"/>
                                 <TextBlock Text="{Binding BlackList.BlackList.Count}" Style="{StaticResource Caption}"
                                            VerticalAlignment="Center"/>
@@ -103,7 +103,7 @@
                     <StackPanel>
                         <Grid Margin="0,0,0,14">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="허용 프로세스 목록" Style="{StaticResource SectionTitle}" Margin="0,0,12,0"
+                                <TextBlock Text="허용 프로그램 목록" Style="{StaticResource SectionTitle}" Margin="0,0,12,0"
                                            VerticalAlignment="Center"/>
                                 <TextBlock Text="{Binding WhiteList.WhiteList.Count}" Style="{StaticResource Caption}"
                                            VerticalAlignment="Center"/>
