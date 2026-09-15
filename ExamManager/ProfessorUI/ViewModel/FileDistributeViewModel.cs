@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -6,6 +7,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
+using NetworkLib;
 using ProfessorUI.Service;
 
 namespace ProfessorUI.ViewModel
@@ -23,7 +25,12 @@ namespace ProfessorUI.ViewModel
         // 현황판 학생과 매핑하기 위한 학번
         public string StudentId { get; set; } = string.Empty;
 
-        public string Name { get; set; } = string.Empty;
+        private string _name = string.Empty;
+        public string Name
+        {
+            get => _name;
+            set { _name = value; OnPropertyChanged(); }
+        }
 
         private int _progressValue = 0;
         public int ProgressValue
@@ -93,6 +100,11 @@ namespace ProfessorUI.ViewModel
 
         // 학생 한 명에게만 다시 보낸다. 지각생이나 전송에 실패한 학생을 시험 중에 합류시킬 때 쓴다.
         public ICommand RedeployOneCommand { get; }
+
+        // 시험 중에 다시 보낸 학생. 받았다는 응답이 오면 그 학생에게만 시험 시작을 알린다.
+        // [시험 시작] 신호는 누른 순간 접속해 있던 학생에게만 갔으므로, 늦게 받은 학생은
+        // 이게 없으면 파일을 받고도 풀지 못하고 감시·인터넷 차단·타이머도 켜지지 않는다.
+        private readonly HashSet<string> _startOnReceive = new HashSet<string>();
 
         public FileDistributeViewModel()
         {
@@ -170,14 +182,24 @@ namespace ProfessorUI.ViewModel
             CommandManager.InvalidateRequerySuggested();
         }
 
-        private static StudentItem CreateRow(StudentItemViewModel student) => new StudentItem
+        private static StudentItem CreateRow(StudentItemViewModel student)
         {
-            StudentId = student.StudentId,
-            Name = student.Name,
-            IsSelected = true,
-            ProgressValue = 0,
-            StatusText = "대기 중"
-        };
+            var row = new StudentItem
+            {
+                StudentId = student.StudentId,
+                Name = student.Name,
+                IsSelected = true,
+                ProgressValue = 0,
+                StatusText = "대기 중"
+            };
+
+            // 같은 학번이 연결이 끊긴 뒤 다른 이름으로 다시 들어오면 현황판 이름이 바뀐다. 배포 목록도 따라간다.
+            student.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(StudentItemViewModel.Name)) row.Name = student.Name;
+            };
+            return row;
+        }
 
         // 현황판에 학생이 추가/삭제될 때 배포 목록도 함께 갱신
         private void OnStoreStudentsChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -209,6 +231,21 @@ namespace ProfessorUI.ViewModel
                 row.ProgressValue = 100;
                 row.StatusText = "수신완료";
             }
+
+            // 시험 중에 다시 보낸 학생이면 [시험 시작]과 같은 순서로 이 학생에게만 보낸다(ExamStartViewModel).
+            // 감시 목록 → 시험 시작(타이머) → 압축 해제(해제가 끝나면 감시·인터넷 차단을 켠다)
+            if (!_startOnReceive.Remove(studentId) || ExamState.CurrentPhase != ExamPhase.InProgress) return;
+
+            var connected = StudentStore.Instance.Students
+                .FirstOrDefault(s => s.StudentId == studentId && s.IsConnected);
+            if (connected == null) return;
+
+            var network = NetworkService.Instance;
+            network.SendToSession(connected.SessionId, PacketType.ProcessListUpdate,
+                ProcessListPayload.Encode(ProgramControlStore.WhiteList, ProgramControlStore.BlackList));
+            network.SendToSession(connected.SessionId, PacketType.ExamPhaseChange,
+                ExamPhasePayload.Encode(ExamPhase.InProgress, "시험이 시작되었습니다."));
+            network.SendToSession(connected.SessionId, PacketType.ExtractArchive, Array.Empty<byte>());
         }
 
         // 전체 선택/해제 로직
@@ -294,21 +331,51 @@ namespace ProfessorUI.ViewModel
             };
             if (string.IsNullOrEmpty(studentId)) return;
 
-            if (!FileDeployState.IsFilePrepared || string.IsNullOrEmpty(FileDeployState.PackagePath))
+            // 누른 뒤 표에 바로 보이는 변화가 없으므로 결과를 창으로 알린다.
+            string? problem = Redeploy(studentId);
+            if (problem != null)
+                MessageBox.Show(problem, "재배포", MessageBoxButton.OK, MessageBoxImage.Warning);
+            else
+                MessageBox.Show($"{DeployStatusMessage}{StartNote}", "재배포",
+                                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        // 여러 학생에게 한꺼번에 다시 보낸다(시험 관리 화면의 [접속 중인 학생 모두 재배포]).
+        // 못 보낸 학생은 이유와 함께 한 창에 모아 알린다.
+        public void RedeployMany(IEnumerable<StudentItemViewModel> students)
+        {
+            int sent = 0;
+            var failed = new List<string>();
+            foreach (var student in students)
             {
-                MessageBox.Show("먼저 시험 파일을 암호화·압축해 주세요.", "재배포",
-                                MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                string? problem = Redeploy(student.StudentId);
+                if (problem == null) sent++;
+                else failed.Add($"{student.StudentId} {student.Name} — {problem}");
             }
+
+            string message = $"{sent}명에게 시험 파일을 다시 보냈습니다.";
+            if (sent > 0) message += StartNote;
+            if (failed.Count > 0)
+                message += $"\n\n보내지 못한 학생 {failed.Count}명:\n" + string.Join("\n", failed);
+
+            MessageBox.Show(message, "재배포", MessageBoxButton.OK,
+                failed.Count > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
+        }
+
+        private static string StartNote => ExamState.CurrentPhase == ExamPhase.InProgress
+            ? "\n학생이 파일을 받으면 그 학생의 시험이 바로 시작됩니다."
+            : string.Empty;
+
+        // 학생 한 명에게 시험 파일을 다시 보낸다. 보냈으면 null, 못 보냈으면 그 이유.
+        private string? Redeploy(string studentId)
+        {
+            if (!FileDeployState.IsFilePrepared || string.IsNullOrEmpty(FileDeployState.PackagePath))
+                return "먼저 시험 파일을 암호화·압축해 주세요.";
 
             var connected = StudentStore.Instance.Students
                 .FirstOrDefault(s => s.StudentId == studentId && s.IsConnected);
             if (connected == null)
-            {
-                MessageBox.Show("접속 중인 학생이 아닙니다.", "재배포",
-                                MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
+                return "접속 중인 학생이 아닙니다.";
 
             var row = Students.FirstOrDefault(s => s.StudentId == studentId);
             if (row == null)
@@ -319,17 +386,13 @@ namespace ProfessorUI.ViewModel
 
             // 재접속하면 세션이 달라지므로, 같은 세션에 중복으로 보내는 경우만 막는다.
             if (row.SendingSessionId == connected.SessionId)
-            {
-                MessageBox.Show("이미 전송 중입니다.", "재배포",
-                                MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
+                return "이미 전송 중입니다.";
 
             if (!NetworkService.Instance.SendFileToSession(
                     connected.SessionId, FileDeployState.PackagePath!, FileDeployState.Password ?? ""))
             {
                 row.StatusText = "전송 실패";
-                return;
+                return "파일을 보내지 못했습니다.";
             }
 
             row.SendingSessionId = connected.SessionId;
@@ -337,6 +400,11 @@ namespace ProfessorUI.ViewModel
             row.StatusText = "전송 중";
             DeployStatusMessage = $"{connected.Name}({studentId}) 에게 다시 전송했습니다.";
             FileDeployState.IsFileDistributed = true;
+
+            // 시험 중이면 받는 대로 이 학생의 시험을 시작시킨다(OnFileReceivedConfirmed).
+            if (ExamState.CurrentPhase == ExamPhase.InProgress)
+                _startOnReceive.Add(studentId);
+            return null;
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

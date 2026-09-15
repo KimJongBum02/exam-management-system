@@ -1,5 +1,6 @@
 ﻿using NetworkLib; // ExamPhase 사용을 위해 추가
 using ProfessorUI.Service;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -41,14 +42,15 @@ namespace ProfessorUI.ViewModel
             ExamState.StateChanged += () => OnPropertyChanged(nameof(IsContainerEnabled));
         }
 
-        // 학생 PC에 종료 명령을 보낸다.
+        // 학생 PC에 종료 명령을 보낸다. 접속이 끊겨 보내지 못했으면 false.
         // 시험 흔적 삭제는 답안 회신을 받은 학생 쪽에서 이미 진행되므로 여기서는 종료만 지시한다.
-        private static void ShutdownStudentPc(StudentItemViewModel student)
+        private static bool ShutdownStudentPc(StudentItemViewModel student)
         {
-            if (!student.IsConnected || string.IsNullOrEmpty(student.SessionId)) return;
+            if (!student.IsConnected || string.IsNullOrEmpty(student.SessionId)) return false;
 
             NetworkService.Instance.SendToSession(
                 student.SessionId, PacketType.ShutdownPC, System.Array.Empty<byte>());
+            return true;
         }
 
         // 개별 승인 처리
@@ -73,16 +75,31 @@ namespace ProfessorUI.ViewModel
                 return;
             }
 
+            var offline = new List<string>();
             foreach (var student in targets)
             {
-                ShutdownStudentPc(student);
+                if (!ShutdownStudentPc(student))
+                    offline.Add($"{student.StudentId} {student.Name}");
                 student.IsApproved = true;
+                student.IsSelected = false; // 승인한 학생은 더 고를 수 없으므로 체크도 푼다
                 student.Status = "종료";
             }
 
             // 일괄 승인 후 체크박스 해제
             _isAllSelected = false;
             OnPropertyChanged(nameof(IsAllSelected));
+
+            // 표의 비고 칸만 바뀌어서는 승인이 됐는지 알아채기 어렵다. 결과를 창으로 알린다.
+            // 접속이 끊긴 학생에게는 명령이 가지 않으므로 누구인지 따로 적는다.
+            string message = $"{targets.Count}명을 승인했습니다.\n" +
+                             $"{targets.Count - offline.Count}명의 PC에 종료 명령을 보냈습니다.";
+            if (offline.Count > 0)
+                message += $"\n\n접속이 끊겨 종료 명령을 보내지 못한 학생 {offline.Count}명:\n" +
+                           string.Join("\n", offline) +
+                           "\n\n이 학생들의 PC는 자리에서 직접 확인해 주세요.";
+
+            MessageBox.Show(message, "승인 완료", MessageBoxButton.OK,
+                offline.Count > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
         }
 
         // 승인이 끝났다고 해서 상태를 초기화하지 않는다.

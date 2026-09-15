@@ -123,8 +123,13 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBox Grid.Column="0" Style="{StaticResource ReadOnlyBox}"
                                          Text="{Binding FileReady.SelectedFilesSummary, Mode=OneWay}"/>
-                                <Button Grid.Column="1" Content="찾아보기" Style="{StaticResource SecondaryButton}"
-                                        Margin="10,0,0,0" Command="{Binding FileReady.SelectFilesCommand}"/>
+                                <!-- 파일을 몇 개 고르거나, 시험 파일이 담긴 폴더를 통째로 고른다 -->
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0">
+                                    <Button Content="파일 선택" Style="{StaticResource SecondaryButton}"
+                                            Command="{Binding FileReady.SelectFilesCommand}"/>
+                                    <Button Content="폴더 선택" Style="{StaticResource SecondaryButton}"
+                                            Margin="8,0,0,0" Command="{Binding FileReady.SelectFolderCommand}"/>
+                                </StackPanel>
                             </Grid>
 
                             <!-- 어느 폴더에서 가져왔는지. 같은 이름의 파일을 헷갈리지 않으려면 필요하다 -->

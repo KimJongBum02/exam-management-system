@@ -60,6 +60,9 @@ namespace ProfessorUI.Service
 
             student.IsConnected = false;
 
+            // 다시 접속했을 때 시험을 이어 받았는지는 학생의 새 감시 보고로 판단한다.
+            student.ClearMonitorStatus();
+
             // 이미 제출한 학생의 상태는 덮어쓰지 않는다 (제출완료 / 정리실패를 유지).
             if (!student.IsAnswerSubmitted)
                 student.Status = "미제출(연결 끊김)";

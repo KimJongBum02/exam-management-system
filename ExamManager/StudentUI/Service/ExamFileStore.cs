@@ -30,11 +30,39 @@ namespace StudentUI.Service
 
         private string _archiveName = string.Empty;
 
+        // 이번 실행에서 시험 파일을 받았는지.
+        // 받은 파일 이름은 메모리에만 있어서, 프로그램을 다시 켜면 비어 있고
+        // 그동안 ExtractedRoot 는 '시험 파일' 폴더 전체를 가리킨다.
+        public bool HasExamFolder => _archiveName.Length > 0;
+
         private string _archivePath = string.Empty; // 수신된 .7z 임시 경로
         private string _password = string.Empty;    // 교수 PC가 함께 보낸 암호
 
         // 이번 시험의 암호. 답안을 제출할 때 같은 암호로 묶어야 교수가 열 수 있다.
         public string ExamPassword => _password;
+
+        // 이어 받기 기록에 남길 값 (ExamSessionStore 참고)
+        public string ArchiveName => _archiveName;
+        public IReadOnlyList<string> DeliveredFiles => _lastExtracted;
+
+        // 다시 켠 프로그램이 이어 받기 기록으로 진행 중이던 시험 폴더를 되살린다.
+        // 파일은 이미 풀려 있으므로 받은 것·푼 것으로 표시만 한다. 앱이 뜰 때 화면 스레드에서 부른다.
+        public void Resume(string archiveName, string password, IEnumerable<string> delivered)
+        {
+            _archiveName = archiveName;
+            _password = password;
+            _lastExtracted = new List<string>(delivered);
+
+            ExtractedFiles.Clear();
+            foreach (string rel in _lastExtracted)
+                ExtractedFiles.Add(rel);
+
+            FileName = archiveName + ".7z";
+            Progress = 100;
+            IsReceived = true;
+            IsExtracted = true;
+            StatusText = $"이어서 진행 중 · 시험 폴더를 다시 찾았습니다 (파일 {ExtractedFiles.Count}개)";
+        }
         private string _transferId = string.Empty;  // 현재 전송 식별자 (재배포 판별용)
 
         private ExamFileStore() { }

@@ -86,7 +86,9 @@
                     <GridViewColumn Header="승인 대상" Width="90">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
-                                <CheckBox IsChecked="{Binding IsSelected}" Style="{StaticResource CellCheck}"/>
+                                <!-- 미수집·이미 승인한 학생은 고를 수 없게 막는다. 줄은 남겨 수집 현황은 계속 보이게 한다 -->
+                                <CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding CanApprove}"
+                                          Style="{StaticResource CellCheck}"/>
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>

@@ -123,6 +123,27 @@ namespace StudentUI.Service
             OnPropertyChanged(nameof(StatusText));
         }
 
+        // 시험을 시작한 시각. 이어 받기 기록에 남긴다(ExamSessionStore 참고).
+        public DateTime StartedAtUtc => _startedAt;
+
+        // 다시 켠 프로그램이 진행 중이던 시험의 남은 시간을 이어서 센다.
+        // 교수가 이미 시험을 끝냈으면 끝난 상태로만 되돌린다.
+        public void Resume(DateTime startedAtUtc, bool examEnded)
+        {
+            _startedAt = startedAtUtc;
+            if (examEnded)
+            {
+                Finish();
+                return;
+            }
+
+            IsFinished = false;
+            IsRunning = true;
+            _ticker.Start();
+            Tick();
+            OnPropertyChanged(nameof(StatusText));
+        }
+
         // 시험이 끝났다. 교수의 종료 신호나 학생 본인의 제출 완료로 불린다.
         private void Finish()
         {

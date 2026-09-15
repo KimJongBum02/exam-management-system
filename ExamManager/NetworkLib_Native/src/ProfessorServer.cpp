@@ -142,7 +142,10 @@ void ProfessorServer::HeartbeatLoop()
         std::vector<std::shared_ptr<ClientSession>> snapshot = GetSessionSnapshot();
         for (auto& s : snapshot)
         {
-            if (s->IsHeartbeatExpired(15))
+            // 로그인을 거절한 세션도 여기서 닫는다 (HandleLogin 참고)
+            if (s->loginRejected)
+                s->Close(static_cast<int>(DisconnectReason::ClientDisconnected));
+            else if (s->IsHeartbeatExpired(15))
                 s->Close(static_cast<int>(DisconnectReason::HeartbeatTimeout));
         }
     }
@@ -173,8 +176,45 @@ void ProfessorServer::HandleLogin(ClientSession* s, const uint8_t* payload, uint
     if (len < sizeof(LoginPayload)) return;
     const auto* p = reinterpret_cast<const LoginPayload*>(payload);
 
-    s->studentId = p->studentId;
-    s->studentName = p->studentName;
+    // 칸이 가득 차 끝에 0 이 없어도 칸 밖을 읽지 않도록 길이를 잘라 읽는다.
+    std::string studentId(p->studentId, strnlen(p->studentId, sizeof(p->studentId)));
+    std::string studentName(p->studentName, strnlen(p->studentName, sizeof(p->studentName)));
+
+    // 같은 학번이 이미 접속해 있으면 받지 않는다.
+    // 받으면 교수 화면의 한 칸을 두 PC 가 나눠 쓰게 되어 이름이 덮어써지고 연결·답안 상태가 뒤섞인다.
+    // 확인과 등록을 한 번에 잠가, 두 PC 가 동시에 같은 학번으로 들어와도 하나만 받는다.
+    bool duplicate = false;
+    {
+        std::lock_guard<std::mutex> lock(sessionsMutex_);
+        for (auto& [id, other] : sessions_)
+        {
+            if (other.get() != s && other->studentId == studentId)
+            {
+                duplicate = true;
+                break;
+            }
+        }
+        if (!duplicate)
+        {
+            s->studentId = studentId;
+            s->studentName = studentName;
+        }
+    }
+
+    if (duplicate)
+    {
+        // 거절 사유는 코드로만 보낸다. 이 소스에 한글 문자열을 쓰면 인코딩이 깨진다.
+        // 학생 앱이 코드를 보고 안내 문구를 띄운 뒤 연결을 끊는다.
+        // 여기서 바로 닫지는 않는다 — 지금은 이 세션의 수신 스레드 안이라, 닫아서 세션이 사라지면
+        // 돌아간 수신 루프가 없어진 세션을 건드린다. 하트비트 감시가 곧 닫는다(5초 안).
+        LoginResponsePayload resp{};
+        resp.success = 0;
+        strncpy_s(resp.rejectionReason, "DUPLICATE_ID", _TRUNCATE);
+        s->Send(PacketType::LoginResponse, &resp, sizeof(resp));
+        s->loginRejected = true;
+        return;
+    }
+
     s->status = static_cast<uint32_t>(StudentStatus::Connected);
 
     // 로그인 승인 응답 전송

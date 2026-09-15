@@ -80,6 +80,11 @@ namespace StudentUI.Service
             if (!ExamSubmitPayload.TryDecode(payload, payloadLen, out _, out string password, out _))
                 return;
 
+            // 먼저 내고 시험 파일까지 지운 학생에게도 교수의 일괄 수집 요청이 온다.
+            // 그대로 진행하면 묶을 폴더가 없어 '제출 실패' 창이 뜬다. 이미 낸 답안은 교수 PC 에 있으므로 넘어간다.
+            if (State == AnswerSubmitState.Succeeded && !Directory.Exists(ExamFileStore.Instance.ExtractedRoot))
+                return;
+
             // 수신 스레드를 붙잡으면 안 되므로 압축·전송은 따로 돌린다.
             _ = SubmitAsync(password);
         }
@@ -130,6 +135,12 @@ namespace StudentUI.Service
             string? archivePath = null;
             try
             {
+                // 이어 받을 기록 없이 프로그램을 다시 켠 뒤에는 어느 폴더가 이번 시험인지 모른다.
+                // 그대로 묶으면 '시험 파일' 폴더 전체(예전 시험, 같은 PC 의 교수 배포 파일까지)를 보내고,
+                // 교수의 회신을 받은 뒤 그 폴더를 통째로 지운다. 시험 파일을 다시 받을 때까지 제출하지 않는다.
+                if (!ExamFileStore.Instance.HasExamFolder)
+                    return Fail("이번 시험 파일을 받은 기록이 없어 답안 폴더를 찾지 못했습니다. 교수님께 시험 파일 재배포를 요청해 주세요.");
+
                 if (!NetworkService.Instance.IsConnected)
                     return Fail("교수 PC와 연결이 끊어져 있습니다.");
 

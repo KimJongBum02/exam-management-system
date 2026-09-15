@@ -22,6 +22,8 @@ public:
     // ── 상태 ──────────────────────────────────────────────────────
     std::atomic<bool>           alive{ true };
     std::atomic<uint32_t>       status{ 0 };   // StudentStatus
+    // 로그인을 거절한 세션. 하트비트 감시가 닫는다 (ProfessorServer::HandleLogin 참고)
+    std::atomic<bool>           loginRejected{ false };
     std::chrono::steady_clock::time_point lastHeartbeat;
 
     // ── 소켓 ──────────────────────────────────────────────────────

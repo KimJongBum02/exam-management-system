@@ -34,6 +34,21 @@ namespace ProfessorUI
                 {
                     Service.StudentStore.Instance.MarkDisconnected(sid);
                     ViewModel.ScreenMonitoringViewModel.Instance.RemoveStudent(sid);
+
+                    // 시험 중에 끊긴 학생은 교수가 찾아가 봐야 한다. 창이 뒤에 있어도 알 수 있게 한다.
+                    // (로그인을 거절한 접속은 학번이 비어 있다 — 학생이 아니므로 알리지 않는다)
+                    if (Service.ExamState.IsExamStarted && studentId.Length > 0)
+                    {
+                        ExamManager.Shared.UiSignal.FlashTaskbar();
+
+                        // 답안을 내지 않고 끊겼으면 보안 경고로도 남긴다.
+                        // 학생 프로그램이 꺼진 것이라면 인터넷 차단도 함께 풀려 있다(FirewallGuard).
+                        bool submitted = Service.StudentStore.Instance.Students
+                            .Any(s => s.StudentId == studentId && s.IsAnswerSubmitted);
+                        if (!submitted)
+                            Service.AlertStore.Instance.Add(studentId, name,
+                                "시험 중 연결 끊김 (답안 미제출)", Service.AlertKind.Security);
+                    }
                 });
 
             network.PacketReceived += (sid, studentId, name, type, payload, len) =>
@@ -56,13 +71,29 @@ namespace ProfessorUI
                 else if (type == PacketType.MonitorStatusReport &&
                          MonitorStatusPayload.TryDecode(payload, len, out MonitorFlags flags, out string monitorDetail))
                 {
+                    // 답안 제출 뒤 네트워크 차단을 풀었다는 보고. 정상 절차라 경고로 올리지 않는다.
+                    // (아래 감시 상태 보고로 읽으면 두 감시가 모두 꺼진 것으로 보여 잘못된 경고가 뜬다)
+                    if (flags.HasFlag(MonitorFlags.NetworkReleased)) return;
+
                     // 감시가 실제로 켜졌는지 학생이 알려 온다.
                     // 이게 없으면 교수는 감시가 도는 줄 알고 시험을 진행하게 된다.
                     bool processOn = flags.HasFlag(MonitorFlags.ProcessMonitor);
                     bool networkOn = flags.HasFlag(MonitorFlags.NetworkMonitor);
 
-                    PostToUi(() => Service.StudentStore.Instance.MarkMonitorStatus(
-                        studentId, processOn, networkOn, monitorDetail));
+                    PostToUi(() =>
+                    {
+                        Service.StudentStore.Instance.MarkMonitorStatus(studentId, processOn, networkOn, monitorDetail);
+
+                        // 감시가 걸리지 않은 학생은 보안 경고로 올린다. 학생 표에는 감시 칸이 없다.
+                        // 실패 이유는 학생이 차단 실패 때만 적어 보낸다.
+                        if (!networkOn)
+                            Service.AlertStore.Instance.Add(studentId, name,
+                                monitorDetail.Length > 0 ? $"인터넷 차단 실패: {monitorDetail}" : "인터넷 차단 실패",
+                                Service.AlertKind.Security);
+                        if (!processOn)
+                            Service.AlertStore.Instance.Add(studentId, name,
+                                "프로그램 감시를 켜지 못함", Service.AlertKind.Security);
+                    });
                 }
                 else if (type == PacketType.InstalledProgramsReport &&
                          InstalledProgramsPayload.TryDecode(payload, len, out var programs))
@@ -86,7 +117,8 @@ namespace ProfessorUI
                     {
                         if (!isReference)
                             Service.StudentStore.Instance.MarkCheatingDetected(studentId);
-                        Service.AlertStore.Instance.Add(studentId, name, description);
+                        Service.AlertStore.Instance.Add(studentId, name, description,
+                            isReference ? Service.AlertKind.Reference : Service.AlertKind.Cheating);
                     });
                 }
                 else if (type == PacketType.ScreenCapture && len > 0)
@@ -104,8 +136,13 @@ namespace ProfessorUI
 
             // 답안 수집 구독 시작 — 학생이 보낸 답안을 저장하고 확인 회신을 보낸다.
             Service.AnswerCollectService.Instance.Start();
+            // 먼저 제출한 학생이 있으면 교수가 바로 알 수 있게 작업표시줄도 깜빡인다.
             Service.AnswerCollectService.Instance.AnswerCollected += (studentId, savedPath) =>
-                PostToUi(() => Service.StudentStore.Instance.MarkAnswerSubmitted(studentId));
+                PostToUi(() =>
+                {
+                    Service.StudentStore.Instance.MarkAnswerSubmitted(studentId);
+                    ExamManager.Shared.UiSignal.FlashTaskbar();
+                });
 
             // 서버는 앱을 켜는 순간 열어 둔다.
             // 교수가 따로 열어 줄 것이 없어야 학생이 접속하지 못하는 사고가 생기지 않는다.

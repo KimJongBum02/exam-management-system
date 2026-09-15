@@ -127,7 +127,7 @@ struct LoginResponsePayload
 {
     uint8_t success;          // 1=승인, 0=거부
     char    message[128];     // 안내 메시지
-    char    rejectionReason[128]; // 거부 사유 (success=0일 때)
+    char    rejectionReason[128]; // 거부 사유 코드 (success=0일 때). "DUPLICATE_ID" = 같은 학번이 이미 접속 중. 안내 문구는 학생 앱이 만든다
 };
 
 struct DisconnectPayload
