@@ -65,7 +65,7 @@ namespace ProfessorUI.ViewModel
         private uint _lastNoticeId;
 
         // 탭과 무관하게 모아 둔 학생 수신 메시지.
-        // 알림 패널은 "지금 누가 뭐라고 했는지"만 보여 주면 되므로 탭을 나누지 않는다.
+        // 셸은 여기에 새 메시지가 들어오는 것만 보고 작업표시줄을 깜빡인다.
         public ObservableCollection<ChatMessageModel> RecentMessages { get; } = new();
 
         private int _unreadCount;
@@ -74,9 +74,6 @@ namespace ProfessorUI.ViewModel
             get => _unreadCount;
             private set { _unreadCount = value; OnPropertyChanged(); }
         }
-
-        // 알림 패널을 열었을 때 호출한다.
-        public void MarkAllRead() => UnreadCount = 0;
 
         public ChatViewModel()
         {
@@ -204,7 +201,7 @@ namespace ProfessorUI.ViewModel
                         UnreadCount++;
                     }
 
-                    // 상단바 알림 패널이 쓰는 목록. 최근 것이 위로 오게 넣는다.
+                    // 셸이 새 메시지 도착을 알아채는 목록. 최근 것이 위로 오게 넣는다.
                     RecentMessages.Insert(0, new ChatMessageModel
                     {
                         SenderName = $"{studentName}({studentId})",

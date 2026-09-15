@@ -69,7 +69,7 @@ namespace ProfessorUI.ViewModel
         public string MonitorText => !_monitorReported ? "확인 전"
                                    : _processMonitorOn && _networkMonitorOn ? "정상"
                                    : _networkMonitorOn ? "네트워크만"
-                                   : _processMonitorOn ? "프로세스만"
+                                   : _processMonitorOn ? "프로그램만"
                                    : "꺼짐";
 
         public void SetMonitorStatus(bool processOn, bool networkOn, string detail)

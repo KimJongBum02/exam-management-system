@@ -37,7 +37,7 @@ namespace ProfessorUI.View.Professor
 
             MessageBox.Show(
                 $"허용 {ProgramControlStore.WhiteList.Count}개 · 금지 {ProgramControlStore.BlackList.Count}개를 학생 PC에 전달했습니다.",
-                "보안 정책 적용", MessageBoxButton.OK, MessageBoxImage.Information);
+                "프로그램 목록 적용", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void ShowAllAlerts_Click(object sender, RoutedEventArgs e)
@@ -60,7 +60,7 @@ namespace ProfessorUI.View.Professor
                { Owner = Window.GetWindow(this) }.ShowDialog();
 
         private void ShowWhite_Click(object sender, RoutedEventArgs e)
-            => new ProgramListWindow("허용 프로세스 목록", _ctx.WhiteList.WhiteList, _ctx.WhiteList.RemoveCommand)
+            => new ProgramListWindow("허용 프로그램 목록", _ctx.WhiteList.WhiteList, _ctx.WhiteList.RemoveCommand)
                { Owner = Window.GetWindow(this) }.ShowDialog();
 
     }

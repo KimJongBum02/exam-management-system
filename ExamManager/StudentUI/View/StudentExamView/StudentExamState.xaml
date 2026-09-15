@@ -78,6 +78,7 @@
                                     Cursor="Hand">
                                 <Button.Style>
                                     <Style TargetType="Button">
+                                        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
                                         <Setter Property="Template">
                                             <Setter.Value>
                                                 <ControlTemplate TargetType="Button">
@@ -180,6 +181,7 @@
                     Padding="0,12">
                 <Button.Style>
                     <Style TargetType="Button">
+                        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="Button">

@@ -92,7 +92,7 @@
 
         <Grid Grid.Row="2">
 
-            <!-- ═══ 1단계: 시험 준비 — 파일 암호화·압축 + 허용/금지 프로세스 ═══ -->
+            <!-- ═══ 1단계: 시험 준비 — 파일 암호화·압축 + 허용/금지 프로그램 ═══ -->
             <Grid x:Name="Step1Panel">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -104,11 +104,11 @@
                     <TextBlock Text="준비 상태 안내" Style="{StaticResource SectionTitle}"/>
                     <Border Style="{StaticResource Card}" Margin="0,0,0,22">
                         <StackPanel>
-                            <TextBlock Text="현재 단계: 시험 파일 및 보안 정책 준비" Style="{StaticResource Body}" Margin="0,0,0,12"/>
+                            <TextBlock Text="현재 단계: 시험 파일 및 프로그램 목록 준비" Style="{StaticResource Body}" Margin="0,0,0,12"/>
                             <TextBlock Style="{StaticResource Body}" Margin="0,0,0,12"
                                        Text="배포할 시험 파일을 지정하면 암호화·압축된 배포용 파일이 생성됩니다. 서버는 프로그램을 켤 때 이미 열려 있으므로, 학생은 상단의 접속 주소로 언제든 접속할 수 있습니다."/>
                             <TextBlock Style="{StaticResource Body}"
-                                       Text="허용·금지 프로세스 목록은 시험 시작 시 학생 PC에 함께 전달됩니다. 시험 중에도 보안 정책 화면에서 변경할 수 있습니다."/>
+                                       Text="허용·금지 프로그램 목록은 시험 시작 시 학생 PC에 함께 전달됩니다. 시험 중에도 프로그램 관리 화면에서 변경할 수 있습니다."/>
                         </StackPanel>
                     </Border>
 
@@ -177,7 +177,7 @@
 
                     <StackPanel Grid.Row="0" Margin="0,0,0,10">
                         <Grid>
-                            <TextBlock Text="금지 프로세스 목록" Style="{StaticResource SectionTitle}"/>
+                            <TextBlock Text="금지 프로그램 목록" Style="{StaticResource SectionTitle}"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                                 <Button Content="기본값 복원" Style="{StaticResource LinkButton}"
                                         Margin="0,0,12,0" Command="{Binding BlackList.RestoreDefaultsCommand}"/>
@@ -193,7 +193,7 @@
                             </Grid.ColumnDefinitions>
                             <TextBox Grid.Column="0" Style="{StaticResource SearchBox}"
                                      Text="{Binding BlackList.InputProcessName, UpdateSourceTrigger=PropertyChanged}"/>
-                            <Button Grid.Column="1" Content="목록에서 찾기" Style="{StaticResource SecondaryButton}"
+                            <Button Grid.Column="1" Content="찾기" Style="{StaticResource SecondaryButton}"
                                     Margin="10,0,0,0" Click="PickBlack_Click"/>
                             <Button Grid.Column="2" Content="추가" Style="{StaticResource SecondaryButton}"
                                     Margin="8,0,0,0" Command="{Binding BlackList.AddCommand}"/>
@@ -214,7 +214,7 @@
 
                     <StackPanel Grid.Row="2" Margin="0,20,0,10">
                         <Grid>
-                            <TextBlock Text="허용 프로세스 목록" Style="{StaticResource SectionTitle}"/>
+                            <TextBlock Text="허용 프로그램 목록" Style="{StaticResource SectionTitle}"/>
                             <Button Content="전체 삭제" Style="{StaticResource LinkButton}"
                                     HorizontalAlignment="Right" VerticalAlignment="Center"
                                     Command="{Binding WhiteList.ClearAllCommand}"/>
@@ -227,7 +227,7 @@
                             </Grid.ColumnDefinitions>
                             <TextBox Grid.Column="0" Style="{StaticResource SearchBox}"
                                      Text="{Binding WhiteList.InputProcessName, UpdateSourceTrigger=PropertyChanged}"/>
-                            <Button Grid.Column="1" Content="목록에서 찾기" Style="{StaticResource SecondaryButton}"
+                            <Button Grid.Column="1" Content="찾기" Style="{StaticResource SecondaryButton}"
                                     Margin="10,0,0,0" Click="PickWhite_Click"/>
                             <Button Grid.Column="2" Content="추가" Style="{StaticResource SecondaryButton}"
                                     Margin="8,0,0,0" Command="{Binding WhiteList.AddCommand}"/>
@@ -408,7 +408,7 @@
                         <StackPanel>
                             <TextBlock Text="현재 단계: 시험 시작 실행" Style="{StaticResource Body}" Margin="0,0,0,12"/>
                             <TextBlock Style="{StaticResource Body}" Margin="0,0,0,12"
-                                       Text="시험 시작을 실행하면 허용·금지 프로세스 목록이 먼저 전달되고, 이어서 시험 시작 신호와 압축 해제 요청이 전송됩니다."/>
+                                       Text="시험 시작을 실행하면 허용·금지 프로그램 목록이 먼저 전달되고, 이어서 시험 시작 신호와 압축 해제 요청이 전송됩니다."/>
                             <TextBlock Style="{StaticResource Body}"
                                        Text="시작 이후에는 시험 관리 창에서 학생 상태, 부정행위 경고, 채팅, 재배포를 처리합니다."/>
                         </StackPanel>
@@ -427,12 +427,12 @@
                                        Margin="12,0,0,11" TextWrapping="Wrap"/>
 
                             <Grid Style="{StaticResource CheckRow}">
-                                <TextBlock Text="● 허용 프로세스" Style="{StaticResource Body}"/>
+                                <TextBlock Text="● 허용 프로그램" Style="{StaticResource Body}"/>
                                 <TextBlock Text="{Binding WhiteList.WhiteList.Count}" Style="{StaticResource Caption}"
                                            HorizontalAlignment="Right"/>
                             </Grid>
                             <Grid Style="{StaticResource CheckRow}">
-                                <TextBlock Text="● 금지 프로세스" Style="{StaticResource Body}"/>
+                                <TextBlock Text="● 금지 프로그램" Style="{StaticResource Body}"/>
                                 <TextBlock Text="{Binding BlackList.BlackList.Count}" Style="{StaticResource Caption}"
                                            HorizontalAlignment="Right"/>
                             </Grid>

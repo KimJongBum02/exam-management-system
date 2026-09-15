@@ -211,7 +211,11 @@ namespace StudentUI.Service
             try
             {
                 if (Directory.Exists(examFolder))
-                    Directory.Delete(examFolder, true);
+                    ExamFileStore.DeleteFolder(examFolder);
+
+                // 배포받은 원본 .7z(%TEMP%)는 보통 압축을 풀 때 이미 지워진다(ExamFileStore).
+                // 풀기에 실패한 채 제출한 경우에 남으므로 여기서 한 번 더 지운다.
+                ExamFileStore.Instance.DeleteArchive();
 
                 // 지웠다는 사실도 교수에게 알린다.
                 // 실패만 알리면, 학생 PC가 보고 전에 꺼졌을 때 교수 화면에는

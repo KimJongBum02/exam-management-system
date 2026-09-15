@@ -26,7 +26,7 @@ namespace ProfessorUI.ViewModel
 
         // 기본으로 들어 있는 항목과 교수가 직접 넣은 항목을 따로 보여 준다.
         // 저장은 한 목록(ProgramControlStore.BlackList) 그대로이고 보여 줄 때만 가른다.
-        // 시험 준비·보안 정책 두 화면이 이 뷰모델 하나를 함께 쓰므로 여기서 한 번만 만든다.
+        // 시험 준비·프로그램 관리 두 화면이 이 뷰모델 하나를 함께 쓰므로 여기서 한 번만 만든다.
         public ICollectionView DefaultItems { get; }
         public ICollectionView AddedItems { get; }
 
@@ -100,7 +100,7 @@ namespace ProfessorUI.ViewModel
         {
             if (BlackList.Count == 0) return;
 
-            var result = MessageBox.Show("금지 프로세스 목록을 모두 비우시겠습니까?", "전체 삭제 확인",
+            var result = MessageBox.Show("금지 프로그램 목록을 모두 비우시겠습니까?", "전체 삭제 확인",
                                          MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (result == MessageBoxResult.Yes)
             {

@@ -7,7 +7,7 @@ using ProfessorUI.ViewModel;
 
 namespace ProfessorUI.View.Professor
 {
-    // 시험 진행 중 허브 화면. 경고 상세 / 보안 정책 / 종료 화면으로 갈라진다.
+    // 시험 진행 중 허브 화면. 경고 상세 / 프로그램 관리 / 종료 화면으로 갈라진다.
     public partial class ExamManagePage : UserControl
     {
         private readonly UiContext _ctx = UiContext.Instance;

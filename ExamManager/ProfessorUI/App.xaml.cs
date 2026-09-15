@@ -16,6 +16,11 @@ namespace ProfessorUI
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+            // 키보드 포커스 점선 사각형을 앱 전체에서 끈다.
+            // 알트탭처럼 키보드를 쓴 뒤 창으로 돌아오면 마지막에 누른 버튼·메뉴·스크롤 영역에 점선이 생긴다.
+            // 스타일마다 막으면 빠지는 곳이 생겨, 화면에 올라오는 모든 요소에서 한 번에 끈다.
+            EventManager.RegisterClassHandler(typeof(FrameworkElement), FrameworkElement.LoadedEvent,
+                new RoutedEventHandler((s, _) => ((FrameworkElement)s).FocusVisualStyle = null));
             // 소프트웨어 렌더링(CPU)으로 강제 전환하여 그래픽 깨짐 방지
             System.Windows.Media.RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;
             // ── 서버 시작 및 학생 접속/응답 이벤트를 현황판(StudentStore)에 연동 ──

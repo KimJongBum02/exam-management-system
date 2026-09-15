@@ -134,7 +134,7 @@ namespace ProfessorUI.View.Professor
                { Owner = Window.GetWindow(this) }.ShowDialog();
 
         private void ShowWhite_Click(object sender, RoutedEventArgs e)
-            => new ProgramListWindow("허용 프로세스 목록", _ctx.WhiteList.WhiteList, _ctx.WhiteList.RemoveCommand)
+            => new ProgramListWindow("허용 프로그램 목록", _ctx.WhiteList.WhiteList, _ctx.WhiteList.RemoveCommand)
                { Owner = Window.GetWindow(this) }.ShowDialog();
     }
 }

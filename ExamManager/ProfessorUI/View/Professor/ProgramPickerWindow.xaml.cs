@@ -35,7 +35,7 @@ namespace ProfessorUI.View.Professor
         private ICollectionView? _view;
 
         // 창을 띄우고 고른 것을 허용·금지 목록에 넣는다.
-        // 보안 정책 화면과 마법사 1단계가 같은 방식으로 부른다.
+        // 프로그램 관리 화면과 마법사 1단계가 같은 방식으로 부른다.
         public static void PickInto(DependencyObject caller, bool toWhiteList)
         {
             var target = toWhiteList ? ProgramControlStore.WhiteList : ProgramControlStore.BlackList;
