@@ -23,7 +23,12 @@ namespace ProfessorUI.ViewModel
         // 현황판 학생과 매핑하기 위한 학번
         public string StudentId { get; set; } = string.Empty;
 
-        public string Name { get; set; } = string.Empty;
+        private string _name = string.Empty;
+        public string Name
+        {
+            get => _name;
+            set { _name = value; OnPropertyChanged(); }
+        }
 
         private int _progressValue = 0;
         public int ProgressValue
@@ -170,14 +175,24 @@ namespace ProfessorUI.ViewModel
             CommandManager.InvalidateRequerySuggested();
         }
 
-        private static StudentItem CreateRow(StudentItemViewModel student) => new StudentItem
+        private static StudentItem CreateRow(StudentItemViewModel student)
         {
-            StudentId = student.StudentId,
-            Name = student.Name,
-            IsSelected = true,
-            ProgressValue = 0,
-            StatusText = "대기 중"
-        };
+            var row = new StudentItem
+            {
+                StudentId = student.StudentId,
+                Name = student.Name,
+                IsSelected = true,
+                ProgressValue = 0,
+                StatusText = "대기 중"
+            };
+
+            // 같은 학번이 연결이 끊긴 뒤 다른 이름으로 다시 들어오면 현황판 이름이 바뀐다. 배포 목록도 따라간다.
+            student.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(StudentItemViewModel.Name)) row.Name = student.Name;
+            };
+            return row;
+        }
 
         // 현황판에 학생이 추가/삭제될 때 배포 목록도 함께 갱신
         private void OnStoreStudentsChanged(object? sender, NotifyCollectionChangedEventArgs e)

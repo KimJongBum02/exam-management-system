@@ -467,6 +467,37 @@ namespace NetworkLib
     }
 
     // ══════════════════════════════════════════════════════════════════
+    //  LoginResponse(2) 페이로드 — 교수 PC 의 로그인 승인·거절
+    //
+    //  Protocol.h 의 LoginResponsePayload 와 같은 형식(고정 257바이트):
+    //    [uint8 success][char message[128]][char rejectionReason[128]]
+    //  거절 사유는 코드로 온다(네이티브 소스에 한글 문자열을 쓰지 않기 위해). 안내 문구는 학생 앱이 만든다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class LoginResponsePayload
+    {
+        // 같은 학번이 이미 접속해 있다
+        public const string DuplicateStudentId = "DUPLICATE_ID";
+
+        private const int ReasonOffset = 1 + 128;
+        private const int ReasonSize   = 128;
+        public  const int Size         = ReasonOffset + ReasonSize;   // 257
+
+        public static bool TryDecode(IntPtr payload, uint payloadLen, out bool success, out string reason)
+        {
+            success = false;
+            reason = "";
+            if (payload == IntPtr.Zero || payloadLen < Size) return false;
+
+            byte[] buffer = new byte[Size];
+            Marshal.Copy(payload, buffer, 0, Size);
+
+            success = buffer[0] == 1;
+            reason = ExamSubmitPayload.ReadFixedString(buffer, ReasonOffset, ReasonSize);
+            return true;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
     //  ChatBroadcast(60) 페이로드 — 번호를 붙인 전체 공지
     //
     //  Protocol.h 의 ChatBroadcastPayload(char message[512]) 뒤에 공지 번호를 붙인다:

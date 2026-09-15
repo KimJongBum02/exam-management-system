@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Input;
 
@@ -68,7 +69,10 @@ namespace StudentUI.ViewModel
                    "같은 학번으로 로그인해 주세요.";
         }
 
-        public void CompleteLogin()
+        // 이름은 완성된 한글만 받는다. 영문·숫자·공백·자모 낱자(ㄱ, ㅏ)는 받지 않는다.
+        private static bool IsKoreanName(string name) => Regex.IsMatch(name, "^[가-힣]+$");
+
+        public async Task CompleteLogin()
         {
             // IP 입력이 끝난 시점에 실제 서버로 연결을 시도한다.
             bool connected = NetworkService.Instance.Connect(Student.IPAddress);
@@ -79,11 +83,49 @@ namespace StudentUI.ViewModel
                 return;
             }
 
+            // 교수 PC 의 승인·거절을 기다린다. 회신이 빨리 오므로 로그인 패킷보다 먼저 구독해 둔다.
+            var response = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+            void OnPacket(PacketType type, IntPtr payload, uint payloadLen)
+            {
+                if (type == PacketType.LoginResponse &&
+                    LoginResponsePayload.TryDecode(payload, payloadLen, out bool approved, out string reason))
+                    response.TrySetResult(approved ? null : reason);
+            }
+            NetworkService.Instance.PacketReceived += OnPacket;
+
             // 학번(16바이트) + 이름을 담은 로그인 패킷 전송 → 교수 PC 현황판에 표시됨
             byte[] loginPayload = new byte[80];
             Encoding.UTF8.GetBytes(Student.StudentNumber).CopyTo(loginPayload, 0);
             Encoding.UTF8.GetBytes(Student.StudentName).CopyTo(loginPayload, 16);
             NetworkService.Instance.SendPacket(PacketType.StudentLogin, loginPayload);
+
+            // 회신이 오지 않으면 승인된 것으로 보고 넘어간다. 회신 하나 때문에 로그인이 막히지 않게 한다.
+            Task finished = await Task.WhenAny(response.Task, Task.Delay(TimeSpan.FromSeconds(3)));
+            NetworkService.Instance.PacketReceived -= OnPacket;
+            string? rejection = finished == response.Task ? response.Task.Result : null;
+
+            // 같은 학번이 이미 접속해 있으면 교수 PC 가 받지 않는다(ProfessorServer::HandleLogin).
+            // 연결을 끊고 로그인 화면에 머문다.
+            if (rejection != null)
+            {
+                NetworkService.Instance.Disconnect();
+
+                if (rejection == LoginResponsePayload.DuplicateStudentId)
+                {
+                    NumberError = "이미 접속 중인 학번입니다.";
+                    MessageBox.Show(
+                        $"학번 {Student.StudentNumber}(으)로 이미 접속한 학생이 있어 들어갈 수 없습니다.\n" +
+                        "학번을 다시 확인해 주세요.\n\n" +
+                        "방금 연결이 끊겨 다시 들어오는 중이라면 20초쯤 뒤에 다시 시도해 주세요.",
+                        "로그인 거절", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                else
+                {
+                    MessageBox.Show($"교수님 PC가 접속을 받지 않았습니다. ({rejection})",
+                                    "로그인 거절", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                return;
+            }
 
             // 이 PC 에 설치된 프로그램 목록을 보낸다. 교수의 프로그램 선택창에 강의실 PC 것도 뜨게 한다.
             // 로그인 패킷 뒤에 보내야 한다 — 교수 PC 는 로그인 전에 온 패킷을 버린다.
@@ -105,6 +147,8 @@ namespace StudentUI.ViewModel
             // 이름 검증
             if (string.IsNullOrEmpty(Student.StudentName))
                 NameError = "이름을 입력해 주세요.";
+            else if (!IsKoreanName(Student.StudentName))
+                NameError = "이름은 한글로만 입력해 주세요.";
             else
                 NameError = string.Empty;
 
@@ -119,7 +163,7 @@ namespace StudentUI.ViewModel
 
         public bool TryLogin()
         {
-            if (string.IsNullOrEmpty(Student.StudentName))
+            if (string.IsNullOrEmpty(Student.StudentName) || !IsKoreanName(Student.StudentName))
                 return false;
 
             if (string.IsNullOrEmpty(Student.StudentNumber) || Student.StudentNumber.Length != 9)
