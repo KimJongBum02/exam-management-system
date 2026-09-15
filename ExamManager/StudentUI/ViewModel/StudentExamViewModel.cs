@@ -175,6 +175,7 @@ namespace StudentUI.ViewModel
 
                 AnswerSubmitService.Instance.StateChanged += OnSubmitStateChanged;
                 ExamMonitorService.Instance.CheatWarning += OnCheatWarning;
+                ExamMonitorService.Instance.NetworkStateChanged += RefreshStatusItems;
 
                 IsConnected = NetworkService.Instance.IsConnected;
                 NetworkService.Instance.Disconnected += OnServerDisconnected;
@@ -312,6 +313,35 @@ namespace StudentUI.ViewModel
                         Description = "비인가 프로그램 및 생성형 AI 사이트 접근이 실시간 감시/차단됩니다.",
                         TimeOrNote = isSecure ? "정상" : "점검 필요"
                     });
+
+                    // 5. 인터넷 차단
+                    // 사이트는 "오프라인입니다"라고만 해서 학생이 인터넷이 끊긴 줄 안다. 막은 것임을 여기서 알린다.
+                    // '차단 중'은 시험 중 정상 상태지만 초록(Success)으로 두면 '인터넷 정상'으로 읽혀 안내(Info)로 둔다.
+                    var (networkStatus, networkLevel, networkDescription, networkNote) = ExamMonitorService.Instance.NetworkState switch
+                    {
+                        NetworkBlockState.Blocked  => ("차단 중", "Info",
+                                                       "시험 중에는 교수님 PC 외의 인터넷이 막힙니다. 사이트가 '오프라인'으로 보이는 것은 정상이며, 답안을 제출하면 자동으로 풀립니다.",
+                                                       "답안 제출 후 자동 해제"),
+                        NetworkBlockState.Released => ("해제됨", "Success",
+                                                       "답안 제출이 끝나 인터넷 차단이 풀렸습니다.",
+                                                       "답안 제출 완료"),
+                        NetworkBlockState.Failed   => ("적용 실패", "Warning",
+                                                       "인터넷 차단을 적용하지 못했습니다. 교수님 PC에 자동으로 보고되었습니다.",
+                                                       "교수님 PC에 보고됨"),
+                        _                          => ("시험 시작 시 적용", "Normal",
+                                                       "시험이 시작되면 교수님 PC 연결을 제외한 인터넷이 차단됩니다.",
+                                                       "-"),
+                    };
+                    StatusItems.Add(new ExamFileStatusItem
+                    {
+                        Icon = "🌐",
+                        Category = "인터넷",
+                        Name = "외부 인터넷 차단 (교수님 PC 연결만 허용)",
+                        Status = networkStatus,
+                        StatusLevel = networkLevel,
+                        Description = networkDescription,
+                        TimeOrNote = networkNote
+                    });
                 });
             }
 
@@ -358,6 +388,7 @@ namespace StudentUI.ViewModel
                 NetworkService.Instance.PacketReceived -= OnPacketReceived;
                 AnswerSubmitService.Instance.StateChanged -= OnSubmitStateChanged;
                 ExamMonitorService.Instance.CheatWarning -= OnCheatWarning;
+                ExamMonitorService.Instance.NetworkStateChanged -= RefreshStatusItems;
             }
 
             // 교수 PC의 시험 단계 알림 수신

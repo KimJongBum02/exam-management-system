@@ -6,6 +6,15 @@ using System.Text;
 
 namespace StudentUI.Service
 {
+    // 학생 화면에 보이는 네트워크 차단 상태.
+    public enum NetworkBlockState
+    {
+        NotApplied, // 시험 시작 전
+        Blocked,    // 교수 PC 연결만 남기고 막는 중
+        Failed,     // 막지 못함 — 사유는 교수 화면에 보고됨
+        Released,   // 답안 제출 뒤 풀림
+    }
+
     // 교수 PC의 명령에 맞춰 프로세스 감시를 켜고, 적발 내용을 교수 PC로 되돌려 보낸다.
     //
     // 교수 PC에서 오는 패킷 세 가지를 순서대로 처리한다.
@@ -13,8 +22,9 @@ namespace StudentUI.Service
     //   ② ExtractArchive    — 시험 시작. 압축 해제가 끝난 뒤에 감시를 켠다.
     //   ③ ExamPhaseChange   — 시험 종료. 감시를 멈춘다.
     //
-    // 프로세스 감시와 네트워크 감시를 같은 자리에서 켜고 끈다.
-    // 교수가 따로 누를 것이 없도록 시험 시작·종료 신호에 그대로 묶었다.
+    // 프로세스 감시와 네트워크 차단을 같은 자리에서 켠다.
+    // 교수가 따로 누를 것이 없도록 시험 시작 신호에 그대로 묶었다.
+    // 푸는 시점은 다르다. 프로세스 감시는 시험 종료(③)에, 네트워크 차단은 답안 제출이 끝난 뒤에 푼다.
     //
     // ②에서 '해제가 끝난 뒤'가 중요하다. 감시를 먼저 켜면 압축 해제에 쓰는
     // 7za.exe가 시험 중 새로 실행된 프로그램으로 적발된다.
@@ -30,24 +40,32 @@ namespace StudentUI.Service
         public event Action<string>? CheatWarning;
         // 네이티브 감시 DLL 래퍼. 시험이 시작될 때 처음 만들어진다(EnsureProcessControl 참고).
         private ProcessControlService? _processControl;
-        private NetworkControlService? _networkControl;
 
-        // 교수 UI 에서 도메인 목록을 보낼 방법이 아직 없어 여기에 둔다.
-        // 프로토콜에 도메인 목록 패킷이 생기면 이 상수는 지우고 받은 값을 쓰면 된다.
-        private static readonly string[] DefaultBlockedDomains =
+        // 마지막으로 받은 감시 목록. 이어 받기 기록에 함께 남긴다 — 다시 켜면 교수가 목록을 다시 보내지 않는다.
+        private List<string> _whitelist = new();
+        private List<string> _blacklist = new();
+
+        // 다시 켠 프로그램이 이어 받을 시험. 로그인이 끝나면 감시와 차단을 다시 건다(OnLoggedIn).
+        // 로그인 화면은 이 값으로 같은 학번인지 확인한다.
+        private ExamSessionStore.ExamSession? _resumeSession;
+        public ExamSessionStore.ExamSession? PendingResume => _resumeSession;
+
+        // 로그인한 학생. 이어 받기 기록에 함께 남긴다.
+        private string _studentNumber = string.Empty;
+        private string _studentName = string.Empty;
+
+        // 네트워크 차단에서 뺄 교수 PC 주소. 로그인 때 접속한 주소를 그대로 쓴다.
+        private string _professorIp = string.Empty;
+
+        // 학생 화면의 '인터넷' 줄이 보여 줄 상태. 사이트가 안 열리는 이유를 학생이 알 수 있게 한다.
+        public NetworkBlockState NetworkState { get; private set; } = NetworkBlockState.NotApplied;
+        public event Action? NetworkStateChanged;
+
+        private void SetNetworkState(NetworkBlockState state)
         {
-            "chatgpt.com", "openai.com", "claude.ai", "anthropic.com",
-            "gemini.google.com", "bard.google.com", "copilot.microsoft.com",
-            "perplexity.ai", "wrtn.ai", "poe.com",
-
-            // 명령줄 AI 도구와 편집기 확장이 부르는 API 주소.
-            // node.exe 나 허용된 편집기(VS Code) 안에서 돌아 프로세스 감시로는 잡을 수 없다.
-            // googleapis.com 을 통째로 막으면 크롬 업데이트 같은 다른 구글 서비스까지 끊겨 필요한 것만 적는다.
-            "generativelanguage.googleapis.com",    // Gemini API (API 키로 쓸 때)
-            "cloudcode-pa.googleapis.com",          // Gemini CLI · Gemini Code Assist (구글 계정으로 쓸 때)
-            "githubcopilot.com",                    // GitHub Copilot (VS Code 확장 포함)
-            "copilot-proxy.githubusercontent.com",  // GitHub Copilot 옛 경로
-        };
+            NetworkState = state;
+            NetworkStateChanged?.Invoke();
+        }
 
         private ExamMonitorService() { }
 
@@ -55,7 +73,9 @@ namespace StudentUI.Service
         public void Start()
         {
             NetworkService.Instance.PacketReceived += OnPacketReceived;
+            NetworkService.Instance.Connected += (ip, _) => _professorIp = ip;
             ExamFileStore.Instance.ExamStartHandled += OnExamStartHandled;
+            AnswerSubmitService.Instance.StateChanged += OnSubmitStateChanged;
         }
 
         private void OnPacketReceived(PacketType type, IntPtr payload, uint payloadLen)
@@ -74,6 +94,17 @@ namespace StudentUI.Service
                                               out List<string> blacklist))
                 return;
 
+            _whitelist = whitelist;
+            _blacklist = blacklist;
+
+            // 시험 중에 목록이 바뀌면(보안 정책 [적용]) 이어 받기 기록도 맞춘다.
+            if (ExamSessionStore.Load() is { } session)
+            {
+                session.Whitelist = whitelist;
+                session.Blacklist = blacklist;
+                ExamSessionStore.Save(session);
+            }
+
             ProcessControlService? processControl = EnsureProcessControl();
             if (processControl == null) return;
 
@@ -86,8 +117,63 @@ namespace StudentUI.Service
         private void OnExamStartHandled()
         {
             bool processOn = EnsureProcessControl()?.StartMonitoring() ?? false;
-            bool networkOn = StartNetworkMonitoring();
+            bool networkOn = ApplyNetworkBlock();
 
+            ReportMonitorStatus(processOn, networkOn);
+
+            // 도중에 프로그램이 꺼져도 이어서 치를 수 있게 남겨 둔다.
+            // 압축이 풀린 뒤라 암호를 적어 둬도 먼저 볼 수 있는 것이 없다.
+            var files = ExamFileStore.Instance;
+            if (files.HasExamFolder && files.IsExtracted)
+            {
+                ExamSessionStore.Save(new ExamSessionStore.ExamSession
+                {
+                    StudentNumber = _studentNumber,
+                    StudentName = _studentName,
+                    ArchiveName = files.ArchiveName,
+                    Password = files.ExamPassword,
+                    DeliveredFiles = new List<string>(files.DeliveredFiles),
+                    Whitelist = _whitelist,
+                    Blacklist = _blacklist,
+                    StartedAtUtc = ExamTimeStore.Instance.IsRunning ? ExamTimeStore.Instance.StartedAtUtc : DateTime.UtcNow,
+                });
+            }
+        }
+
+        // ── 이어 받기 ── (ExamSessionStore 참고)
+        // 앱이 뜰 때 부른다. 차단은 켜질 때 이미 풀었다(App.OnStartup).
+        // 감시와 차단은 같은 학번으로 교수에게 다시 로그인한 뒤에 새로 건다.
+        public void ResumeFromSession(ExamSessionStore.ExamSession session)
+        {
+            _resumeSession = session;
+            _whitelist = session.Whitelist;
+            _blacklist = session.Blacklist;
+        }
+
+        // 로그인 패킷을 보낸 뒤 부른다. 누가 로그인했는지 기억해 두고(이어 받기 기록용),
+        // 이어 받을 시험이 있으면 감시와 차단을 다시 건다.
+        // 교수 PC 는 로그인 전에 온 패킷을 버리므로 감시 보고는 이때 해야 한다.
+        // 교수 PC 주소가 바뀌었을 수 있어 차단은 새 주소로 다시 건다.
+        // 교수가 이미 시험을 끝냈으면 감시는 켜지 않고 차단만 유지한 채 답안 제출을 기다린다.
+        public void OnLoggedIn(string studentNumber, string studentName)
+        {
+            _studentNumber = studentNumber;
+            _studentName = studentName;
+
+            var session = _resumeSession;
+            if (session == null) return;
+            _resumeSession = null;
+
+            bool processOn = false;
+            if (!session.ExamEnded)
+            {
+                ProcessControlService? processControl = EnsureProcessControl();
+                processControl?.SetWhitelist(string.Join("|", _whitelist));
+                processControl?.SetBlacklist(string.Join("|", _blacklist));
+                processOn = processControl?.StartMonitoring() ?? false;
+            }
+
+            bool networkOn = ApplyNetworkBlock();
             ReportMonitorStatus(processOn, networkOn);
         }
 
@@ -106,42 +192,16 @@ namespace StudentUI.Service
         // 감시를 켜지 못한 이유. 교수 화면에 그대로 보인다.
         private string _monitorFailReason = string.Empty;
 
-        // DNS 를 127.0.0.1 로 돌려 놓아야 조회가 감시로 들어온다.
-        // 전환에 실패하면 감시를 켜 봐야 아무것도 잡히지 않으므로 시작하지 않는다.
-        private bool StartNetworkMonitoring()
+        // 교수 PC 연결만 남기고 바깥 통신을 막는다 (FirewallPolicyService 참고).
+        private bool ApplyNetworkBlock()
         {
-            NetworkControlService? networkControl = EnsureNetworkControl();
-            if (networkControl == null)
-            {
-                _monitorFailReason = "감시 모듈을 불러오지 못함 (NetworkControl.dll)";
-                return false;
-            }
+            string? failReason = FirewallPolicyService.Apply(_professorIp);
+            _monitorFailReason = failReason ?? string.Empty;
+            SetNetworkState(failReason == null ? NetworkBlockState.Blocked : NetworkBlockState.Failed);
 
-            string? upstream = DnsRedirectService.Apply();
-            if (upstream == null)
-            {
-                _monitorFailReason = DnsRedirectService.IsAdministrator()
-                    ? "DNS 전환 실패 (네트워크 어댑터를 찾지 못함)"
-                    : "관리자 권한 없음 — DNS 를 바꿀 수 없음";
-                System.Diagnostics.Debug.WriteLine("DNS 전환에 실패해 네트워크 감시를 켜지 않습니다.");
-                return false;
-            }
-
-            // 조회를 원래 DNS 로 넘겨 준다. 감시는 하되 인터넷은 그대로 되게 하기 위함이다.
-            networkControl.SetUpstream(upstream);
-            networkControl.SetTargetDomains(string.Join("|", DefaultBlockedDomains));
-
-            if (!networkControl.StartMonitoring())
-            {
-                // 켜지 못했으면 DNS 를 그대로 둘 수 없다. 되돌리지 않으면 인터넷이 끊긴다.
-                System.Diagnostics.Debug.WriteLine("네트워크 감시를 켜지 못해 DNS 를 되돌립니다.");
-                DnsRedirectService.Restore();
-                _monitorFailReason = "감시를 시작하지 못함 (127.0.0.1:53 을 다른 프로그램이 쓰는 중)";
-                return false;
-            }
-
-            _monitorFailReason = string.Empty;
-            return true;
+            // 앱이 강제로 끝나도 차단이 남지 않게 지킴이를 띄운다(FirewallGuard 참고).
+            if (failReason == null) FirewallGuard.Start();
+            return failReason == null;
         }
 
         // ── ③ 시험 종료 → 감시 중지 ──
@@ -160,10 +220,37 @@ namespace StudentUI.Service
             // 멈추자고 네이티브 DLL을 새로 불러올 이유가 없다.
             _processControl?.StopMonitoring();
 
-            // 네트워크 감시를 멈추고 DNS 를 원래대로 돌린다.
-            // 이걸 빠뜨리면 시험이 끝난 뒤에도 학생 PC 의 DNS 가 127.0.0.1 로 남는다.
-            _networkControl?.StopMonitoring();
-            DnsRedirectService.Restore();
+            // 이어 받기 기록에도 끝났음을 남긴다. 다시 켜도 감시는 켜지 않고 답안 제출만 기다린다.
+            if (ExamSessionStore.Load() is { } session && !session.ExamEnded)
+            {
+                session.ExamEnded = true;
+                ExamSessionStore.Save(session);
+            }
+
+            // 네트워크 차단은 여기서 풀지 않는다(OnSubmitStateChanged 참고).
+        }
+
+        // ── 답안 제출이 끝나면 네트워크 차단을 푼다 ──
+        // 시험 종료에서 풀면, 교수가 답안을 걷기 전까지 답안 폴더가 학생 PC 에 남은 채로 인터넷이 열린다.
+        // 답안 전송은 교수 PC 로 가는 연결이라 차단 중에도 된다.
+        //
+        // 풀었으면 교수에게도 알린다. 교수 표의 '인터넷' 칸이 이 보고로 '해제됨'이 된다.
+        // 제출 성공은 두 번 올라올 수 있어(시험 파일 삭제 실패 시) 막혀 있을 때만 푼다.
+        //
+        // 제출이 끝나면 이 학생의 시험도 끝이다. 이어 받을 기록도 지운다.
+        private void OnSubmitStateChanged(AnswerSubmitState state, string message)
+        {
+            if (state != AnswerSubmitState.Succeeded) return;
+
+            _resumeSession = null;
+            ExamSessionStore.Clear();
+
+            if (NetworkState != NetworkBlockState.Blocked) return;
+            if (!FirewallPolicyService.Restore()) return;
+
+            SetNetworkState(NetworkBlockState.Released);
+            NetworkService.Instance.SendPacket(PacketType.MonitorStatusReport,
+                MonitorStatusPayload.Encode(MonitorFlags.NetworkReleased));
         }
 
         // 네이티브 DLL은 여기서 처음 불린다.
@@ -187,37 +274,6 @@ namespace StudentUI.Service
             }
 
             return _processControl;
-        }
-
-        // 프로세스 감시와 같은 이유로 시험이 시작될 때 처음 만든다.
-        private NetworkControlService? EnsureNetworkControl()
-        {
-            if (_networkControl != null) return _networkControl;
-
-            try
-            {
-                NetworkControlService networkControl = new NetworkControlService();
-                networkControl.UnauthorizedDomainDetected += OnDomainDetected;
-                _networkControl = networkControl;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"네트워크 감시를 시작하지 못했습니다: {ex.Message}");
-            }
-
-            return _networkControl;
-        }
-
-        // 금지 도메인 조회를 잡았을 때. 프로세스 적발과 같은 경로로 보고한다.
-        // 조회 자체는 네이티브가 "그런 주소 없음"으로 답해 매번 막고, 여기서는 시도한 사실을 알린다.
-        // 알림은 도메인마다 한 번만 올라온다(NetworkMonitor 참고). 학생 쪽 화면 안내도 같은 문구를 쓴다.
-        private void OnDomainDetected(string domain)
-        {
-            string description = $"금지된 사이트 접속 시도: {domain}";
-
-            NetworkService.Instance.SendPacket(PacketType.CheatingAlert,
-                BuildAlertPayload(CheatingAlertType.NetworkAccessAttempt, description));
-            CheatWarning?.Invoke(description);
         }
 
         // ── ③ 적발 내용을 교수 PC로 보고하고, 학생 화면에도 알린다 ──
@@ -268,12 +324,9 @@ namespace StudentUI.Service
             _processControl?.Dispose();
             _processControl = null;
 
-            _networkControl?.Dispose();
-            _networkControl = null;
-
-            // 정상 종료 경로에서도 DNS 를 반드시 되돌린다.
-            // 시험 종료 신호를 못 받고 앱이 닫히는 경우가 여기에 걸린다.
-            DnsRedirectService.Restore();
+            // 어떤 경로로 끝나든 네트워크 차단을 푼다. 시험 중이어도 예외 없다 —
+            // 차단이 남으면 그 PC 가 인터넷을 잃는다. 이어 치를 때는 같은 학번으로 다시 로그인하면 새로 건다.
+            FirewallPolicyService.Restore();
         }
     }
 }

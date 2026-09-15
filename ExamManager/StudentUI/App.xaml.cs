@@ -19,12 +19,26 @@ namespace StudentUI
         {
             base.OnStartup(e);
 
+            // 방화벽 지킴이로 켜진 경우(FirewallGuard 참고). 창을 띄우지 않고, 학생 앱이 끝나면 차단을 풀고 끝난다.
+            // 아래의 시작 청소보다 먼저 봐야 한다 — 지킴이가 켜지자마자 방금 건 차단을 풀면 안 된다.
+            if (Service.FirewallGuard.RunIfRequested(e.Args))
+            {
+                Environment.Exit(0);
+                return;
+            }
+
             // 윈도우 전환 시 앱이 종료되지 않도록 명시적 종료 모드 설정
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
             // 지난 시험이 DNS 를 되돌리지 못하고 끝났으면 지금 되돌린다.
             // 이 안전장치가 없으면 그 PC 는 인터넷이 되지 않는 채로 남는다.
+            // (예전 DNS 방식 배포판이 남긴 흔적용. 강의실 PC 가 모두 새 판으로 바뀌면 지운다)
             Service.DnsRedirectService.RestoreIfLeftOver();
+
+            // 방화벽 차단도 마찬가지다. 지난번에 풀지 못하고 끝났으면 켜자마자 푼다.
+            // 진행 중이던 시험이 있어도 예외 없이 푼다 — 차단은 같은 학번으로 다시 로그인한 뒤 새로 건다.
+            Service.FirewallPolicyService.Restore();
+            var examSession = Service.ExamSessionStore.Load();
 
             RegisterShutdownGuards();
 
@@ -45,6 +59,15 @@ namespace StudentUI
             Service.ExamTimeStore.Instance.Start();
             // 답안 제출 구독 시작 — 교수의 수집 요청을 기다린다.
             Service.AnswerSubmitService.Instance.Start();
+
+            // 진행 중이던 시험이 있으면 되살린다. 시험 폴더·암호·남은 시간은 바로,
+            // 감시와 차단은 같은 학번으로 다시 로그인한 뒤에 건다(LoginViewModel).
+            if (examSession != null)
+            {
+                Service.ExamFileStore.Instance.Resume(examSession.ArchiveName, examSession.Password, examSession.DeliveredFiles);
+                Service.ExamTimeStore.Instance.Resume(examSession.StartedAtUtc, examSession.ExamEnded);
+                Service.ExamMonitorService.Instance.ResumeFromSession(examSession);
+            }
 
             // OX 퀴즈 구독 시작 — 교수가 낸 문제를 기다린다.
             // 수업 중 이해도 확인에도 쓰는 기능이라 시험 화면에 묶지 않고 여기서 받는다.
@@ -135,10 +158,10 @@ namespace StudentUI
             Shutdown();
         }
 
-        // 어떤 경로로 끝나든 감시를 끄고 DNS 를 되돌린다.
+        // 어떤 경로로 끝나든 프로세스 감시를 끄고 네트워크 차단을 푼다. 시험 중이어도 예외 없다.
         //
-        // 이 PC 는 시험 중 DNS 가 127.0.0.1 로 바뀌어 있다. 되돌리지 못한 채 끝나면
-        // 감시 프로그램이 없는 그 주소를 계속 가리켜, 학생 PC 는 인터넷이 되지 않는다.
+        // 차단이 남으면 그 PC 는 인터넷이 되지 않는다. 강제 종료처럼 이 코드가 아예 돌지 못하는
+        // 경우는 지킴이(FirewallGuard)가 푼다. 프로세스 감시는 앱과 함께 사라지므로 따로 챙길 것이 없다.
         // 시험이 끝난 강의실 PC 가 먹통으로 남는 것이 가장 나쁜 결과라 경로마다 막아 둔다.
         //
         // OnExit 하나로는 부족하다. 아래 넷은 OnExit 를 거치지 않거나,
@@ -150,7 +173,7 @@ namespace StudentUI
 
             // UI 스레드에서 처리되지 않은 예외. 실제로 가장 자주 밟는 경로다.
             // 일부러 Handled 로 덮지 않는다 — 상태가 깨진 채로 시험을 이어 가는 것보다,
-            // 감시와 DNS 를 정리하고 끝낸 뒤 다시 실행하는 편이 낫다.
+            // 감시와 차단을 정리하고 끝낸 뒤 다시 실행하는 편이 낫다.
             DispatcherUnhandledException += (_, _) => RestoreSafely();
 
             // 감시 콜백처럼 UI 가 아닌 스레드에서 터진 예외.
@@ -161,7 +184,7 @@ namespace StudentUI
         }
 
         // 여러 번 불려도 안전하다.
-        // Dispose 는 이미 정리된 것을 건너뛰고, Restore 는 백업 파일이 없으면 아무 일도 하지 않는다.
+        // Dispose 는 이미 정리된 것을 건너뛰고, Restore 는 지울 차단 규칙이 없으면 아무 일도 하지 않는다.
         private static void RestoreSafely()
         {
             try { Service.ExamMonitorService.Instance.Dispose(); } catch { }
