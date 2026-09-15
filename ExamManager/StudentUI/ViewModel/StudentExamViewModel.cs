@@ -21,9 +21,12 @@ namespace StudentUI.ViewModel
 
     public class ExamFileStatusItem
     {
+        public string Icon { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
+        public string StatusLevel { get; set; } = "Normal"; // Success, Info, Warning, Normal
+        public string Description { get; set; } = string.Empty;
         public string TimeOrNote { get; set; } = string.Empty;
     }
 
@@ -71,17 +74,27 @@ namespace StudentUI.ViewModel
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(ConnectionStatusText));
                     OnPropertyChanged(nameof(SessionCheckText));
+                    OnPropertyChanged(nameof(SecurityPolicyCheckText));
                     OnPropertyChanged(nameof(NetworkCheckText));
+                    OnPropertyChanged(nameof(IsSessionValid));
+                    OnPropertyChanged(nameof(IsSecurityPolicyValid));
+                    OnPropertyChanged(nameof(IsNetworkValid));
                 }
             }
 
             public string ConnectionStatusText => IsConnected ? "실시간 연결 중" : "서버 미연결";
 
-            // 조건 점검 항목
-            public string SessionCheckText => IsConnected ? "완료" : "미연결";
-            public string SecurityPolicyCheckText => "완료";
-            public string NetworkCheckText => IsConnected ? "정상" : "단절";
-            public string FileReadyCheckText => ExamFile.IsReceived ? "완료" : "수신 대기";
+            // 조건 점검 항목 상태 (정상 여부)
+            public bool IsSessionValid => IsConnected;
+            public bool IsSecurityPolicyValid => IsConnected;
+            public bool IsNetworkValid => IsConnected;
+            public bool IsFileReadyValid => ExamFile.IsReceived;
+
+            // 조건 점검 항목 텍스트
+            public string SessionCheckText => IsSessionValid ? "완료" : "미연결";
+            public string SecurityPolicyCheckText => IsSecurityPolicyValid ? "완료" : "미완료";
+            public string NetworkCheckText => IsNetworkValid ? "정상" : "단절";
+            public string FileReadyCheckText => IsFileReadyValid ? "완료" : "수신 대기";
 
             // 단계(스텝퍼) 계산 (1: 대기, 2: 준비, 3: 파일 배포, 4: 시험 시작)
             public int CurrentStep
@@ -171,6 +184,7 @@ namespace StudentUI.ViewModel
                 ExamFile.PropertyChanged += (s, e) =>
                 {
                     OnPropertyChanged(nameof(FileReadyCheckText));
+                    OnPropertyChanged(nameof(IsFileReadyValid));
                     OnPropertyChanged(nameof(CurrentStep));
                     OnPropertyChanged(nameof(IsStep1Active));
                     OnPropertyChanged(nameof(IsStep2Active));
@@ -242,61 +256,61 @@ namespace StudentUI.ViewModel
                 {
                     StatusItems.Clear();
 
-                    // 1. 문제 압축 파일
+                    // 1. 시험 문제지 수신 상태
+                    bool fileReceived = ExamFile.IsReceived;
                     string fileName = string.IsNullOrEmpty(ExamFile.FileName) ? "배포 대기 중" : ExamFile.FileName;
-                    string fileStatus = ExamFile.IsReceived ? "수신 완료" : (string.IsNullOrEmpty(ExamFile.StatusText) ? "대기 중" : ExamFile.StatusText);
+                    string fileStatus = fileReceived ? "수신 완료" : (string.IsNullOrEmpty(ExamFile.StatusText) ? "배포 대기" : ExamFile.StatusText);
                     StatusItems.Add(new ExamFileStatusItem
                     {
-                        Category = "문제 압축본",
+                        Icon = "📦",
+                        Category = "시험 문제지",
                         Name = fileName,
                         Status = fileStatus,
-                        TimeOrNote = ExamFile.IsReceived ? "암호화 보관" : "-"
+                        StatusLevel = fileReceived ? "Success" : "Normal",
+                        Description = fileReceived ? "문제 압축 파일이 안전하게 수신되었습니다." : "교수님이 시험 문제를 배포하면 자동으로 수신됩니다.",
+                        TimeOrNote = fileReceived ? "수신 완료" : "대기 중"
                     });
 
-                    // 2. 압축 해제된 실제 시험 문제 및 소스 파일들
-                    if (ExamFile.IsExtracted && ExamFile.ExtractedFiles.Count > 0)
-                    {
-                        foreach (var f in ExamFile.ExtractedFiles)
-                        {
-                            StatusItems.Add(new ExamFileStatusItem
-                            {
-                                Category = "문제 파일",
-                                Name = System.IO.Path.GetFileName(f),
-                                Status = "풀이 준비 완료",
-                                TimeOrNote = ExamFile.ExtractFolder
-                            });
-                        }
-                    }
-                    else
-                    {
-                        string folderPath = ExamFile.IsExtracted ? ExamFile.ExtractedRoot : ExamFile.ExtractFolder;
-                        string folderStatus = ExamFile.IsExtracted ? "압축 해제 완료" : (ExamFile.IsReceived ? "준비 완료" : "대기 중");
-                        StatusItems.Add(new ExamFileStatusItem
-                        {
-                            Category = "작업 폴더",
-                            Name = folderPath,
-                            Status = folderStatus,
-                            TimeOrNote = ExamFile.IsExtracted ? $"파일 {ExamFile.ExtractedFiles.Count}개" : "시험 시작 시 자동 생성"
-                        });
-                    }
-
-                    // 3. 답안 제출 파일
-                    string submitText = string.IsNullOrEmpty(SubmitStatus) ? "답안 작성 중 (미제출)" : SubmitStatus;
+                    // 2. 작업 폴더 (문제 풀이 및 소스코드 저장 위치)
+                    bool isExtracted = ExamFile.IsExtracted;
+                    string folderPath = isExtracted ? ExamFile.ExtractedRoot : ExamFile.ExtractFolder;
+                    string folderStatus = isExtracted ? "풀이 준비 완료" : (fileReceived ? "압축 해제 대기" : "대기 중");
                     StatusItems.Add(new ExamFileStatusItem
                     {
+                        Icon = "📁",
+                        Category = "내 작업 공간",
+                        Name = string.IsNullOrEmpty(folderPath) ? "C:\\Exam" : folderPath,
+                        Status = folderStatus,
+                        StatusLevel = isExtracted ? "Success" : (fileReceived ? "Info" : "Normal"),
+                        Description = isExtracted ? $"폴더 내 문제 파일({ExamFile.ExtractedFiles.Count}개)을 열어 코드를 작성하세요." : "시험이 시작되면 문제 파일이 자동 압축 해제됩니다.",
+                        TimeOrNote = isExtracted ? "작업 가능" : "시작 대기"
+                    });
+
+                    // 3. 답안 제출 파일
+                    string submitText = string.IsNullOrEmpty(SubmitStatus) ? "작성 중 (미제출)" : SubmitStatus;
+                    string submitLevel = submitText.Contains("완료") ? "Success" : (submitText.Contains("실패") ? "Warning" : "Info");
+                    StatusItems.Add(new ExamFileStatusItem
+                    {
+                        Icon = "📤",
                         Category = "답안 제출",
                         Name = $"{Student.StudentNumber}_답안.zip",
                         Status = submitText,
-                        TimeOrNote = "-"
+                        StatusLevel = submitLevel,
+                        Description = "종료 전 '답안 제출' 버튼을 누르면 작업 폴더 전체가 자동 압축되어 전송됩니다.",
+                        TimeOrNote = submitText.Contains("완료") ? "제출 성공" : "미제출"
                     });
 
                     // 4. 보안 감시 정책
+                    bool isSecure = IsConnected;
                     StatusItems.Add(new ExamFileStatusItem
                     {
-                        Category = "보안 정책",
-                        Name = "부정행위 감시 및 프로세스 차단",
-                        Status = "실시간 감시 가동 중",
-                        TimeOrNote = "정상"
+                        Icon = "🛡️",
+                        Category = "보안 감독",
+                        Name = "실시간 프로세스 & 웹 차단",
+                        Status = isSecure ? "정상 감독 중" : "서버 미연결",
+                        StatusLevel = isSecure ? "Success" : "Warning",
+                        Description = "비인가 프로그램 및 생성형 AI 사이트 접근이 실시간 감시/차단됩니다.",
+                        TimeOrNote = isSecure ? "정상" : "점검 필요"
                     });
                 });
             }
