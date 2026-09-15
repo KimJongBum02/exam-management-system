@@ -78,11 +78,13 @@ namespace ProfessorUI.ViewModel
         private bool _isProcessing = false;
 
         public ICommand SelectFilesCommand { get; }
+        public ICommand SelectFolderCommand { get; }
         public ICommand StartProcessCommand { get; }
 
         public FileReadyViewModel()
         {
             SelectFilesCommand = new RelayCommand(ExecuteSelectFiles);
+            SelectFolderCommand = new RelayCommand(ExecuteSelectFolder);
             StartProcessCommand = new RelayCommand(ExecuteStartProcess);
         }
 
@@ -98,22 +100,61 @@ namespace ProfessorUI.ViewModel
 
             if (openFileDialog.ShowDialog() == true)
             {
-                SelectedFilePaths.Clear();
-                SelectedFileNames.Clear();
-
-                foreach (string filePath in openFileDialog.FileNames)
-                {
-                    SelectedFilePaths.Add(filePath);
-                    SelectedFileNames.Add($"- {Path.GetFileName(filePath)}"); // 파일 이름만 추출
-                }
-
-                SourceFolder = Path.GetDirectoryName(openFileDialog.FileNames[0]) ?? "-";
-                SelectedFilesSummary = $"{SelectedFilePaths.Count}개의 파일이 선택되었습니다.";
-                CurrentStatusMessage = "파일 선택 완료. 준비되었습니다.";
-                CurrentFileNameDisplay = "대기 중...";
-                ProgressValue = 0;
-                ProgressText = "0%";
+                ApplySelection(openFileDialog.FileNames,
+                               Path.GetDirectoryName(openFileDialog.FileNames[0]) ?? "-",
+                               $"{openFileDialog.FileNames.Length}개의 파일이 선택되었습니다.");
             }
+        }
+
+        // 시험 파일이 담긴 폴더를 통째로 고른다. 교수는 문제를 폴더 하나에 모아 두는 경우가 많다.
+        //
+        // 폴더 자체가 아니라 폴더 안의 항목을 담는다. 폴더째 담으면 학생 쪽에서
+        // 시험 폴더 안에 같은 이름의 폴더가 한 겹 더 생겨 문제를 찾기 불편하다.
+        // 하위 폴더는 구조 그대로 들어간다(ExamPackager 가 폴더를 통째로 복사한다).
+        private void ExecuteSelectFolder(object? obj)
+        {
+            var dialog = new OpenFolderDialog { Title = "시험 파일이 담긴 폴더를 선택하세요" };
+            if (dialog.ShowDialog() != true) return;
+
+            string folder = dialog.FolderName;
+
+            // 숨김 파일(desktop.ini, Thumbs.db 등)은 학생에게 보낼 이유가 없다.
+            string[] entries = Directory.GetFileSystemEntries(folder)
+                .Where(entry => (File.GetAttributes(entry) & FileAttributes.Hidden) == 0)
+                .OrderBy(entry => !Directory.Exists(entry))     // 폴더 먼저
+                .ThenBy(entry => Path.GetFileName(entry))
+                .ToArray();
+
+            if (entries.Length == 0)
+            {
+                System.Windows.MessageBox.Show("선택한 폴더가 비어 있습니다.", "폴더 선택");
+                return;
+            }
+
+            int fileCount = Directory.GetFiles(folder, "*", SearchOption.AllDirectories).Length;
+            ApplySelection(entries, folder, $"'{Path.GetFileName(folder)}' 폴더 · 파일 {fileCount}개");
+        }
+
+        // 고른 항목을 화면과 압축 목록에 담는다. 파일 선택과 폴더 선택이 함께 쓴다.
+        private void ApplySelection(IEnumerable<string> paths, string sourceFolder, string summary)
+        {
+            SelectedFilePaths.Clear();
+            SelectedFileNames.Clear();
+
+            foreach (string path in paths)
+            {
+                SelectedFilePaths.Add(path);
+                SelectedFileNames.Add(Directory.Exists(path)
+                    ? $"- {Path.GetFileName(path)}\\  (폴더)"
+                    : $"- {Path.GetFileName(path)}");
+            }
+
+            SourceFolder = sourceFolder;
+            SelectedFilesSummary = summary;
+            CurrentStatusMessage = "파일 선택 완료. 준비되었습니다.";
+            CurrentFileNameDisplay = "대기 중...";
+            ProgressValue = 0;
+            ProgressText = "0%";
         }
 
         private async void ExecuteStartProcess(object? obj)
@@ -131,7 +172,9 @@ namespace ProfessorUI.ViewModel
             ProgressValue = 0;
             ProgressText = "0%";
 
-            string examId = "Exam_" + DateTime.Now.ToString("yyyyMMdd_HHmm");
+            // 예: 20260915_시험문제.7z — 학생 PC 에서는 이 이름이 그대로 시험 폴더 이름이 된다.
+            // 같은 날 다시 압축하면 같은 이름이라 앞 파일을 덮어쓴다(ExamPackager 가 먼저 지운다).
+            string examId = DateTime.Now.ToString("yyyyMMdd") + "_시험문제";
             // 배포용 묶음을 만들어 두는 곳. 교수가 바로 확인할 수 있도록 바탕화면에 둔다.
             string packageDir = PackageFolder;
             string output = Path.Combine(packageDir, examId + ".7z");
