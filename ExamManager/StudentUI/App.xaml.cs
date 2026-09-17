@@ -30,12 +30,8 @@ namespace StudentUI
             // 윈도우 전환 시 앱이 종료되지 않도록 명시적 종료 모드 설정
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-            // 지난 시험이 DNS 를 되돌리지 못하고 끝났으면 지금 되돌린다.
+            // 지난번에 방화벽 차단을 풀지 못하고 끝났으면 켜자마자 푼다.
             // 이 안전장치가 없으면 그 PC 는 인터넷이 되지 않는 채로 남는다.
-            // (예전 DNS 방식 배포판이 남긴 흔적용. 강의실 PC 가 모두 새 판으로 바뀌면 지운다)
-            Service.DnsRedirectService.RestoreIfLeftOver();
-
-            // 방화벽 차단도 마찬가지다. 지난번에 풀지 못하고 끝났으면 켜자마자 푼다.
             // 진행 중이던 시험이 있어도 예외 없이 푼다 — 차단은 같은 학번으로 다시 로그인한 뒤 새로 건다.
             Service.FirewallPolicyService.Restore();
 

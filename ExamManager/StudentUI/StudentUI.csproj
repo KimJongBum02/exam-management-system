@@ -41,13 +41,6 @@
       <Link>NetworkLib_Native.dll</Link>
     </None>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="$(SolutionDir)x64\$(Configuration)\NetworkControl.dll"
-          Condition="Exists('$(SolutionDir)x64\$(Configuration)\NetworkControl.dll')">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>NetworkControl.dll</Link>
-    </None>
-  </ItemGroup>
   <!-- 압축 해제용 FileControl.dll + 7za.exe 복사 -->
   <ItemGroup>
     <None Include="$(SolutionDir)x64\$(Configuration)\FileControl.dll"
