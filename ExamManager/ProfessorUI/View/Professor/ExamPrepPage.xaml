@@ -116,38 +116,95 @@
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <TextBlock Text="시험 파일" Style="{StaticResource FieldLabel}"/>
-                            <Grid Margin="0,0,0,16">
+                            <Grid Margin="0,0,0,6">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBox Grid.Column="0" Style="{StaticResource ReadOnlyBox}"
                                          Text="{Binding FileReady.SelectedFilesSummary, Mode=OneWay}"/>
-                                <!-- 파일을 몇 개 고르거나, 시험 파일이 담긴 폴더를 통째로 고른다 -->
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0">
-                                    <Button Content="파일 선택" Style="{StaticResource SecondaryButton}"
-                                            Command="{Binding FileReady.SelectFilesCommand}"/>
-                                    <Button Content="폴더 선택" Style="{StaticResource SecondaryButton}"
-                                            Margin="8,0,0,0" Command="{Binding FileReady.SelectFolderCommand}"/>
-                                </StackPanel>
+                                <!-- 누를 때마다 목록 뒤에 더한다. 파일을 고르거나, 폴더 안으로 들어가 [열기]를 눌러 폴더를 통째로 고른다 -->
+                                <Button Grid.Column="1" Content="선택" Style="{StaticResource SecondaryButton}"
+                                        Margin="10,0,0,0" Command="{Binding FileReady.SelectCommand}"/>
+                            </Grid>
+                            <!-- 선택 창 하나로 폴더까지 고르는 방법은 알려 주지 않으면 찾기 어렵다 -->
+                            <TextBlock Style="{StaticResource Caption}" Margin="0,0,0,16" TextWrapping="Wrap"
+                                       Text="파일을 고르면 그 파일만 담습니다. 폴더 전체를 담으려면 폴더 안으로 들어가 이름 칸을 '폴더 선택' 그대로 두고 [열기]를 누르세요."/>
+
+                            <!-- 압축할 목록. 여러 폴더에서 더할 수 있어 줄마다 원본 위치를 함께 적는다 -->
+                            <TextBlock Text="선택된 항목" Style="{StaticResource FieldLabel}"/>
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <!-- 비었을 때는 위아래 읽기 전용 칸과 같은 높이(38)로 맞춘다 -->
+                                <Border Grid.Column="0" Background="{StaticResource BgSubtle}" BorderBrush="{StaticResource BorderLight}"
+                                        BorderThickness="1" CornerRadius="6" Padding="14,0" MinHeight="38">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <!-- 다른 읽기 전용 칸과 같은 글자로 쓴다.
+                                             Body 스타일은 줄 높이(21)가 글자보다 커서 남는 자리가 아래에 붙어 글자가 위로 뜬다 -->
+                                        <TextBlock Text="선택된 항목 없음" FontSize="13" Foreground="{StaticResource TextPrimary}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding FileReady.HasSelectedItems}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <ItemsControl ItemsSource="{Binding FileReady.SelectedItems}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="0,4">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel Grid.Column="0">
+                                                            <TextBlock Text="{Binding Display}" Style="{StaticResource Body}"/>
+                                                            <TextBlock Text="{Binding Location}" Style="{StaticResource Caption}"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                        </StackPanel>
+                                                        <!-- 잘못 넣은 항목 하나만 뺀다 -->
+                                                        <Button Grid.Column="1" Content="✕" ToolTip="목록에서 빼기"
+                                                                Cursor="Hand" VerticalAlignment="Center" Margin="10,0,0,0"
+                                                                Command="{Binding DataContext.FileReady.RemoveItemCommand,
+                                                                          RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                CommandParameter="{Binding}">
+                                                            <Button.Template>
+                                                                <ControlTemplate TargetType="Button">
+                                                                    <Border x:Name="Bd" Background="Transparent" CornerRadius="4"
+                                                                            Width="26" Height="26">
+                                                                        <TextBlock x:Name="Mark" Text="{TemplateBinding Content}"
+                                                                                   FontSize="13" Foreground="{StaticResource TextSecondary}"
+                                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                    </Border>
+                                                                    <ControlTemplate.Triggers>
+                                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgHeader}"/>
+                                                                            <Setter TargetName="Mark" Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                                                                        </Trigger>
+                                                                    </ControlTemplate.Triggers>
+                                                                </ControlTemplate>
+                                                            </Button.Template>
+                                                        </Button>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                                <!-- 목록을 통째로 비운다. 목록 옆에 두어 무엇이 지워지는지 바로 보이게 한다 -->
+                                <Button Grid.Column="1" Content="모두 지우기" Style="{StaticResource SecondaryButton}"
+                                        Margin="10,0,0,0" VerticalAlignment="Top" Height="38"
+                                        Command="{Binding FileReady.ClearAllCommand}"/>
                             </Grid>
 
-                            <!-- 어느 폴더에서 가져왔는지. 같은 이름의 파일을 헷갈리지 않으려면 필요하다 -->
-                            <TextBlock Text="원본 폴더" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Style="{StaticResource ReadOnlyBox}" Margin="0,0,0,14"
-                                     Text="{Binding FileReady.SourceFolder, Mode=OneWay}"/>
-
-                            <!-- 고른 파일 이름들. 여러 개를 묶어 하나로 압축한다 -->
-                            <ItemsControl ItemsSource="{Binding FileReady.SelectedFileNames}" Margin="0,0,0,14">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding}" Style="{StaticResource Caption}" Margin="0,0,0,3"/>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-
                             <!-- 만들어진 배포용 묶음이 어디에 있는지. 학생에게 못 갔을 때 직접 찾아가야 한다 -->
-                            <TextBlock Text="배포용 파일 저장 위치" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="시험 파일 경로" Style="{StaticResource FieldLabel}"/>
                             <TextBox Style="{StaticResource ReadOnlyBox}" Margin="0,0,0,16"
                                      Text="{Binding FileReady.PackagePathText, Mode=OneWay}"/>
 
