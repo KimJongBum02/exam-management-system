@@ -213,8 +213,7 @@ namespace StudentUI.Service
                 if (Directory.Exists(examFolder))
                     ExamFileStore.DeleteFolder(examFolder);
 
-                // 배포받은 원본 .7z(%TEMP%)는 보통 압축을 풀 때 이미 지워진다(ExamFileStore).
-                // 풀기에 실패한 채 제출한 경우에 남으므로 여기서 한 번 더 지운다.
+                // 배포받은 원본 .7z도 시험 파일 폴더에 남아 있으므로 함께 지운다(ExamFileStore).
                 ExamFileStore.Instance.DeleteArchive();
 
                 // 지웠다는 사실도 교수에게 알린다.
@@ -243,7 +242,7 @@ namespace StudentUI.Service
         }
 
         // 시험 파일을 받아 푼 폴더를 그대로 묶는다.
-        // 배포받은 원본 .7z는 압축 해제가 끝날 때 이미 지워지므로(ExamFileStore) 같이 들어가지 않는다.
+        // 배포받은 원본 .7z는 이 폴더 바깥(시험 파일 폴더)에 있으므로 같이 들어가지 않는다.
         // 묶음 파일은 임시 폴더에 만든다 — 답안 폴더 안에 만들면 자기 자신을 압축하게 된다.
         //
         // 종료 코드가 0이 아니면 만들어진 묶음을 버린다. 특히 코드 1이 위험한데,

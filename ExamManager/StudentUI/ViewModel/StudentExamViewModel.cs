@@ -238,6 +238,7 @@ namespace StudentUI.ViewModel
                 {
                     Unsubscribe();
                     NetworkService.Instance.Disconnect();
+                    ChatVM.Clear();
                     _navigationStore.CurrentViewModel = new LoginViewModel(_navigationStore);
                 });
 

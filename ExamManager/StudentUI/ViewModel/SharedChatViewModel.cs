@@ -51,6 +51,14 @@ namespace StudentUI.ViewModel
             NetworkService.Instance.PacketReceived += OnPacketReceived;
         }
 
+        // 로그아웃할 때 비운다. 이 객체는 앱이 켜져 있는 동안 하나뿐이라,
+        // 비우지 않으면 다시 로그인한 뒤에도 앞 로그인의 채팅이 그대로 보인다.
+        public void Clear()
+        {
+            Messages.Clear();
+            InputMessage = string.Empty;
+        }
+
         private void SendMessage()
         {
             if (string.IsNullOrWhiteSpace(InputMessage)) return;
