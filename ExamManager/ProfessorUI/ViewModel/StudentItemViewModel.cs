@@ -12,7 +12,6 @@ namespace ProfessorUI.ViewModel
         private string _name = string.Empty;
         private string _status = string.Empty; // 메인 화면용 (대기, 미접속, 시험중 등)
         private string _ip = string.Empty;
-        private string _attendance = string.Empty;
 
         // ⭐ 2, 3단계 lifecycle을 위한 속성 추가
         private bool _isSelected;
@@ -38,7 +37,6 @@ namespace ProfessorUI.ViewModel
         private string _lastUpdate = "-";
         public string LastUpdate { get => _lastUpdate; private set { _lastUpdate = value; OnPropertyChanged(); } }
         public string Ip { get => _ip; set { _ip = value; OnPropertyChanged(); } }
-        public string Attendance { get => _attendance; set { _attendance = value; OnPropertyChanged(); } }
 
         // 서버가 부여한 세션 식별자 (접속 종료·개별 전송 매핑용)
         public string SessionId { get; set; } = string.Empty;
@@ -154,22 +152,6 @@ namespace ProfessorUI.ViewModel
                 OnPropertyChanged(nameof(CleanupText));
                 OnPropertyChanged(nameof(CanApprove));
             }
-        }
-
-        // 개별 승인 명령 바인딩용
-        public System.Windows.Input.ICommand? ApproveSingleCommand { get; set; }
-
-        // 🎯 1:1 채팅 열기 커맨드 및 요청 콜백
-        public System.Action<string, string>? RequestOpenChat { get; set; }
-        public System.Windows.Input.ICommand? OpenChatCommand { get; set; }
-
-        public StudentItemViewModel()
-        {
-            // 초기화 시점에 커맨드 등록 (Service/RelayCommand 사용을 가정)
-            OpenChatCommand = new RelayCommand(o =>
-            {
-                RequestOpenChat?.Invoke(SessionId, Name);
-            });
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

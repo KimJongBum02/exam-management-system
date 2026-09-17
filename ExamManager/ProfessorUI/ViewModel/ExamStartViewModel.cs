@@ -16,9 +16,6 @@ namespace ProfessorUI.ViewModel
         // ⭐ 컨테이너 전체를 흐리게(비활성화) 만들 속성
         public bool IsContainerEnabled => !ExamState.IsExamStarted;
 
-        // ⭐ 배포 안 됐을 때 띄울 주황색 경고창의 표시 여부 결정
-        public Visibility WarningVisibility => FileDeployState.IsFileDistributed ? Visibility.Collapsed : Visibility.Visible;
-
         public ICommand StartExamCommand { get; }
 
         public ExamStartViewModel()

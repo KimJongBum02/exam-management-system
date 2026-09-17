@@ -15,28 +15,11 @@ namespace ProfessorUI.ViewModel
         public bool IsContainerEnabled => ExamState.IsExamStarted;
         public ObservableCollection<StudentItemViewModel> Students => StudentStore.Instance.Students;
 
-        public ICommand ApproveSingleCommand { get; }
         public ICommand ApproveSelectedCommand { get; }
 
-        private bool _isAllSelected;
-        public bool IsAllSelected
-        {
-            get => _isAllSelected;
-            set
-            {
-                _isAllSelected = value;
-                OnPropertyChanged();
-
-                foreach (var student in Students)
-                {
-                    student.IsSelected = value;
-                }
-            }
-        }
 
         public ExamEndViewModel()
         {
-            ApproveSingleCommand = new RelayCommand(ExecuteApproveSingle);
             ApproveSelectedCommand = new RelayCommand(ExecuteApproveSelected);
 
             ExamState.StateChanged += () => OnPropertyChanged(nameof(IsContainerEnabled));
@@ -51,17 +34,6 @@ namespace ProfessorUI.ViewModel
             NetworkService.Instance.SendToSession(
                 student.SessionId, PacketType.ShutdownPC, System.Array.Empty<byte>());
             return true;
-        }
-
-        // 개별 승인 처리
-        private void ExecuteApproveSingle(object obj)
-        {
-            if (obj is StudentItemViewModel student && student.IsAnswerSubmitted)
-            {
-                ShutdownStudentPc(student);
-                student.IsApproved = true;
-                student.Status = "종료";
-            }
         }
 
         // 선택 항목 일괄 승인 처리
@@ -84,10 +56,6 @@ namespace ProfessorUI.ViewModel
                 student.IsSelected = false; // 승인한 학생은 더 고를 수 없으므로 체크도 푼다
                 student.Status = "종료";
             }
-
-            // 일괄 승인 후 체크박스 해제
-            _isAllSelected = false;
-            OnPropertyChanged(nameof(IsAllSelected));
 
             // 표의 비고 칸만 바뀌어서는 승인이 됐는지 알아채기 어렵다. 결과를 창으로 알린다.
             // 접속이 끊긴 학생에게는 명령이 가지 않으므로 누구인지 따로 적는다.

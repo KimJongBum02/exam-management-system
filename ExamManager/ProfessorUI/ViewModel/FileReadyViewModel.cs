@@ -62,14 +62,6 @@ namespace ProfessorUI.ViewModel
             set { _currentStatusMessage = value; OnPropertyChanged(); }
         }
 
-        // 현재 처리 중인 파일 이름을 보여주기 위한 속성
-        private string _currentFileNameDisplay = "선택된 파일 없음";
-        public string CurrentFileNameDisplay
-        {
-            get => _currentFileNameDisplay;
-            set { _currentFileNameDisplay = value; OnPropertyChanged(); }
-        }
-
         // 배포용 묶음이 만들어지는 곳. 압축 전에도 어디에 생기는지 미리 알려 준다.
         public static string PackageFolder { get; } = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "시험 파일");
@@ -295,7 +287,6 @@ namespace ProfessorUI.ViewModel
             else
                 CurrentStatusMessage = "파일 선택 완료. 준비되었습니다.";
 
-            CurrentFileNameDisplay = "대기 중...";
             ProgressValue = 0;
             ProgressText = "0%";
         }
@@ -393,7 +384,6 @@ namespace ProfessorUI.ViewModel
             {
                 ProgressValue = 100;
                 ProgressText = "100%";
-                CurrentFileNameDisplay = "모든 파일 처리 완료";
                 CurrentStatusMessage = "압축 및 암호화 완료!";
                 PackagePathText = PackageFolderText + Path.GetFileName(output);
 
