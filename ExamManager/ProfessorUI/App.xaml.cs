@@ -159,7 +159,6 @@ namespace ProfessorUI
 
 
             // 교수 화면은 새 UI(ShellWindow)를 쓴다.
-            // 옛 화면은 View/_Legacy 로 옮겨 두었고 더 이상 띄우지 않는다.
             new View.Professor.ShellWindow().Show();
         }
 

@@ -12,11 +12,6 @@
 
 
   <ItemGroup>
-    <!-- 구형 UI 파일은 보존하되 빌드에서는 제외한다 -->
-    <Compile Remove="View\_Legacy\**" />
-    <Page Remove="View\_Legacy\**" />
-    <None Include="View\_Legacy\**" />
-
     <Compile Include="..\NetworkInterop\NetworkInterop.cs" Link="NetworkInterop.cs" />
     <!-- 학생 PC 와 같은 방식으로 설치 프로그램을 읽고, 같은 프로그램 사전을 쓰도록 한 벌을 나눠 쓴다 -->
     <Compile Include="..\Shared\StartMenuPrograms.cs" Link="StartMenuPrograms.cs" />
