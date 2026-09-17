@@ -21,6 +21,10 @@ namespace ProfessorUI.Service
             string stagingRoot = Path.Combine(Path.GetTempPath(), "ExamPkg_" + Guid.NewGuid().ToString("N"));
             string stagingContent = Path.Combine(stagingRoot, PackageFolderName);
 
+            // 새 묶음은 옆에 임시 이름으로 만든 뒤, 다 만들어지면 기존 묶음과 바꾼다.
+            // 기존 묶음을 먼저 지우면 압축이 실패했을 때 배포할 파일이 사라진다.
+            string pendingArchive = outputArchive + ".tmp";
+
             try
             {
                 Directory.CreateDirectory(stagingContent);
@@ -37,24 +41,30 @@ namespace ProfessorUI.Service
                 // 2) 시험별 랜덤 암호 생성
                 string password = GeneratePassword();
 
-                // 3) 같은 경로에 이전 아카이브가 남아 있으면 먼저 지운다.
+                // 3) 지난번에 실패해 남은 임시 묶음이 있으면 지운다.
                 //    7za의 'a'는 기존 아카이브에 "추가"하는데, -mhe=on 이라 이전 암호로 잠긴
-                //    헤더를 새 암호로는 열지 못해 그대로 실패한다(같은 파일 재배포 시 발생).
-                if (File.Exists(outputArchive))
-                    File.Delete(outputArchive);
+                //    헤더를 새 암호로는 열지 못해 그대로 실패한다.
+                if (File.Exists(pendingArchive))
+                    File.Delete(pendingArchive);
 
-                // 4) DLL 호출: 스테이징 폴더의 "내용물" → 암호 걸린 .7z
+                // 4) DLL 호출: 스테이징 폴더의 "내용물" → 암호 걸린 .7z (-t7z 라 확장자가 달라도 된다)
                 //    폴더째 넣으면 학생 쪽에서 ExamFiles\ExamFiles\... 로 한 겹 더 들어간다.
                 int code = FileControlService.FC_CompressEncrypt(
-                    sevenZa, Path.Combine(stagingContent, "*"), outputArchive, password);
+                    sevenZa, Path.Combine(stagingContent, "*"), pendingArchive, password);
+                if (code != 0) return null;
 
-                return code == 0 ? password : null;
+                // 5) 다 만들어졌으니 기존 묶음과 바꾼다.
+                //    배포 중이라 기존 묶음이 열려 있으면 여기서 예외가 난다. 기존 묶음은 그대로 남는다.
+                File.Move(pendingArchive, outputArchive, true);
+                return password;
             }
             finally
             {
-                // 5) 스테이징 폴더 정리 (성공/실패 무관)
+                // 6) 스테이징 폴더와, 바꾸지 못한 임시 묶음 정리 (성공/실패 무관)
                 if (Directory.Exists(stagingRoot))
                     Directory.Delete(stagingRoot, true);
+                if (File.Exists(pendingArchive))
+                    File.Delete(pendingArchive);
             }
 
 
