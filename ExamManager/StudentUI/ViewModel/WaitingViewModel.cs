@@ -97,6 +97,7 @@ namespace StudentUI.ViewModel
             {
                 Cleanup();
                 NetworkService.Instance.Disconnect(); // 로그아웃 시 연결도 정리
+                ChatVM.Clear();
                 _navigationStore.CurrentViewModel = new LoginViewModel(_navigationStore);
             });
 

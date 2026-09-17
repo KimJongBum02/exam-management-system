@@ -35,7 +35,7 @@ namespace StudentUI.Service
         // 그동안 ExtractedRoot 는 '시험 파일' 폴더 전체를 가리킨다.
         public bool HasExamFolder => _archiveName.Length > 0;
 
-        private string _archivePath = string.Empty; // 수신된 .7z 임시 경로
+        private string _archivePath = string.Empty; // 수신된 .7z 경로 (보통 시험 파일 폴더, 옮기지 못했으면 %TEMP%)
         private string _password = string.Empty;    // 교수 PC가 함께 보낸 암호
 
         // 이번 시험의 암호. 답안을 제출할 때 같은 암호로 묶어야 교수가 열 수 있다.
@@ -51,6 +51,8 @@ namespace StudentUI.Service
         {
             _archiveName = archiveName;
             _password = password;
+            // 받은 .7z도 시험 파일 폴더에 남아 있으므로, 제출 뒤 정리할 때 함께 지워지도록 경로를 되살린다.
+            _archivePath = Path.Combine(ExtractFolder, archiveName + ".7z");
             _lastExtracted = new List<string>(delivered);
 
             ExtractedFiles.Clear();
@@ -173,11 +175,24 @@ namespace StudentUI.Service
             if (transferId != _transferId)
                 BeginNewTransfer(transferId);
 
-            _archivePath = tempPath;
             _password = archivePassword;
 
             // 압축을 풀 폴더 이름으로 쓴다. 확장자를 뗀 묶음 이름이 곧 폴더 이름이 된다.
             _archiveName = Path.GetFileNameWithoutExtension(fileName ?? "");
+
+            // 받은 .7z는 시험 파일 폴더에 둔다. 압축을 푼 폴더와 나란히 남는다.
+            // 네이티브는 받는 동안 %TEMP%에 쓰므로 다 받은 뒤에 옮긴다 — 받다 만 파일이 폴더에 보이지 않는다.
+            // 옮기지 못하면(교수 앱을 같은 PC에서 돌려 교수가 보내는 중인 원본과 경로가 같은 경우 등)
+            // %TEMP%에 둔 채로 압축을 푼다.
+            _archivePath = tempPath;
+            try
+            {
+                string dest = Path.Combine(ExtractFolder, Path.GetFileName(fileName ?? ""));
+                Directory.CreateDirectory(ExtractFolder);
+                File.Move(tempPath, dest, true);
+                _archivePath = dest;
+            }
+            catch (Exception) { }
 
             FileName = fileName;
             Progress = 100;
@@ -189,8 +204,8 @@ namespace StudentUI.Service
         // (이렇게 하지 않으면 재배포된 파일을 받고도 IsExtracted가 true로 남아 다시 해제할 수 없다)
         private void BeginNewTransfer(string transferId)
         {
-            // 이전 전송이 남긴 임시 .7z는 더 이상 쓰지 않으므로 지운다.
-            // (재배포할 때마다 %TEMP%에 사본이 쌓이는 것을 막는다)
+            // 이전 전송이 남긴 .7z는 더 이상 쓰지 않으므로 지운다.
+            // (재배포할 때마다 이전 묶음이 쌓이는 것을 막는다)
             DeleteArchive();
 
             _transferId = transferId;
@@ -199,7 +214,7 @@ namespace StudentUI.Service
             ExtractedFiles.Clear();
         }
 
-        // 수신된 임시 .7z를 지운다. 실패해도 기능에는 영향이 없으므로 무시한다.
+        // 수신된 .7z를 지운다. 실패해도 기능에는 영향이 없으므로 무시한다.
         public void DeleteArchive()
         {
             if (string.IsNullOrEmpty(_archivePath)) return;
@@ -299,7 +314,8 @@ namespace StudentUI.Service
 
             if (code == 0)
             {
-                DeleteArchive(); // 해제까지 끝났으면 임시 .7z는 필요 없다
+                // 받은 .7z는 지우지 않는다 — 시험 파일 폴더에 압축 파일과 푼 폴더가 함께 있어야 한다.
+                // 답안 제출 뒤 정리(AnswerSubmitService)나 재배포(BeginNewTransfer) 때 지워진다.
                 _lastExtracted = delivered;
 
                 ExtractedFiles.Clear();
