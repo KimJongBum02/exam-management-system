@@ -127,7 +127,7 @@
                 <StackPanel>
                     <TextBlock Text="다음 시험 준비" Style="{StaticResource FieldLabel}" Margin="0,0,0,10"/>
                     <TextBlock Style="{StaticResource Body}" Margin="0,0,0,18"
-                               Text="처음 화면으로 돌아가면 시험 단계와 학생별 진행 상태가 초기화됩니다. 걷은 답안 파일은 지워지지 않습니다."/>
+                               Text="모든 승인이 끝난 뒤에 초기화할 수 있습니다. 처음 화면으로 돌아가면 시험 단계와 학생별 진행 상태가 초기화되며, 걷은 답안 파일은 지워지지 않습니다."/>
                     <Button Content="처음 화면으로 (새 시험 준비)" Style="{StaticResource PrimaryButton}"
                             HorizontalAlignment="Right" Click="RestartSession_Click"/>
                 </StackPanel>

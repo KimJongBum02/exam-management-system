@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Threading;
 using ProfessorUI.ViewModel;
 
@@ -21,10 +22,18 @@ namespace ProfessorUI.View.Professor
         // 오른쪽에 열어 둔 대화. 새 메시지가 오면 맨 아래로 내려 주려고 들고 있는다.
         private ChatTabItem? _openTab;
 
-        public ChatPage()
+        public ChatPage() : this(null) { }
+
+        // 대시보드 말풍선처럼 다른 화면에서 학생을 집어 들어오면 그 대화를 열어 둔 채로 시작한다.
+        public ChatPage(ChatTabItem? openTab)
         {
             InitializeComponent();
             DataContext = _ctx;
+
+            // 학생 대화 목록에는 전체 학생이 한 줄씩 보인다.
+            // 아직 말이 오가지 않은 학생도 줄이 있어야 교수가 먼저 말을 걸 수 있다.
+            _ctx.Chat.EnsureTabs(_ctx.Overview.Students);
+            _ctx.Overview.Students.CollectionChanged += OnStudentsChanged;
 
             // 원본 목록은 건드리지 않고 보기만 거르고 줄 세운다.
             _conversations = (ListCollectionView)CollectionViewSource.GetDefaultView(_ctx.Chat.Tabs);
@@ -45,7 +54,13 @@ namespace ProfessorUI.View.Professor
             ConversationList.ItemsSource = _conversations;
             ((INotifyCollectionChanged)_conversations).CollectionChanged += OnConversationsChanged;
             UpdateConversationEmpty();
+
+            if (openTab != null) OpenConversation(openTab);
         }
+
+        // 뒤늦게 들어온 학생도 대화 목록에 바로 한 줄이 생긴다.
+        private void OnStudentsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+            => _ctx.Chat.EnsureTabs(_ctx.Overview.Students);
 
         private bool MatchesFilter(object item)
         {
@@ -80,10 +95,20 @@ namespace ProfessorUI.View.Professor
         }
 
         // ── 1:1 대화 ──
+        // 목록의 [대화] 버튼과 줄 전체를 누르는 것, 둘 다 같은 대화를 연다.
         private void OpenConversation_Click(object sender, RoutedEventArgs e)
-        {
-            if ((sender as FrameworkElement)?.DataContext is not ChatTabItem tab) return;
+            => OpenTabOf(sender);
 
+        private void ConversationRow_Click(object sender, MouseButtonEventArgs e)
+            => OpenTabOf(sender);
+
+        private void OpenTabOf(object sender)
+        {
+            if ((sender as FrameworkElement)?.DataContext is ChatTabItem tab) OpenConversation(tab);
+        }
+
+        private void OpenConversation(ChatTabItem tab)
+        {
             DetachConversation();
             _openTab = tab;
             _ctx.Chat.OpenConversation(tab);
@@ -134,9 +159,35 @@ namespace ProfessorUI.View.Professor
         private void CancelCompose_Click(object sender, RoutedEventArgs e)
             => ComposeCard.Visibility = Visibility.Collapsed;
 
-        private void SendNotice_Click(object sender, RoutedEventArgs e)
+        private void SendNotice_Click(object sender, RoutedEventArgs e) => SendNotice();
+
+        private void SendNotice()
         {
             if (_ctx.Chat.SendNotice()) ComposeCard.Visibility = Visibility.Collapsed;
+        }
+
+        // 엔터를 치면 바로 보낸다. 줄을 바꾸려면 Shift 를 함께 누른다.
+        // 한글을 조합하는 중의 엔터는 Key.ImeProcessed 로 와서 여기에 걸리지 않는다 —
+        // 첫 엔터로 글자를 확정하고, 다음 엔터에 보내진다.
+        private static bool IsSendKey(KeyEventArgs e)
+            => e.Key == Key.Enter && (Keyboard.Modifiers & ModifierKeys.Shift) == 0;
+
+        private void MessageBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (!IsSendKey(e)) return;
+
+            e.Handled = true;
+            var send = _ctx.Chat.SendMessageCommand;
+            if (send.CanExecute(null)) send.Execute(null);
+        }
+
+        // 전체 공지도 같은 규칙으로 보낸다.
+        private void NoticeBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (!IsSendKey(e)) return;
+
+            e.Handled = true;
+            SendNotice();
         }
 
         // 화면을 떠나면 대화도 닫는다. 열린 채로 두면 그 학생의 새 메시지가 안 읽음으로 잡히지 않는다.
@@ -144,6 +195,7 @@ namespace ProfessorUI.View.Professor
         {
             CloseConversation();
             ((INotifyCollectionChanged)_conversations).CollectionChanged -= OnConversationsChanged;
+            _ctx.Overview.Students.CollectionChanged -= OnStudentsChanged;
         }
     }
 }

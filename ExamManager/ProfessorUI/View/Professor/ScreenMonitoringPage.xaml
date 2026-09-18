@@ -69,7 +69,7 @@
                                                         HorizontalAlignment="Center"
                                                         Visibility="{Binding HasScreen, Converter={StaticResource BoolToVis}}">
                                             </StackPanel>
-                                            <TextBlock Text="대기 중…" Foreground="#888"
+                                            <TextBlock Text="대기 중…" Foreground="#B4BBC4"
                                                        FontSize="12" HorizontalAlignment="Center"
                                                        VerticalAlignment="Center">
                                                 <TextBlock.Style>
@@ -99,7 +99,7 @@
                                                                FontWeight="SemiBold"
                                                                TextTrimming="CharacterEllipsis"/>
                                                     <TextBlock Text="{Binding LastUpdated}"
-                                                               Foreground="#AAAAAA" FontSize="10"
+                                                               Foreground="#CCCCCC" FontSize="10"
                                                                HorizontalAlignment="Right"
                                                                VerticalAlignment="Bottom"/>
                                                 </Grid>

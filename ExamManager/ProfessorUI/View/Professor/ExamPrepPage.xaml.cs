@@ -13,7 +13,7 @@ namespace ProfessorUI.View.Professor
     public partial class ExamPrepPage : UserControl
     {
         private static readonly SolidColorBrush ActiveBorder = new(Color.FromRgb(0x2A, 0x2D, 0x31));
-        private static readonly SolidColorBrush IdleBorder = new(Color.FromRgb(0xE5, 0xE7, 0xEB));
+        private static readonly SolidColorBrush IdleBorder = new(Color.FromRgb(0x8C, 0x94, 0xA0));
 
         private const int LastStep = 3;
 

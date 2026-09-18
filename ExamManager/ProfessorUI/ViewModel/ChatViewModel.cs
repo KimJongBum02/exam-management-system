@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -136,6 +137,37 @@ namespace ProfessorUI.ViewModel
             return true;
         }
 
+        // 학생 한 명의 대화 줄을 찾는다. 없으면 만든다.
+        // 학생이 말을 걸어 올 때도, 교수가 먼저 말을 걸 때도 같은 줄을 쓴다 —
+        // 다시 접속해 세션이 바뀌어도 학번으로 찾으므로 대화가 이어진다.
+        public ChatTabItem GetOrCreateTab(string studentId, string studentName, string? sessionId)
+        {
+            var tab = Tabs.FirstOrDefault(t => t.SessionId != null && t.StudentId == studentId);
+            if (tab == null)
+            {
+                tab = new ChatTabItem
+                {
+                    TabName = $"{studentName}({studentId})",
+                    SessionId = sessionId ?? string.Empty,
+                    StudentName = studentName,
+                    StudentId = studentId,
+                };
+                Tabs.Add(tab);
+            }
+            // 답장은 지금 접속해 있는 세션으로 가야 한다
+            else if (!string.IsNullOrEmpty(sessionId)) tab.SessionId = sessionId;
+
+            return tab;
+        }
+
+        // 학생 대화 목록에 전체 학생을 띄운다.
+        // 아직 말이 오가지 않은 학생도 줄이 있어야 교수가 먼저 말을 걸 수 있다.
+        public void EnsureTabs(IEnumerable<StudentItemViewModel> students)
+        {
+            foreach (var student in students)
+                GetOrCreateTab(student.StudentId, student.Name, student.SessionId);
+        }
+
         // 알림·채팅 화면에서 한 학생과의 대화를 연다. 그 학생 몫의 안 읽음은 상단 배지에서도 뺀다.
         public void OpenConversation(ChatTabItem tab)
         {
@@ -166,24 +198,7 @@ namespace ProfessorUI.ViewModel
                 dispatcher.BeginInvoke(() =>
                 {
                     // 학생 한 명에 대화 한 줄. 다시 접속해 세션이 바뀌어도 같은 줄을 이어 쓴다.
-                    var tab = Tabs.FirstOrDefault(t => t.SessionId != null && t.StudentId == studentId);
-                    if (tab == null)
-                    {
-                        // 없으면 새 탭 생성
-                        tab = new ChatTabItem
-                        {
-                            TabName = $"{studentName}({studentId})",
-                            SessionId = sessionId,
-                            StudentName = studentName,
-                            StudentId = studentId,
-                        };
-                        Tabs.Add(tab);
-                    }
-                    else
-                    {
-                        // 답장은 지금 접속해 있는 세션으로 가야 한다
-                        tab.SessionId = sessionId;
-                    }
+                    var tab = GetOrCreateTab(studentId, studentName, sessionId);
 
                     // 메시지 추가
                     tab.Messages.Add(new ChatMessageModel

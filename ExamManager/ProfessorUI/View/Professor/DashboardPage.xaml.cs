@@ -69,6 +69,15 @@ namespace ProfessorUI.View.Professor
         private void StartWizard_Click(object sender, RoutedEventArgs e)
             => ShellWindow.From(this)?.Navigate(new ExamPrepPage(), 1);
 
+        // 학생 칸의 말풍선. 그 학생과의 1:1 대화를 열어 둔 채 알림·채팅 화면으로 넘어간다.
+        private void Chat_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is not StudentItemViewModel student) return;
+
+            var tab = _ctx.Chat.GetOrCreateTab(student.StudentId, student.Name, student.SessionId);
+            ShellWindow.From(this)?.Navigate(new ChatPage(tab), 4);
+        }
+
         // 강의실 큰 모니터에 올려 둘 현황판을 띄운다.
         // 교수 창과 별개로 떠서 다른 모니터로 옮길 수 있다.
         private void OpenMonitorBoard_Click(object sender, RoutedEventArgs e)

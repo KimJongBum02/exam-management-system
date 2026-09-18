@@ -32,6 +32,10 @@ namespace ProfessorUI.Service
         // 단계가 생기기 전부터 화면들이 쓰던 이름이라, 뜻이 같으므로 그대로 남겨둡니다.
         public static bool IsExamStarted => _currentPhase >= ExamPhase.InProgress;
 
+        // 지금 시험을 치르는 중인지. 시험을 끝내면(SubmitRequested) false 가 되어
+        // 다음 시험을 위한 준비 화면이 다시 열린다.
+        public static bool IsExamRunning => _currentPhase == ExamPhase.InProgress;
+
         public static event Action StateChanged;
     }
 }

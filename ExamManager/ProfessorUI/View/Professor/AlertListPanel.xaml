@@ -44,11 +44,11 @@
                                             VerticalAlignment="Center" Click="AlertDetail_Click"/>
                                 </Grid>
                             </Border>
-                            <!-- 아직 보지 않은 경고는 굵게 -->
+                            <!-- 아직 보지 않은 경고는 굵은 붉은 글씨다 -->
                             <DataTemplate.Triggers>
                                 <DataTrigger Binding="{Binding IsAcknowledged}" Value="False">
                                     <Setter TargetName="State" Property="FontWeight" Value="Bold"/>
-                                    <Setter TargetName="State" Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                                    <Setter TargetName="State" Property="Foreground" Value="{StaticResource AlertRed}"/>
                                 </DataTrigger>
                             </DataTemplate.Triggers>
                         </DataTemplate>

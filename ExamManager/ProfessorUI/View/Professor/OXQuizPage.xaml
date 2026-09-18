@@ -51,64 +51,48 @@
         </Grid>
 
         <!-- 문제를 그 자리에서 써서 바로 낸다. 문제를 모아 두지 않으므로 목록이 없다 -->
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="30"/>
-                <ColumnDefinition Width="470"/>
-            </Grid.ColumnDefinitions>
+        <StackPanel Grid.Row="1">
+            <TextBlock Text="문제 작성" Style="{StaticResource SectionTitle}"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="문제" Style="{StaticResource FieldLabel}"/>
+                    <TextBox Height="112" Style="{StaticResource NoteBox}" Margin="0,0,0,18"
+                             Text="{Binding Quiz.CurrentQuestion, UpdateSourceTrigger=PropertyChanged}"/>
 
-            <StackPanel Grid.Column="0">
-                <TextBlock Text="문제 작성" Style="{StaticResource SectionTitle}"/>
-                <Border Style="{StaticResource Card}">
-                    <StackPanel>
-                        <TextBlock Text="분류" Style="{StaticResource FieldLabel}"/>
-                        <ComboBox Style="{StaticResource FilterCombo}" IsEditable="True"
-                                  ItemsSource="{Binding Quiz.Categories}"
-                                  Text="{Binding Quiz.CurrentCategory, UpdateSourceTrigger=PropertyChanged}"
-                                  HorizontalAlignment="Stretch" Margin="0,0,0,18"/>
-
-                        <TextBlock Text="문제" Style="{StaticResource FieldLabel}"/>
-                        <TextBox Height="112" Style="{StaticResource NoteBox}" Margin="0,0,0,18"
-                                 Text="{Binding Quiz.CurrentQuestion, UpdateSourceTrigger=PropertyChanged}"/>
-
-                        <TextBlock Text="정답" Style="{StaticResource FieldLabel}"/>
-                        <StackPanel Orientation="Horizontal">
-                            <RadioButton Style="{StaticResource AnswerChoice}" GroupName="Answer"
-                                         AutomationProperties.Name="정답 O"
-                                         IsChecked="{Binding Quiz.IsOSelected}">
-                                <TextBlock Text="O" FontSize="21" FontWeight="Bold"
-                                           Foreground="{StaticResource TextPrimary}"/>
-                            </RadioButton>
-                            <RadioButton Style="{StaticResource AnswerChoice}" GroupName="Answer"
-                                         AutomationProperties.Name="정답 X"
-                                         IsChecked="{Binding Quiz.IsXSelected}">
-                                <TextBlock Text="X" FontSize="21" FontWeight="Bold"
-                                           Foreground="{StaticResource TextPrimary}"/>
-                            </RadioButton>
-                        </StackPanel>
+                    <TextBlock Text="정답" Style="{StaticResource FieldLabel}"/>
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton Style="{StaticResource AnswerChoice}" GroupName="Answer"
+                                     AutomationProperties.Name="정답 O"
+                                     IsChecked="{Binding Quiz.IsOSelected}">
+                            <TextBlock Text="O" FontSize="21" FontWeight="Bold"
+                                       Foreground="{StaticResource TextPrimary}"/>
+                        </RadioButton>
+                        <RadioButton Style="{StaticResource AnswerChoice}" GroupName="Answer"
+                                     AutomationProperties.Name="정답 X"
+                                     IsChecked="{Binding Quiz.IsXSelected}">
+                            <TextBlock Text="X" FontSize="21" FontWeight="Bold"
+                                       Foreground="{StaticResource TextPrimary}"/>
+                        </RadioButton>
                     </StackPanel>
-                </Border>
-            </StackPanel>
 
-            <StackPanel Grid.Column="2">
-                <TextBlock Text="학생에게 출제" Style="{StaticResource SectionTitle}"/>
-                <Border Style="{StaticResource Card}">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource Body}" Margin="0,0,0,10"
-                                   Text="작성한 문제를 접속 중인 학생 화면에 띄우고 응답을 받습니다."/>
-                        <TextBlock x:Name="SendHint" Style="{StaticResource Caption}" Margin="0,0,0,18"
-                                   TextWrapping="Wrap"/>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <!-- 출제 버튼은 문제를 다 쓴 자리 바로 아래, 오른쪽 끝에 둔다 -->
+                    <Grid Margin="0,22,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" x:Name="SendHint" Style="{StaticResource Caption}"
+                                   TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
                             <Button Content="문제 비우기" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0"
                                     Command="{Binding Quiz.NewCommand}"/>
                             <Button x:Name="SendQuizButton" Content="출제하기" Style="{StaticResource PrimaryButton}"
                                     Click="AskQuiz_Click"/>
                         </StackPanel>
-                    </StackPanel>
-                </Border>
-            </StackPanel>
-        </Grid>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
 
         <!-- ═══ 출제 현황 ═══ -->
         <Grid Grid.Row="2" Margin="0,30,0,12">

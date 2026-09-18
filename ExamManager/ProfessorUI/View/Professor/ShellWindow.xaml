@@ -42,21 +42,24 @@
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="238"/>
+                <ColumnDefinition Width="244"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
             <!-- ── 좌측 운영 메뉴 ── -->
             <Border Grid.Column="0" Background="{StaticResource BgSidebar}"
                     BorderBrush="{StaticResource BorderLight}" BorderThickness="0,0,1,0">
-                <StackPanel Margin="26,26,0,0">
-                    <TextBlock Text="운영 메뉴" Style="{StaticResource Caption}" Margin="0,0,0,14"/>
+                <StackPanel Margin="16,26,16,0">
+                    <TextBlock Text="운영 메뉴" Style="{StaticResource Caption}" Margin="12,0,0,14"/>
                     <ListBox x:Name="MenuList" Background="Transparent" BorderThickness="0"
                              SelectionChanged="MenuList_SelectionChanged">
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem">
                                 <Setter Property="Cursor" Value="Hand"/>
-                                <Setter Property="Padding" Value="0,7"/>
+                                <!-- 메뉴 사이를 넉넉히 띄운다 -->
+                                <Setter Property="Padding" Value="12,12"/>
+                                <Setter Property="Margin" Value="0,0,0,6"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                                 <!-- 시험 단계가 허락하지 않는 메뉴는 아예 눌리지 않는다 -->
                                 <Setter Property="IsEnabled" Value="{Binding Enabled}"/>
                                 <!-- 항목이 문자열이 아니라 객체라, 읽어 줄 이름을 따로 지정한다 -->
@@ -66,9 +69,19 @@
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="ListBoxItem">
-                                            <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+                                            <Border x:Name="Bd" Background="Transparent" CornerRadius="6"
+                                                    Padding="{TemplateBinding Padding}">
                                                 <ContentPresenter/>
                                             </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="#E3E5E9"/>
+                                                </Trigger>
+                                                <!-- 지금 보고 있는 메뉴는 검은 바탕이다 -->
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource BtnDark}"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
                                         </ControlTemplate>
                                     </Setter.Value>
                                 </Setter>
@@ -77,23 +90,21 @@
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock x:Name="Label" Text="{Binding Name}" FontSize="14.5"
-                                               Foreground="{StaticResource TextSecondary}"
-                                               TextDecorations="Underline"/>
+                                    <!-- 메뉴 글씨는 모두 검은색이다. 보고 있는 메뉴만 흰 글씨로 뒤집는다 -->
+                                    <TextBlock x:Name="Label" Text="{Binding Name}" FontSize="16"
+                                               Foreground="{StaticResource TextPrimary}"/>
                                     <TextBlock x:Name="Lock" Text="&#x1F512; 잠김" FontSize="11" Margin="9,0,0,0"
-                                               VerticalAlignment="Center" Foreground="#C4C7CC"
+                                               VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"
                                                Visibility="Collapsed"/>
                                 </StackPanel>
                                 <DataTemplate.Triggers>
                                     <DataTrigger Value="True"
                                                  Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}">
                                         <Setter TargetName="Label" Property="FontWeight" Value="Bold"/>
-                                        <Setter TargetName="Label" Property="Foreground" Value="{StaticResource TextPrimary}"/>
-                                        <Setter TargetName="Label" Property="TextDecorations" Value="{x:Null}"/>
+                                        <Setter TargetName="Label" Property="Foreground" Value="White"/>
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding Enabled}" Value="False">
-                                        <Setter TargetName="Label" Property="Foreground" Value="#C4C7CC"/>
-                                        <Setter TargetName="Label" Property="TextDecorations" Value="{x:Null}"/>
+                                        <Setter TargetName="Label" Property="Foreground" Value="{StaticResource TextMuted}"/>
                                         <Setter TargetName="Lock" Property="Visibility" Value="Visible"/>
                                     </DataTrigger>
                                 </DataTemplate.Triggers>
