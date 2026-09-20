@@ -75,6 +75,9 @@
                 <local:StudentInputName x:Name="NameInput" Margin="0,0,0,16"/>
                 <local:StudentInputNumber x:Name="NumberInput" Margin="0,0,0,28"/>
                 <local:LoginButton x:Name="LoginBtn"/>
+                <!-- 교수 PC 를 찾는 동안 보여 줄 한 줄 -->
+                <TextBlock Text="{Binding ConnectStatus}" FontSize="11" Foreground="#6B7280"
+                           HorizontalAlignment="Center" Margin="0,10,0,0"/>
             </StackPanel>
         </Border>
     </Grid>

@@ -1,21 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using System;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace StudentUI.View.LoginView
 {
+    // 교수 PC 를 자동으로 찾지 못했을 때만 뜨는 창.
+    // 교수가 포트를 바꿨다면 "192.168.0.5:9100" 처럼 함께 적을 수 있다.
     public partial class IPInputDialog : Window
     {
         public string IPAddress { get; private set; } = string.Empty;
+        public int Port { get; private set; } = DefaultPort;
+
+        private const int DefaultPort = 9000;
 
         public IPInputDialog()
         {
@@ -26,13 +21,22 @@ namespace StudentUI.View.LoginView
 
             ConnectButton.Click += (s, e) =>
             {
-                if (string.IsNullOrEmpty(IPTextBox.Text.Trim()))
+                string input = IPTextBox.Text.Trim();
+                if (string.IsNullOrEmpty(input))
                 {
                     MessageBox.Show("IP 주소를 입력해 주세요.");
                     return;
                 }
 
-                IPAddress = IPTextBox.Text.Trim();
+                // 포트를 함께 적었으면 떼어 낸다. 적지 않았으면 기본 포트로 붙는다.
+                string[] parts = input.Split(':');
+                if (parts.Length == 2 && int.TryParse(parts[1], out int port))
+                {
+                    input = parts[0];
+                    Port = port;
+                }
+
+                IPAddress = input;
                 DialogResult = true;
                 Close();
             };

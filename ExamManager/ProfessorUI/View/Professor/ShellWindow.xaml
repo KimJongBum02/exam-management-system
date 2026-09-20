@@ -36,6 +36,10 @@
                                VerticalAlignment="Center">
                         <Run Text="● 서버"/><Run Text=" "/><Run Text="{Binding Server.StatusText, Mode=OneWay}"/>
                     </TextBlock>
+                    <!-- 강의실 PC 가 9000번을 이미 쓰고 있을 때 여기서 포트를 바꾼다 -->
+                    <Button x:Name="PortButton" Content="포트 변경" Style="{StaticResource SecondaryButton}"
+                            FontSize="12" Padding="12,6" Margin="10,0,0,0"
+                            Click="PortButton_Click"/>
                 </StackPanel>
             </Grid>
         </Border>

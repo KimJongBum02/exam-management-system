@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="교수 PC 연결"
-        Height="280"
+        Height="330"
         Width="380"
         FontFamily="{StaticResource AppFont}"
         WindowStartupLocation="CenterScreen"
@@ -28,11 +28,12 @@
                        HorizontalAlignment="Center"
                        Margin="0,0,0,6"/>
 
-            <TextBlock Text="교수 PC의 IP 주소를 입력해 주세요."
+            <TextBlock Text="교수 PC를 자동으로 찾지 못했습니다.&#10;교수 PC의 IP 주소를 입력해 주세요.&#10;포트를 바꿨다면 192.168.0.5:9100 처럼 적어 주세요."
                        FontSize="12"
                        Foreground="#6B7280"
+                       TextAlignment="Center"
                        HorizontalAlignment="Center"
-                       Margin="0,0,0,24"/>
+                       Margin="0,0,0,20"/>
 
             <TextBlock Text="IP 주소"
                        FontSize="12"

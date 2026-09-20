@@ -109,6 +109,12 @@ namespace ProfessorUI.View.Professor
             _settle.SetGate(started, "시험을 시작하면 열립니다. 먼저 답안을 낸 학생은 시험 중에도 여기서 승인합니다.");
         }
 
+        // 포트는 9000 을 그대로 쓰는 것이 기본이다. 그 자리를 다른 프로그램이 쓰고 있을 때만 여기서 바꾼다.
+        private void PortButton_Click(object sender, RoutedEventArgs e)
+        {
+            new PortWindow { Owner = this }.ShowDialog();
+        }
+
         private void MenuList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (PageHost == null) return;

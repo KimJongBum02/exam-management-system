@@ -153,7 +153,7 @@ namespace ProfessorUI
             // 교수가 따로 열어 줄 것이 없어야 학생이 접속하지 못하는 사고가 생기지 않는다.
             // 여닫는 일은 Service.ServerControl 이 맡는다.
             if (!Service.ServerControl.Start())
-                MessageBox.Show("서버를 열지 못했습니다. 포트 9000을 다른 프로그램이 쓰고 있는지 확인해 주세요.",
+                MessageBox.Show($"서버를 열지 못했습니다. 포트 {Service.ServerControl.Port}번을 다른 프로그램이 쓰고 있는지 확인해 주세요.",
                                 "서버 열기 실패", MessageBoxButton.OK, MessageBoxImage.Warning);
             // ───────────────────────────────────
 

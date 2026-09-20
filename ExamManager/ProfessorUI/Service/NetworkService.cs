@@ -49,11 +49,25 @@ namespace ProfessorUI.Service
         public event Action<string, string, string, string, int>? SendProgress;
         public event Action<string, string, string, string>? SendError;
 
-        public NetworkService(int port = 9000)
+        public NetworkService(int port = ServerControl.DefaultPort)
         {
             // NetworkLibrary 초기화는 앱 수명 동안 한 번만 필요합니다.
             NetworkLibrary.Initialize();
 
+            CreateServer(port);
+        }
+
+        // 포트를 바꾸려면 서버를 새로 만들어야 한다. 네이티브 쪽은 서버 인스턴스마다
+        // 콜백을 다시 걸어 주므로, 여기서 다시 만들어야 이벤트가 끊기지 않는다.
+        // 바깥에서 이 NetworkService 를 구독한 쪽은 그대로 두어도 된다.
+        public void RecreateServer(int port)
+        {
+            _server?.Dispose();
+            CreateServer(port);
+        }
+
+        private void CreateServer(int port)
+        {
             _server = new ProfessorServer(port);
 
             _server.StudentConnected += (sid, stid, name, ip) => StudentConnected?.Invoke(sid, stid, name, ip);
