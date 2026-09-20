@@ -13,74 +13,113 @@
 
     <Border Background="White"
             CornerRadius="8"
-            Padding="32,28">
+            Padding="32,28"
+            MouseLeftButtonDown="Border_MouseLeftButtonDown">
         <Border.Effect>
             <DropShadowEffect Color="#000000" Opacity="0.12"
                               BlurRadius="16" ShadowDepth="2"/>
         </Border.Effect>
 
-        <StackPanel>
-
-            <TextBlock Text="교수 PC 연결"
-                       FontSize="18"
-                       FontWeight="Bold"
-                       Foreground="#1F2328"
-                       HorizontalAlignment="Center"
-                       Margin="0,0,0,6"/>
-
-            <TextBlock Text="교수 PC를 자동으로 찾지 못했습니다.&#10;교수 PC의 IP 주소를 입력해 주세요.&#10;포트를 바꿨다면 192.168.0.5:9100 처럼 적어 주세요."
-                       FontSize="12"
-                       Foreground="#6B7280"
-                       TextAlignment="Center"
-                       HorizontalAlignment="Center"
-                       Margin="0,0,0,20"/>
-
-            <TextBlock Text="IP 주소"
-                       FontSize="12"
-                       Foreground="#6B7280"
-                       Margin="0,0,0,6"/>
-
-            <Border BorderBrush="#2A2D31" BorderThickness="1" CornerRadius="6"
-                    Background="White" Margin="0,0,0,20">
-                <TextBox x:Name="IPTextBox"
-                         FontSize="13"
-                         Foreground="#1F2328"
-                         Background="Transparent"
-                         BorderThickness="0"
-                         Padding="12,10"
-                         Height="38"
-                         VerticalContentAlignment="Center"/>
-            </Border>
-
-            <Button x:Name="ConnectButton"
-                    IsDefault="True"
-                    Height="44"
+        <Grid>
+            <!-- 우측 상단 닫기(X) 버튼 -->
+            <Button x:Name="CloseButton"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Margin="0,-14,-18,0"
+                    Width="28"
+                    Height="28"
+                    Background="Transparent"
                     BorderThickness="0"
-                    Cursor="Hand">
+                    Cursor="Hand"
+                    IsCancel="True">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="ConnectBorder"
-                                Background="#2A2D31"
-                                CornerRadius="6">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"/>
+                        <Border x:Name="BtnBorder" Background="Transparent" CornerRadius="14">
+                            <TextBlock x:Name="BtnText"
+                                       Text="✕"
+                                       FontSize="12"
+                                       FontWeight="Medium"
+                                       Foreground="#9CA3AF"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ConnectBorder" Property="Background" Value="#3D4147"/>
+                                <Setter TargetName="BtnBorder" Property="Background" Value="#F3F4F6"/>
+                                <Setter TargetName="BtnText" Property="Foreground" Value="#374151"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="ConnectBorder" Property="Background" Value="#1F2328"/>
+                                <Setter TargetName="BtnBorder" Property="Background" Value="#E5E7EB"/>
+                                <Setter TargetName="BtnText" Property="Foreground" Value="#111827"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Button.Template>
-                <TextBlock Text="연결하기"
-                           FontSize="13"
-                           FontWeight="Bold"
-                           Foreground="White"/>
             </Button>
 
-        </StackPanel>
+            <StackPanel>
+
+                <TextBlock Text="교수 PC 연결"
+                           FontSize="18"
+                           FontWeight="Bold"
+                           Foreground="#1F2328"
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,6"/>
+
+                <TextBlock Text="교수 PC를 자동으로 찾지 못했습니다.&#10;교수 PC의 IP 주소를 입력해 주세요.&#10;포트를 바꿨다면 192.168.0.5:9100 처럼 적어 주세요."
+                           FontSize="12"
+                           Foreground="#6B7280"
+                           TextAlignment="Center"
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,20"/>
+
+                <TextBlock Text="IP 주소"
+                           FontSize="12"
+                           Foreground="#6B7280"
+                           Margin="0,0,0,6"/>
+
+                <Border BorderBrush="#2A2D31" BorderThickness="1" CornerRadius="6"
+                        Background="White" Margin="0,0,0,20">
+                    <TextBox x:Name="IPTextBox"
+                             FontSize="13"
+                             Foreground="#1F2328"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             Padding="12,10"
+                             Height="38"
+                             VerticalContentAlignment="Center"/>
+                </Border>
+
+                <Button x:Name="ConnectButton"
+                        IsDefault="True"
+                        Height="44"
+                        BorderThickness="0"
+                        Cursor="Hand">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="ConnectBorder"
+                                    Background="#2A2D31"
+                                    CornerRadius="6">
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="ConnectBorder" Property="Background" Value="#3D4147"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="ConnectBorder" Property="Background" Value="#1F2328"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                    <TextBlock Text="연결하기"
+                               FontSize="13"
+                               FontWeight="Bold"
+                               Foreground="White"/>
+                </Button>
+
+            </StackPanel>
+        </Grid>
     </Border>
-</Window>
+</Window>
