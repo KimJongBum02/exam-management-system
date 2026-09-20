@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Windows;
@@ -24,6 +24,12 @@ namespace StudentUI.View.LoginView
             // 창이 열리면 IP 입력란으로 바로 커서 포커스
             Loaded += (s, e) => IPTextBox.Focus();
 
+            CloseButton.Click += (s, e) =>
+            {
+                DialogResult = false;
+                Close();
+            };
+
             ConnectButton.Click += (s, e) =>
             {
                 if (string.IsNullOrEmpty(IPTextBox.Text.Trim()))
@@ -36,6 +42,14 @@ namespace StudentUI.View.LoginView
                 DialogResult = true;
                 Close();
             };
+        }
+
+        private void Border_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                DragMove();
+            }
         }
     }
 }

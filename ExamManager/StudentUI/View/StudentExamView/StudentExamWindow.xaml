@@ -363,7 +363,7 @@
                                 <Border Grid.Column="0" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14,14">
                                     <StackPanel HorizontalAlignment="Center">
                                         <TextBlock Text="전체 시간" FontSize="11" Foreground="#64748B" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="60" FontSize="24" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                        <TextBlock Text="50" FontSize="24" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" Margin="0,2,0,0"/>
                                         <TextBlock Text="분" FontSize="11" Foreground="#94A3B8" HorizontalAlignment="Center"/>
                                     </StackPanel>
                                 </Border>
