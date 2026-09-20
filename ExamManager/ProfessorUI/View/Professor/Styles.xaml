@@ -6,16 +6,19 @@
     <SolidColorBrush x:Key="BgSidebar"     Color="#F7F7F8"/>
     <SolidColorBrush x:Key="BgSubtle"      Color="#F3F4F6"/>
     <SolidColorBrush x:Key="BgHeader"      Color="#EDEDEE"/>
-    <SolidColorBrush x:Key="BorderLight"   Color="#E5E7EB"/>
+    <SolidColorBrush x:Key="BorderLight"   Color="#8C94A0"/>
     <!-- 누를 수 있고 고칠 수 있는 것에만 쓰는 테두리.
          읽기 전용 상자와 한눈에 구분되도록 본문 글자색과 같은 검정을 쓴다. -->
     <SolidColorBrush x:Key="BorderStrong"   Color="#2A2D31"/>
     <SolidColorBrush x:Key="TextPrimary"   Color="#1F2328"/>
-    <SolidColorBrush x:Key="TextSecondary" Color="#6B7280"/>
-    <SolidColorBrush x:Key="TextMuted"     Color="#9CA3AF"/>
+    <SolidColorBrush x:Key="TextSecondary" Color="#3F4651"/>
+    <SolidColorBrush x:Key="TextMuted"     Color="#5A626D"/>
     <SolidColorBrush x:Key="BtnDark"       Color="#2A2D31"/>
     <SolidColorBrush x:Key="BtnDarkHover"  Color="#3D4147"/>
     <SolidColorBrush x:Key="Placeholder"   Color="#E4E5E7"/>
+    <!-- 보안 경고. 미확인 글씨는 AlertRed, 경고를 담는 칸은 연붉은 AlertSoft 다 -->
+    <SolidColorBrush x:Key="AlertRed"      Color="#C02020"/>
+    <SolidColorBrush x:Key="AlertSoft"     Color="#FCE6E6"/>
 
     <!-- ── 카드 ── -->
     <Style x:Key="Card" TargetType="Border">

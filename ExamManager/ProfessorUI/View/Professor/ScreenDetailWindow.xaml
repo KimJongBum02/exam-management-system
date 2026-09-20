@@ -28,10 +28,10 @@
                 <TextBlock x:Name="NameText" FontSize="18" FontWeight="Bold"
                            Foreground="White"/>
                 <TextBlock x:Name="UpdatedText" FontSize="12"
-                           Foreground="#888" Margin="0,4,0,0"/>
+                           Foreground="#B4BBC4" Margin="0,4,0,0"/>
             </StackPanel>
             <Button Content="✕  닫기" HorizontalAlignment="Right" VerticalAlignment="Center"
-                    Click="Close_Click" Foreground="#CCC" Background="Transparent"
+                    Click="Close_Click" Foreground="#E4E7EB" Background="Transparent"
                     BorderThickness="0" FontSize="13" Cursor="Hand"/>
         </Grid>
 
@@ -44,14 +44,14 @@
 
                 <!-- 수신 전 안내 -->
                 <TextBlock x:Name="WaitingText" Text="화면 수신 대기 중…"
-                           Foreground="#555" FontSize="16"
+                           Foreground="#A8B0BA" FontSize="16"
                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Grid>
         </Border>
 
         <!-- ── 하단 바 ── -->
         <TextBlock Grid.Row="2" x:Name="ResolutionText"
-                   Text="320 × 180 · JPEG" Foreground="#555" FontSize="11"
+                   Text="320 × 180 · JPEG" Foreground="#A8B0BA" FontSize="11"
                    HorizontalAlignment="Right" Margin="0,8,0,0"/>
     </Grid>
 </Window>

@@ -80,10 +80,12 @@ namespace ProfessorUI.View.Professor
         }
 
         private void SecurityPolicy_Click(object sender, RoutedEventArgs e)
-            => ShellWindow.From(this)?.Navigate(new SecurityPolicyPage(), 4);
+            => ShellWindow.From(this)?.Navigate(new SecurityPolicyPage(), 5);
 
         // 시험 종료 실행. 학생 PC의 감시를 멈추는 신호까지 AnswerCollectViewModel 이 보낸다.
         // 교수가 확인 창에서 취소하면 단계가 그대로이므로 화면도 옮기지 않는다.
+        // 끝난 뒤에는 다음 시험을 준비할 수 있도록 시험 준비 화면으로 돌아간다.
+        // 답안 수집과 승인은 좌측 [종료 및 정산] 메뉴에서 이어서 한다.
         private void EndExam_Click(object sender, RoutedEventArgs e)
         {
             var command = _ctx.AnswerCollect.EndExamCommand;
@@ -92,7 +94,7 @@ namespace ProfessorUI.View.Professor
             command.Execute(null);
 
             if (Service.ExamState.CurrentPhase >= NetworkLib.ExamPhase.SubmitRequested)
-                ShellWindow.From(this)?.Navigate(new ExamEndPage(), 5);
+                ShellWindow.From(this)?.Navigate(new ExamPrepPage(), 1);
         }
     }
 }

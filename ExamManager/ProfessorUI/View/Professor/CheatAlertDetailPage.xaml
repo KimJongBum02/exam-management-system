@@ -6,6 +6,24 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/ProfessorUI;component/View/Professor/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- 아직 확인하지 않은 경고는 붉은 글씨로 -->
+            <Style x:Key="AlertStateText" TargetType="TextBlock" BasedOn="{StaticResource Body}">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsAcknowledged}" Value="False">
+                        <Setter Property="Foreground" Value="{StaticResource AlertRed}"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+            <Style x:Key="AlertStateCell" TargetType="TextBlock" BasedOn="{StaticResource Cell}">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsAcknowledged}" Value="False">
+                        <Setter Property="Foreground" Value="{StaticResource AlertRed}"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -16,11 +34,10 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- 브레드크럼 -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,14">
-            <Button Content="시험 관리 창으로" Style="{StaticResource LinkButton}" Click="BackToManage_Click"/>
-            <TextBlock Text=" / 보안 경고 상세" FontSize="13" Foreground="{StaticResource TextMuted}"
-                       VerticalAlignment="Center"/>
+        <!-- 돌아가는 길. 링크로는 잘 보이지 않아 큰 버튼으로 둔다 -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,18">
+            <Button Content="&#x2190; 시험 관리 창으로" Style="{StaticResource PrimaryButton}"
+                    Padding="26,13" Click="BackToManage_Click"/>
         </StackPanel>
 
         <!-- 부정행위만이 아니라 차단 실패·연결 끊김도 여기로 온다 -->
@@ -49,7 +66,7 @@
                             </StackPanel>
                             <StackPanel>
                                 <TextBlock Text="경고 상태" Style="{StaticResource FieldLabel}"/>
-                                <TextBlock Text="{Binding StateText}" Style="{StaticResource Body}"/>
+                                <TextBlock Text="{Binding StateText}" Style="{StaticResource AlertStateText}"/>
                             </StackPanel>
                         </UniformGrid>
                         <StackPanel>
@@ -78,7 +95,7 @@
                         <TextBlock Text="경고 처리 상태" Style="{StaticResource SectionTitle}" Margin="0,0,0,18"/>
                         <StackPanel Margin="0,0,0,16">
                             <TextBlock Text="현재 상태" Style="{StaticResource FieldLabel}"/>
-                            <TextBlock Text="{Binding StateText}" Style="{StaticResource Body}"/>
+                            <TextBlock Text="{Binding StateText}" Style="{StaticResource AlertStateText}"/>
                         </StackPanel>
                         <TextBlock Text="처리 메모" Style="{StaticResource FieldLabel}"/>
                         <TextBox Height="110" Style="{StaticResource NoteBox}" Margin="0,0,0,16"
@@ -110,7 +127,7 @@
                                     </GridViewColumn>
                                     <GridViewColumn Header="상태" Width="90">
                                         <GridViewColumn.CellTemplate>
-                                            <DataTemplate><TextBlock Text="{Binding StateText}" Style="{StaticResource Cell}"/></DataTemplate>
+                                            <DataTemplate><TextBlock Text="{Binding StateText}" Style="{StaticResource AlertStateCell}"/></DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
                                 </GridView>

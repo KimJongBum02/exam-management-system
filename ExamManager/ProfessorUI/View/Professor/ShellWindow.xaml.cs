@@ -4,6 +4,8 @@ using System.Collections.Specialized;
 using System.Windows;
 using ExamManager.Shared;
 using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using ProfessorUI.Service;
 
@@ -35,7 +37,7 @@ namespace ProfessorUI.View.Professor
 
             MenuList.ItemsSource = new List<MenuEntry>
             {
-                _dashboard, _prep, _manage, _chat, _policy, _settle, _quiz, _monitoring
+                _dashboard, _prep, _manage, _settle, _chat, _policy, _quiz, _monitoring
             };
             ApplyPhaseGates();
             MenuList.SelectedIndex = 0;
@@ -54,14 +56,53 @@ namespace ProfessorUI.View.Professor
 
             ExamState.StateChanged += ApplyPhaseGates;
             Closed += (_, _) => ExamState.StateChanged -= ApplyPhaseGates;
+
+            // 화면 안의 목록·대화창이 휠을 삼켜도 전체 화면이 내려가게 한다.
+            // 이미 처리된 휠까지 받아야 하므로 handledEventsToo 로 단다.
+            PageScroll.AddHandler(MouseWheelEvent, new MouseWheelEventHandler(OnPageWheel), true);
         }
+
+        // 휠 한 칸에 움직일 거리. WPF 기본값(세 줄)과 비슷하게 맞춘다.
+        private const double WheelStep = 48;
+
+        // 안쪽 스크롤은 끝에 닿아도 휠을 자기가 처리한 것으로 표시해 버린다.
+        // 그래서 바깥 화면이 더 내려갈 곳이 있어도 멈춰 버린다 — 그 몫을 여기서 대신 움직인다.
+        private void OnPageWheel(object sender, MouseWheelEventArgs e)
+        {
+            // 휠이 놓인 자리에서 바깥으로 훑는다.
+            bool swallowedInside = false;
+            for (DependencyObject? node = e.OriginalSource as DependencyObject;
+                 node != null && node != PageScroll;
+                 node = ParentOf(node))
+            {
+                if (node is not ScrollViewer inner) continue;
+
+                // 안쪽이 아직 더 움직일 수 있으면 그쪽 몫이다
+                if (CanScrollFurther(inner, e.Delta)) return;
+                swallowedInside = true;
+            }
+
+            // 안쪽에 스크롤이 없었다면 PageScroll 이 이미 스스로 움직였다
+            if (!swallowedInside || !CanScrollFurther(PageScroll, e.Delta)) return;
+
+            PageScroll.ScrollToVerticalOffset(PageScroll.VerticalOffset - Math.Sign(e.Delta) * WheelStep);
+        }
+
+        // 글자 조각(Run·Hyperlink)처럼 그리기 나무에 없는 것이 올라올 수 있어 둘 다 살핀다.
+        private static DependencyObject? ParentOf(DependencyObject node)
+            => node is Visual ? VisualTreeHelper.GetParent(node) : LogicalTreeHelper.GetParent(node);
+
+        private static bool CanScrollFurther(ScrollViewer scroll, int delta)
+            => delta < 0 ? scroll.VerticalOffset < scroll.ScrollableHeight
+                         : scroll.VerticalOffset > 0;
 
         // 시험 단계에 맞지 않는 메뉴를 잠그고, 잠긴 이유를 툴팁으로 남긴다.
         private void ApplyPhaseGates()
         {
             bool started = ExamState.IsExamStarted;                                  // 시험 시작 이후
 
-            _prep.SetGate(!started, "시험이 시작되어 준비 단계는 끝났습니다. 지각생 파일 전송은 시험 관리 창의 파일 재배포를 쓰십시오.");
+            // 시험을 끝내면 다음 시험을 준비할 수 있도록 준비 화면이 다시 열린다.
+            _prep.SetGate(!ExamState.IsExamRunning, "시험이 진행 중입니다. 지각생 파일 전송은 시험 관리 창의 파일 재배포를 쓰십시오.");
             _manage.SetGate(started, "시험을 시작하면 열립니다. 시험 준비 마법사를 4단계까지 진행하십시오.");
             // 먼저 답안을 낸 학생을 시험 중에 승인·종료해야 하므로 시험 종료를 기다리지 않고 연다.
             // 시험 중 [답안 일괄 수집]은 AnswerCollectViewModel 이 따로 막는다.
@@ -77,9 +118,9 @@ namespace ProfessorUI.View.Professor
                 0 => new DashboardPage(),
                 1 => new ExamPrepPage(),
                 2 => new ExamManagePage(),
-                3 => new ChatPage(),
-                4 => new SecurityPolicyPage(),
-                5 => new ExamEndPage(),
+                3 => new ExamEndPage(),
+                4 => new ChatPage(),
+                5 => new SecurityPolicyPage(),
                 6 => new OXQuizPage(),
                 7 => new ScreenMonitoringPage(),
                 _ => PageHost.Content

@@ -40,7 +40,8 @@
                     </StackPanel>
                     <StackPanel>
                         <TextBlock Text="미확인 경고" Style="{StaticResource FieldLabel}"/>
-                        <TextBlock Text="{Binding Overview.UnreadAlertCount}" Style="{StaticResource Body}"/>
+                        <TextBlock Text="{Binding Overview.UnreadAlertCount}" Style="{StaticResource Body}"
+                                   Foreground="{StaticResource AlertRed}" FontWeight="Bold"/>
                     </StackPanel>
                 </UniformGrid>
                 <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
@@ -152,7 +153,9 @@
                         <ItemsControl x:Name="AlertSummary" Margin="0,0,0,12">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Style="{StaticResource Card}" Background="{StaticResource BgSubtle}"
+                                    <!-- 경고는 연붉은 칸에 담아 다른 안내와 구분한다 -->
+                                    <Border Style="{StaticResource Card}" Background="{StaticResource AlertSoft}"
+                                            BorderBrush="{StaticResource AlertRed}"
                                             Padding="14,12" Margin="0,0,0,10">
                                         <StackPanel>
                                             <Grid Margin="0,0,0,6">
