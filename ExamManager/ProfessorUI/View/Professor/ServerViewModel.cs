@@ -20,8 +20,8 @@ namespace ProfessorUI.View.Professor
 
         public bool IsRunning => ServerControl.IsRunning;
 
-        // 주소를 상태에 붙여 둔다. 상단바 한 줄만 보고도 학생에게 불러 줄 수 있어야 한다.
-        public string StatusText => IsRunning ? $"열림 · {Address}" : "닫힘";
+        // 주소와 포트를 상태에 붙여 둔다. 상단바 한 줄만 보고도 학생에게 불러 줄 수 있어야 한다.
+        public string StatusText => IsRunning ? $"열림 · {Address}:{ServerControl.Port}" : "닫힘";
 
         private void OnServerStateChanged() => OnPropertyChanged(nameof(StatusText));
 

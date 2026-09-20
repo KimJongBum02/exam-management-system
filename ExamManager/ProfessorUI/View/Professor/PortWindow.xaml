@@ -1,0 +1,36 @@
+<Window x:Class="ProfessorUI.View.Professor.PortWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="포트 변경" Height="268" Width="380"
+        FontFamily="{StaticResource AppFont}"
+        Background="#FFFFFF"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/ProfessorUI;component/View/Professor/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <StackPanel Margin="28,24,28,24">
+        <TextBlock Text="학생을 받을 포트" Style="{StaticResource SectionTitle}" Margin="0,0,0,6"/>
+        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,18"
+                   Text="기본값은 9000입니다. 바꾸면 서버를 다시 열기 때문에 접속 중인 학생은 모두 끊어집니다. 앱을 끄면 다시 9000으로 돌아옵니다."/>
+
+        <TextBlock Text="포트 번호" Style="{StaticResource FieldLabel}"/>
+        <TextBox x:Name="PortBox" FontSize="13" Height="38" Padding="12,0" VerticalContentAlignment="Center"
+                 Foreground="{StaticResource TextPrimary}" Background="White"
+                 BorderBrush="{StaticResource BorderStrong}" BorderThickness="1" Margin="0,0,0,6"/>
+        <TextBlock x:Name="ErrorText" FontSize="11" Foreground="{StaticResource AlertRed}" Margin="2,0,0,0"/>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+            <Button x:Name="CancelButton" Content="취소" Style="{StaticResource SecondaryButton}"
+                    IsCancel="True" Margin="0,0,8,0"/>
+            <Button x:Name="ApplyButton" Content="변경" Style="{StaticResource PrimaryButton}" IsDefault="True"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

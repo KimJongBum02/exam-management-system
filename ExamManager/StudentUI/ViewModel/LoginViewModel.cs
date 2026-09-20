@@ -17,7 +17,20 @@ namespace StudentUI.ViewModel
         private readonly NavigationStore _navigationStore;
         public Student Student { get; set; } = new Student();
         public ICommand LoginCommand { get; }
-        public event Action? ShowIPInput;
+        // 교수 PC 를 자동으로 찾지 못했을 때만 IP 를 직접 받는다.
+        // 화면이 돌려준 주소·포트로 잇고, 학생이 창을 닫으면 null 이다.
+        public event Func<(string Ip, int Port)?>? RequestManualAddress;
+
+        // 찾는 동안 화면에 보여 줄 한 줄. 엔터를 누르고 몇 초 조용하면 멈춘 줄 안다.
+        private string _connectStatus = string.Empty;
+        public string ConnectStatus
+        {
+            get => _connectStatus;
+            private set { _connectStatus = value; OnPropertyChanged(); }
+        }
+
+        // 찾는 중에 엔터를 또 눌러 두 번 붙는 일이 없게 한다.
+        private bool _connecting;
 
         private string _nameError = string.Empty;
         public string NameError
@@ -36,23 +49,45 @@ namespace StudentUI.ViewModel
         public LoginViewModel(NavigationStore navigationStore)
         {
             _navigationStore = navigationStore;
-            LoginCommand = new RelayCommand(() =>
+            LoginCommand = new RelayCommand(() => _ = LoginAsync());
+        }
+
+        private async Task LoginAsync()
+        {
+            if (_connecting) return;
+
+            // 유효성 검사 후 인라인 에러 표시
+            ValidateFields();
+
+            if (!TryLogin()) return;
+
+            string? mismatch = PendingExamMismatch();
+            if (mismatch != null)
             {
-                // 유효성 검사 후 인라인 에러 표시
-                ValidateFields();
+                NumberError = "진행 중인 시험의 학번과 다릅니다.";
+                MessageBox.Show(mismatch, "로그인 확인", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
-                if (!TryLogin()) return;
+            _connecting = true;
+            try
+            {
+                // 학번·이름만 치면 들어갈 수 있도록 교수 PC 를 스스로 찾는다.
+                ConnectStatus = "교수 PC를 찾는 중…";
+                (string Ip, int Port)? professor = await ProfessorDiscovery.FindAsync();
+                ConnectStatus = string.Empty;
 
-                string? mismatch = PendingExamMismatch();
-                if (mismatch != null)
-                {
-                    NumberError = "진행 중인 시험의 학번과 다릅니다.";
-                    MessageBox.Show(mismatch, "로그인 확인", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
+                // 못 찾는 경우(브로드캐스트를 막는 공유기, 교수 PC 가 다른 대역)에는 예전처럼 IP 를 직접 받는다.
+                professor ??= RequestManualAddress?.Invoke();
+                if (professor == null) return;
 
-                ShowIPInput?.Invoke();
-            });
+                await CompleteLogin(professor.Value.Ip, professor.Value.Port);
+            }
+            finally
+            {
+                _connecting = false;
+                ConnectStatus = string.Empty;
+            }
         }
 
         // 이 PC 에서 진행 중이던 시험이 있으면 그 학번으로만 들어올 수 있다(ExamSessionStore 참고).
@@ -72,13 +107,14 @@ namespace StudentUI.ViewModel
         // 이름은 완성된 한글만 받는다. 영문·숫자·공백·자모 낱자(ㄱ, ㅏ)는 받지 않는다.
         private static bool IsKoreanName(string name) => Regex.IsMatch(name, "^[가-힣]+$");
 
-        public async Task CompleteLogin()
+        private async Task CompleteLogin(string ip, int port)
         {
-            // IP 입력이 끝난 시점에 실제 서버로 연결을 시도한다.
-            bool connected = NetworkService.Instance.Connect(Student.IPAddress);
+            // 교수 PC 를 찾았거나 직접 입력받은 시점에 실제 서버로 연결을 시도한다.
+            Student.IPAddress = ip;
+            bool connected = NetworkService.Instance.Connect(ip, port);
             if (!connected)
             {
-                MessageBox.Show($"서버에 연결하지 못했습니다: {Student.IPAddress}\nIP 주소와 서버 실행 여부를 확인해 주세요.",
+                MessageBox.Show($"서버에 연결하지 못했습니다: {ip}:{port}\n주소와 교수 프로그램 실행 여부를 확인해 주세요.",
                     "연결 실패");
                 return;
             }

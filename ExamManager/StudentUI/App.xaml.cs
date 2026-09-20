@@ -82,7 +82,7 @@ namespace StudentUI
             Service.QuizService.Instance.QuestionReceived += ShowQuizWindow;
 
             // ── 시험 파일을 수신하면 교수 PC로 '수신 완료' 응답을 보낸다 ──
-            // 실제 접속/로그인 패킷 전송은 IP 입력 후 LoginViewModel.CompleteLogin 에서 수행한다.
+            // 실제 접속/로그인 패킷 전송은 교수 PC 를 찾은 뒤 LoginViewModel.CompleteLogin 에서 수행한다.
             // 수신 사실은 대기 화면·시험 준비 화면이 ExamFileStore를 통해 표시하므로 별도 알림창은 띄우지 않는다.
             Service.NetworkService.Instance.FileReceived += (tid, senderId, fileName, tempPath, size, pw) =>
             {
