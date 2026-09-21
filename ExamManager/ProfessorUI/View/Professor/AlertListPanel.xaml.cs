@@ -2,6 +2,8 @@ using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Controls;
 using ExamManager.Shared;
+using ProfessorUI.Model;
+using ProfessorUI.Common;
 
 namespace ProfessorUI.View.Professor
 {
@@ -32,8 +34,8 @@ namespace ProfessorUI.View.Professor
         // 누른 줄의 경고를 상세 화면으로 넘긴다. 상세 화면은 시험 관리 메뉴 아래에 있다.
         private void AlertDetail_Click(object sender, RoutedEventArgs e)
         {
-            var alert = (sender as FrameworkElement)?.DataContext as Service.AlertItem;
-            ShellWindow.From(this)?.Navigate(new CheatAlertDetailPage(alert), 2);
+            var alert = (sender as FrameworkElement)?.DataContext as AlertItem;
+            MainWindow.From(this)?.Navigate(new CheatLog(alert), 2);
         }
     }
 }

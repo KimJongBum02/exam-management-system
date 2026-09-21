@@ -1,0 +1,141 @@
+<UserControl x:Class="ProfessorUI.View.Professor.CheatLog"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/ProfessorUI;component/View/Professor/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- 아직 확인하지 않은 경고는 붉은 글씨로 -->
+            <Style x:Key="AlertStateText" TargetType="TextBlock" BasedOn="{StaticResource Body}">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsAcknowledged}" Value="False">
+                        <Setter Property="Foreground" Value="{StaticResource AlertRed}"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+            <Style x:Key="AlertStateCell" TargetType="TextBlock" BasedOn="{StaticResource Cell}">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsAcknowledged}" Value="False">
+                        <Setter Property="Foreground" Value="{StaticResource AlertRed}"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 돌아가는 길. 링크로는 잘 보이지 않아 큰 버튼으로 둔다 -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,18">
+            <Button Content="&#x2190; 시험 관리 창으로" Style="{StaticResource PrimaryButton}"
+                    Padding="26,13" Click="BackToManage_Click"/>
+        </StackPanel>
+
+        <!-- 부정행위만이 아니라 차단 실패·연결 끊김도 여기로 온다 -->
+        <TextBlock Grid.Row="1" Text="보안 경고 상세" Style="{StaticResource PageTitle}" Margin="0,0,0,18"/>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="30"/>
+                <ColumnDefinition Width="430"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 좌측 -->
+            <StackPanel Grid.Column="0">
+                <Border Style="{StaticResource Card}" Margin="0,0,0,20">
+                    <StackPanel>
+                        <TextBlock Text="학생 정보" Style="{StaticResource SectionTitle}" Margin="0,0,0,18"/>
+                        <UniformGrid Columns="3" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="학번" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding StudentId}" Style="{StaticResource Body}"/>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="이름" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding Name}" Style="{StaticResource Body}"/>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="경고 상태" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding StateText}" Style="{StaticResource AlertStateText}"/>
+                            </StackPanel>
+                        </UniformGrid>
+                        <StackPanel>
+                            <TextBlock Text="발생 시각" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding Time}" Style="{StaticResource Body}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="감지 내용" Style="{StaticResource SectionTitle}" Margin="0,0,0,18"/>
+                        <TextBlock Text="내용" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding Description}" Style="{StaticResource Body}" Margin="0,0,0,18"
+                                   TextWrapping="Wrap"/>
+                        <!-- 안내는 경고 종류마다 다르다(AlertItem.Guide) -->
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Text="{Binding Guide}"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- 우측 -->
+            <StackPanel Grid.Column="2">
+                <Border Style="{StaticResource Card}" Margin="0,0,0,20">
+                    <StackPanel>
+                        <TextBlock Text="경고 처리 상태" Style="{StaticResource SectionTitle}" Margin="0,0,0,18"/>
+                        <StackPanel Margin="0,0,0,16">
+                            <TextBlock Text="현재 상태" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding StateText}" Style="{StaticResource AlertStateText}"/>
+                        </StackPanel>
+                        <TextBlock Text="처리 메모" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Height="110" Style="{StaticResource NoteBox}" Margin="0,0,0,16"
+                                 Foreground="{StaticResource TextPrimary}"
+                                 Text="{Binding Note, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button x:Name="AckButton" Content="확인 완료 처리" Style="{StaticResource PrimaryButton}"
+                                Click="Acknowledge_Click"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="동일 학생 경고 이력" Style="{StaticResource SectionTitle}" Margin="0,0,0,14"/>
+                        <ListView x:Name="HistoryTable" Style="{StaticResource FlatTable}" MinHeight="160">
+                            <ListView.View>
+                                <GridView ColumnHeaderContainerStyle="{StaticResource TableHeader}">
+                                    <GridViewColumn Header="시각" Width="100">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate><TextBlock Text="{Binding Time}" Style="{StaticResource Cell}"/></DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="내용" Width="180">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Description}" Style="{StaticResource Cell}"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="상태" Width="90">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate><TextBlock Text="{Binding StateText}" Style="{StaticResource AlertStateCell}"/></DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+                                </GridView>
+                            </ListView.View>
+                        </ListView>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>
