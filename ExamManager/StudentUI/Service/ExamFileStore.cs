@@ -84,8 +84,18 @@ namespace StudentUI.Service
         public event Action? ExamStartHandled;
 
         // 교수 PC가 '시험 시작'을 누르면 오는 명령 — 받은 파일을 자동으로 풀고 해제 폴더를 띄운다.
+        // 또한 교수가 시험을 초기화(Waiting)하면 파일 상태를 리셋한다.
         private void OnPacketReceived(PacketType type, IntPtr payload, uint payloadLen)
         {
+            if (type == PacketType.ExamPhaseChange)
+            {
+                if (ExamPhasePayload.TryDecode(payload, payloadLen, out ExamPhase phase) && phase == ExamPhase.Waiting)
+                {
+                    Post(Reset);
+                }
+                return;
+            }
+
             if (type != PacketType.ExtractArchive) return;
 
             Post(async () =>
@@ -100,6 +110,26 @@ namespace StudentUI.Service
                 // 해제 성공 여부와 관계없이 시험은 시작된 것이므로 감시는 켠다
                 ExamStartHandled?.Invoke();
             });
+        }
+
+        public void Reset()
+        {
+            _archiveName = string.Empty;
+            _archivePath = string.Empty;
+            _password = string.Empty;
+            _transferId = string.Empty;
+            _lastExtracted.Clear();
+            ExtractedFiles.Clear();
+            FileName = "-";
+            Progress = 0;
+            IsReceived = false;
+            IsExtracted = false;
+            IsExtracting = false;
+            StatusText = "파일 수신 대기 중";
+            OnPropertyChanged(nameof(HasExamFolder));
+            OnPropertyChanged(nameof(ExtractedRoot));
+            OnPropertyChanged(nameof(ExamPassword));
+            OnPropertyChanged(nameof(ArchiveName));
         }
 
         // ── 바인딩용 상태 ──

@@ -256,7 +256,15 @@ namespace StudentUI.Service
             if (!Directory.Exists(sourceFolder)) return (null, -1);
 
             string sevenZa = Path.Combine(AppContext.BaseDirectory, "7za.exe");
-            string archivePath = Path.Combine(Path.GetTempPath(), $"answer_{Guid.NewGuid():N}.7z");
+
+            // 파일명을 '학번_이름.7z' 형식으로 만든다. 교수가 수신 파일을 보고 학생을 바로 알 수 있게 한다.
+            // 학생 정보가 없는 예외 상황에는 임시 이름을 쓴다.
+            string studentNumber = ExamMonitorService.Instance.StudentNumber;
+            string studentName   = ExamMonitorService.Instance.StudentName;
+            string baseName = (!string.IsNullOrEmpty(studentNumber) && !string.IsNullOrEmpty(studentName))
+                ? $"{studentNumber}_{studentName}"
+                : $"answer_{Guid.NewGuid():N}";
+            string archivePath = Path.Combine(Path.GetTempPath(), $"{baseName}.7z");
 
             int code = FileControlService.FC_CompressEncrypt(sevenZa, sourceFolder, archivePath, password);
             if (code != 0 || !File.Exists(archivePath))

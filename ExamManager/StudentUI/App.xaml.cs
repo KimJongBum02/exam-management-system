@@ -67,9 +67,9 @@ namespace StudentUI
             //     if (type == PacketType.ShutdownPC) ShutdownPc();
             // };
 
-            // 진행 중이던 시험이 있으면 되살린다. 시험 폴더·암호·남은 시간은 바로,
-            // 감시와 차단은 같은 학번으로 다시 로그인한 뒤에 건다(LoginViewModel).
-            if (examSession != null)
+            // 진행 중이던 시험이 있으면 되살린다. (이미 종료된 시험은 제외)
+            // 시험 폴더·암호·남은 시간은 바로, 감시와 차단은 같은 학번으로 다시 로그인한 뒤에 건다(LoginViewModel).
+            if (examSession != null && !examSession.ExamEnded)
             {
                 Service.ExamFileStore.Instance.Resume(examSession.ArchiveName, examSession.Password, examSession.DeliveredFiles);
                 Service.ExamTimeStore.Instance.Resume(examSession.StartedAtUtc, examSession.ExamEnded);

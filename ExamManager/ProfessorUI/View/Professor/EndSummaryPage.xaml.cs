@@ -74,6 +74,11 @@ namespace ProfessorUI.View.Professor
             FileDeployState.IsFileDistributed = false;
             ExamState.CurrentPhase = NetworkLib.ExamPhase.Waiting;
 
+            // 접속 중인 학생들에게도 시험 초기화(대기 상태)를 알린다.
+            NetworkService.Instance.Broadcast(
+                NetworkLib.PacketType.ExamPhaseChange,
+                NetworkLib.ExamPhasePayload.Encode(NetworkLib.ExamPhase.Waiting, "시험이 초기화되었습니다."));
+
             ShellWindow.From(this)?.Navigate(new DashboardPage(), 0);
         }
     }
