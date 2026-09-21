@@ -39,7 +39,8 @@ namespace StudentUI.Service
             public bool ExamEnded { get; set; }                         // 교수가 시험을 끝냈으면 감시는 다시 켜지 않는다
         }
 
-        // 기록이 있고 아직 유효하면 돌려준다. 오래됐거나 깨진 기록은 여기서 지운다.
+        // 기록이 있고 아직 유효하며 진행 중인 시험이면 돌려준다.
+        // 이미 종료된 시험(ExamEnded == true)이거나 오래됐거나 깨진 기록은 여기서 지운다.
         public static ExamSession? Load()
         {
             try
@@ -48,6 +49,7 @@ namespace StudentUI.Service
 
                 var session = JsonSerializer.Deserialize<ExamSession>(File.ReadAllText(SessionPath));
                 if (session != null && session.ArchiveName.Length > 0 &&
+                    !session.ExamEnded &&
                     DateTime.UtcNow - session.StartedAtUtc <= MaxAge)
                     return session;
             }

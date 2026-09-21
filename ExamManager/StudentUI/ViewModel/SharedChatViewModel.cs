@@ -25,6 +25,28 @@ namespace StudentUI.ViewModel
         public bool HasMessages => Messages != null && Messages.Count > 0;
         public bool HasNoMessages => Messages == null || Messages.Count == 0;
 
+        private int _unreadCount;
+        public int UnreadCount
+        {
+            get => _unreadCount;
+            set
+            {
+                _unreadCount = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasUnreadMessages));
+            }
+        }
+
+        public bool HasUnreadMessages => _unreadCount > 0;
+
+        public string LastSender { get; private set; } = string.Empty;
+        public string LastMessage { get; private set; } = string.Empty;
+
+        public void MarkAsRead()
+        {
+            UnreadCount = 0;
+        }
+
         private string _inputMessage = string.Empty;
         public string InputMessage
         {
@@ -57,6 +79,9 @@ namespace StudentUI.ViewModel
         {
             Messages.Clear();
             InputMessage = string.Empty;
+            UnreadCount = 0;
+            LastSender = string.Empty;
+            LastMessage = string.Empty;
         }
 
         private void SendMessage()
@@ -109,6 +134,10 @@ namespace StudentUI.ViewModel
                         Timestamp = DateTime.Now,
                         IsMine = false
                     });
+
+                    LastSender = senderName;
+                    LastMessage = message;
+                    UnreadCount++;
 
                     // 창을 내려 두었거나 다른 창을 보고 있어도 알 수 있게 한다.
                     MessageArrived?.Invoke();

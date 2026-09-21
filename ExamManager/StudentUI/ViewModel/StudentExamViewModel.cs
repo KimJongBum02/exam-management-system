@@ -59,6 +59,10 @@ namespace StudentUI.ViewModel
                 set { _isChatOpen = value; OnPropertyChanged(); }
             }
 
+            // 교수가 시험 종료 신호를 보내면 true가 된다. 학생 화면 전체를 잠근다.
+            public bool IsExamEnded => ExamTime.IsFinished;
+            public DateTime? ExamEndedTime => ExamTime.IsFinished ? DateTime.Now : (DateTime?)null;
+
             public ICommand ToggleNotificationCommand { get; }
             public ICommand ToggleChatCommand { get; }
 
@@ -91,6 +95,22 @@ namespace StudentUI.ViewModel
             public string SecurityPolicyCheckText => IsSecurityPolicyValid ? "완료" : "미완료";
             public string NetworkCheckText => IsNetworkValid ? "접속" : "미접속";
             public string FileReadyCheckText => IsFileReadyValid ? "완료" : "수신 대기";
+
+            // 화면에 표시할 간결한 시험 파일 경로 (전송 전: 바탕화면\시험 파일, 전송 후: 바탕화면\시험 파일\시험파일명)
+            public string DisplayFolderPath
+            {
+                get
+                {
+                    if (ExamFile.HasExamFolder || ExamFile.IsReceived)
+                    {
+                        string name = !string.IsNullOrEmpty(ExamFile.ArchiveName)
+                            ? ExamFile.ArchiveName
+                            : (!string.IsNullOrEmpty(ExamFile.FileName) ? System.IO.Path.GetFileNameWithoutExtension(ExamFile.FileName) : "");
+                        return string.IsNullOrEmpty(name) ? @"바탕화면\시험 파일" : $@"바탕화면\시험 파일\{name}";
+                    }
+                    return @"바탕화면\시험 파일";
+                }
+            }
 
             // 단계(스텝퍼) 계산 (1: 대기, 2: 준비, 3: 파일 배포, 4: 시험 시작)
             public int CurrentStep
@@ -162,6 +182,32 @@ namespace StudentUI.ViewModel
                 set { _currentTime = value; OnPropertyChanged(); }
             }
 
+            // ── 채팅 토스트 알림 ──
+            private bool _isToastVisible;
+            public bool IsToastVisible
+            {
+                get => _isToastVisible;
+                set { _isToastVisible = value; OnPropertyChanged(); }
+            }
+
+            private string _toastTitle = string.Empty;
+            public string ToastTitle
+            {
+                get => _toastTitle;
+                set { _toastTitle = value; OnPropertyChanged(); }
+            }
+
+            private string _toastMessage = string.Empty;
+            public string ToastMessage
+            {
+                get => _toastMessage;
+                set { _toastMessage = value; OnPropertyChanged(); }
+            }
+
+            public ICommand OpenChatFromToastCommand { get; }
+            public ICommand CloseToastCommand { get; }
+            private readonly System.Windows.Threading.DispatcherTimer _toastTimer;
+
             public StudentExamViewModel(NavigationStore navigationStore, Student student)
             {
                 _navigationStore = navigationStore;
@@ -177,6 +223,35 @@ namespace StudentUI.ViewModel
                 NetworkService.Instance.Disconnected += OnServerDisconnected;
                 NetworkService.Instance.PacketReceived += OnPacketReceived;
 
+                // 채팅 수신 이벤트 구독
+                ChatVM.MessageArrived += OnChatMessageArrived;
+
+                // 토스트 5초 타이머
+                _toastTimer = new System.Windows.Threading.DispatcherTimer
+                {
+                    Interval = TimeSpan.FromSeconds(5)
+                };
+                _toastTimer.Tick += (s, e) =>
+                {
+                    _toastTimer.Stop();
+                    IsToastVisible = false;
+                };
+
+                OpenChatFromToastCommand = new RelayCommand(() =>
+                {
+                    _toastTimer.Stop();
+                    IsToastVisible = false;
+                    IsChatOpen = true;
+                    IsNotificationOpen = false;
+                    ChatVM.MarkAsRead();
+                });
+
+                CloseToastCommand = new RelayCommand(() =>
+                {
+                    _toastTimer.Stop();
+                    IsToastVisible = false;
+                });
+
                 // 시험 파일 상태 변경 감지 시 테이블/단계 갱신
                 ExamFile.PropertyChanged += (s, e) =>
                 {
@@ -187,6 +262,7 @@ namespace StudentUI.ViewModel
                     OnPropertyChanged(nameof(IsStep2Active));
                     OnPropertyChanged(nameof(IsStep3Active));
                     OnPropertyChanged(nameof(IsStep4Active));
+                    OnPropertyChanged(nameof(DisplayFolderPath));
                     RefreshStatusItems();
                 };
 
@@ -197,6 +273,8 @@ namespace StudentUI.ViewModel
                     OnPropertyChanged(nameof(IsStep2Active));
                     OnPropertyChanged(nameof(IsStep3Active));
                     OnPropertyChanged(nameof(IsStep4Active));
+                    OnPropertyChanged(nameof(IsExamEnded));
+                    OnPropertyChanged(nameof(ExamEndedTime));
                 };
 
                 // 기본은 채팅/알림 오버레이 닫힘 상태
@@ -225,7 +303,13 @@ namespace StudentUI.ViewModel
                 ToggleChatCommand = new RelayCommand(() =>
                 {
                     IsChatOpen = !IsChatOpen;
-                    if (IsChatOpen) IsNotificationOpen = false;
+                    if (IsChatOpen)
+                    {
+                        IsNotificationOpen = false;
+                        ChatVM.MarkAsRead();
+                        _toastTimer.Stop();
+                        IsToastVisible = false;
+                    }
                 });
 
                 GoToWaitingCommand = new RelayCommand(() =>
@@ -239,6 +323,7 @@ namespace StudentUI.ViewModel
                     Unsubscribe();
                     NetworkService.Instance.Disconnect();
                     ChatVM.Clear();
+                    ExamTime.Reset();
                     _navigationStore.CurrentViewModel = new LoginViewModel(_navigationStore);
                 });
 
@@ -271,13 +356,12 @@ namespace StudentUI.ViewModel
 
                     // 2. 작업 폴더 (문제 풀이 및 소스코드 저장 위치)
                     bool isExtracted = ExamFile.IsExtracted;
-                    string folderPath = isExtracted ? ExamFile.ExtractedRoot : ExamFile.ExtractFolder;
                     string folderStatus = isExtracted ? "풀이 준비 완료" : (fileReceived ? "압축 해제 대기" : "대기 중");
                     StatusItems.Add(new ExamFileStatusItem
                     {
                         Icon = "📁",
                         Category = "시험 파일 경로",
-                        Name = string.IsNullOrEmpty(folderPath) ? "C:\\Exam" : folderPath,
+                        Name = DisplayFolderPath,
                         Status = folderStatus,
                         StatusLevel = isExtracted ? "Success" : (fileReceived ? "Info" : "Normal"),
                         Description = isExtracted ? $"폴더 내 문제 파일({ExamFile.ExtractedFiles.Count}개)을 열어 코드를 작성하세요." : "시험이 시작되면 문제 파일이 자동 압축 해제됩니다.",
@@ -287,11 +371,14 @@ namespace StudentUI.ViewModel
                     // 3. 답안 제출 파일
                     string submitText = string.IsNullOrEmpty(SubmitStatus) ? "작성 중 (미제출)" : SubmitStatus;
                     string submitLevel = submitText.Contains("완료") ? "Success" : (submitText.Contains("실패") ? "Warning" : "Info");
+                    string answerFileName = string.IsNullOrEmpty(Student.StudentName)
+                        ? $"{Student.StudentNumber}_답안.zip"
+                        : $"{Student.StudentNumber}_{Student.StudentName}.zip";
                     StatusItems.Add(new ExamFileStatusItem
                     {
                         Icon = "📤",
                         Category = "답안 파일",
-                        Name = $"{Student.StudentNumber}_답안.zip",
+                        Name = answerFileName,
                         Status = submitText,
                         StatusLevel = submitLevel,
                         Description = "종료 전 '답안 제출' 버튼을 누르면 작업 폴더 전체가 자동 압축되어 전송됩니다.",
@@ -381,11 +468,36 @@ namespace StudentUI.ViewModel
             private void Unsubscribe()
             {
                 _clockTimer.Stop();
+                _toastTimer.Stop();
+                ChatVM.MessageArrived -= OnChatMessageArrived;
                 NetworkService.Instance.Disconnected -= OnServerDisconnected;
                 NetworkService.Instance.PacketReceived -= OnPacketReceived;
                 AnswerSubmitService.Instance.StateChanged -= OnSubmitStateChanged;
                 ExamMonitorService.Instance.CheatWarning -= OnCheatWarning;
                 ExamMonitorService.Instance.NetworkStateChanged -= RefreshStatusItems;
+            }
+
+            // 채팅 메시지가 도착했을 때 토스트 알림 처리
+            private void OnChatMessageArrived()
+            {
+                var dispatcher = Application.Current?.Dispatcher;
+                if (dispatcher == null || dispatcher.HasShutdownStarted) return;
+
+                dispatcher.BeginInvoke(() =>
+                {
+                    if (IsChatOpen)
+                    {
+                        ChatVM.MarkAsRead();
+                        return;
+                    }
+
+                    ToastTitle = string.IsNullOrEmpty(ChatVM.LastSender) ? "새 메시지" : ChatVM.LastSender;
+                    ToastMessage = ChatVM.LastMessage;
+                    IsToastVisible = true;
+
+                    _toastTimer.Stop();
+                    _toastTimer.Start();
+                });
             }
 
             // 교수 PC의 시험 단계 알림 수신

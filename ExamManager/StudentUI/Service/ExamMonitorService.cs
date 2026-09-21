@@ -54,6 +54,10 @@ namespace StudentUI.Service
         private string _studentNumber = string.Empty;
         private string _studentName = string.Empty;
 
+        // 현재 로그인된 학생 정보 (답안 파일명 생성 등에 사용)
+        public string StudentNumber => _studentNumber;
+        public string StudentName => _studentName;
+
         // 네트워크 차단에서 뺄 교수 PC 주소. 로그인 때 접속한 주소를 그대로 쓴다.
         private string _professorIp = string.Empty;
 
@@ -220,12 +224,9 @@ namespace StudentUI.Service
             // 멈추자고 네이티브 DLL을 새로 불러올 이유가 없다.
             _processControl?.StopMonitoring();
 
-            // 이어 받기 기록에도 끝났음을 남긴다. 다시 켜도 감시는 켜지 않고 답안 제출만 기다린다.
-            if (ExamSessionStore.Load() is { } session && !session.ExamEnded)
-            {
-                session.ExamEnded = true;
-                ExamSessionStore.Save(session);
-            }
+            // 시험이 종료되었으므로 남은 세션 기록을 지운다. (다시 켰을 때 종료 화면으로 잠기지 않도록)
+            _resumeSession = null;
+            ExamSessionStore.Clear();
 
             // 네트워크 차단은 여기서 풀지 않는다(OnSubmitStateChanged 참고).
         }

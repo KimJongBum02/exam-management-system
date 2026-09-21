@@ -107,7 +107,21 @@ namespace StudentUI.Service
             {
                 if (phase == ExamPhase.InProgress) Begin();
                 else if (phase >= ExamPhase.SubmitRequested) Finish();
+                else if (phase <= ExamPhase.Ready) Reset();
             });
+        }
+
+        public void Reset()
+        {
+            _ticker.Stop();
+            IsRunning = false;
+            IsFinished = false;
+            Remaining = ExamDuration;
+            OnPropertyChanged(nameof(IsRunning));
+            OnPropertyChanged(nameof(IsFinished));
+            OnPropertyChanged(nameof(StatusText));
+            OnPropertyChanged(nameof(RemainingText));
+            OnPropertyChanged(nameof(IsTimeUp));
         }
 
         private void Begin()
@@ -127,13 +141,12 @@ namespace StudentUI.Service
         public DateTime StartedAtUtc => _startedAt;
 
         // 다시 켠 프로그램이 진행 중이던 시험의 남은 시간을 이어서 센다.
-        // 교수가 이미 시험을 끝냈으면 끝난 상태로만 되돌린다.
         public void Resume(DateTime startedAtUtc, bool examEnded)
         {
             _startedAt = startedAtUtc;
             if (examEnded)
             {
-                Finish();
+                Reset();
                 return;
             }
 
