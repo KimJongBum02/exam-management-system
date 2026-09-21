@@ -49,7 +49,7 @@ namespace ProfessorUI.Service
         public event Action<string, string, string, string, int>? SendProgress;
         public event Action<string, string, string, string>? SendError;
 
-        public NetworkService(int port = ServerControl.DefaultPort)
+        public NetworkService(int port = ServerService.DefaultPort)
         {
             // NetworkLibrary 초기화는 앱 수명 동안 한 번만 필요합니다.
             NetworkLibrary.Initialize();

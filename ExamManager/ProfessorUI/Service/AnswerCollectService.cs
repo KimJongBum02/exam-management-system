@@ -91,7 +91,7 @@ namespace ProfessorUI.Service
                 Directory.CreateDirectory(studentFolder);
 
                 string sevenZa = Path.Combine(AppContext.BaseDirectory, "7za.exe");
-                int code = FileControlService.FC_ExtractDecrypt(sevenZa, archivePath, studentFolder, password);
+                int code = ZipNative.FC_ExtractDecrypt(sevenZa, archivePath, studentFolder, password);
 
                 if (code == 0)
                 {

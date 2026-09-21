@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using ExamManager.Shared;
@@ -89,6 +89,25 @@ namespace ProfessorUI.Service
 
         // 기본 제공 금지 항목 중 지워진 것을 다시 채운다. 이미 있는 것은 건드리지 않는다.
         // 교수가 실수로 지운 AI 기본값을 손으로 다시 타이핑하지 않아도 되게 한다.
+        // 프로그램 선택창에서 고른 것들을 목록에 넣는다.
+        // 반대쪽 목록에 이미 있는 것은 넣지 않고 돌려준다 — 조용히 무시하면
+        // 아무 일도 일어나지 않은 것처럼 보이기 때문이다.
+        public static List<string> AddPicked(IEnumerable<string> executables, bool toWhiteList)
+        {
+            var other = toWhiteList ? BlackList : WhiteList;
+            var conflicts = new List<string>();
+
+            foreach (string exe in executables)
+            {
+                if (other.Contains(exe)) { conflicts.Add(exe); continue; }
+
+                if (toWhiteList) AddToWhiteList(exe);
+                else AddToBlackList(exe);
+            }
+
+            return conflicts;
+        }
+
         public static void RestoreBlackListDefaults()
         {
             foreach (string entry in DefaultBlackList)

@@ -11,14 +11,14 @@ namespace ProfessorUI.Service
         public static StudentStore Instance { get; } = new StudentStore();
 
         // ⭐ 단 하나의 학생 리스트 원본 (실제 접속한 학생만 채워짐)
-        public ObservableCollection<StudentItemViewModel> Students { get; }
+        public ObservableCollection<StudentStatusViewModel> Students { get; }
 
         // 특정 학생이 파일 수신 완료 응답을 보냈을 때 알림 (배포 화면 갱신용) — 인자: 학번
         public event Action<string>? FileReceivedConfirmed;
 
         private StudentStore()
         {
-            Students = new ObservableCollection<StudentItemViewModel>();
+            Students = new ObservableCollection<StudentStatusViewModel>();
         }
 
         // 학생 접속: 같은 학번이 이미 있으면 정보 갱신, 없으면 새로 추가
@@ -35,7 +35,7 @@ namespace ProfessorUI.Service
             }
             else
             {
-                Students.Add(new StudentItemViewModel
+                Students.Add(new StudentStatusViewModel
                 {
                     SessionId = sessionId,
                     StudentId = studentId,
