@@ -1,7 +1,8 @@
 <UserControl x:Class="ProfessorUI.View.Professor.ScreenMonitoring"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="clr-namespace:ProfessorUI.ViewModel">
+             xmlns:vm="clr-namespace:ProfessorUI.ViewModel"
+             xmlns:local="clr-namespace:ProfessorUI.View.Professor">
 
     <UserControl.Resources>
         <ResourceDictionary>
@@ -20,7 +21,10 @@
 
         <!-- ── 헤더 ── -->
         <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <TextBlock Text="화면 모니터링" Style="{StaticResource PageTitle}"/>
+            <StackPanel Orientation="Horizontal">
+                <local:BackButton/>
+                <TextBlock Text="화면 모니터링" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
+            </StackPanel>
             <TextBlock Text="{Binding StudentCountText}"
                        Style="{StaticResource Caption}" Margin="0,6,0,0"/>
         </StackPanel>

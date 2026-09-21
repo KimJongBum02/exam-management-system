@@ -85,8 +85,8 @@ namespace ProfessorUI.View.Professor
 
         // 시험 종료 실행. 학생 PC의 감시를 멈추는 신호까지 ExamEndViewModel 이 보낸다.
         // 교수가 확인 창에서 취소하면 단계가 그대로이므로 화면도 옮기지 않는다.
-        // 끝난 뒤에는 다음 시험을 준비할 수 있도록 시험 준비 화면으로 돌아간다.
-        // 답안 수집과 승인은 좌측 [종료 및 정산] 메뉴에서 이어서 한다.
+        // 끝난 뒤에는 답안 수집 현황과 승인이 있는 종료 및 정산 화면으로 넘어간다.
+        // 다음 시험 준비는 정산까지 끝난 뒤 종료 완료 현황의 [처음 화면으로] 에서 시작한다.
         private void EndExam_Click(object sender, RoutedEventArgs e)
         {
             var command = _ctx.ExamEnd.EndExamCommand;
@@ -95,7 +95,7 @@ namespace ProfessorUI.View.Professor
             command.Execute(null);
 
             if (Service.ExamState.CurrentPhase >= NetworkLib.ExamPhase.SubmitRequested)
-                MainWindow.From(this)?.Navigate(new ExamWizard(), 1);
+                MainWindow.From(this)?.Navigate(new ExamEndWindow(), 3);
         }
     }
 }

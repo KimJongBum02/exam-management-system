@@ -1,6 +1,7 @@
 <UserControl x:Class="ProfessorUI.View.Professor.QuizWindow"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:ProfessorUI.View.Professor">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -45,7 +46,10 @@
 
         <!-- 제목 -->
         <Grid Grid.Row="0" Margin="0,0,0,18">
-            <TextBlock Text="OX 퀴즈" Style="{StaticResource PageTitle}"/>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <local:BackButton/>
+                <TextBlock Text="OX 퀴즈" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
+            </StackPanel>
             <TextBlock Text="{Binding Quiz.FeedbackMessage}" Style="{StaticResource Caption}"
                        HorizontalAlignment="Right" VerticalAlignment="Center"/>
         </Grid>

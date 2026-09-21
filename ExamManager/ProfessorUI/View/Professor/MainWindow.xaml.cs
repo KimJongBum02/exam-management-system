@@ -30,8 +30,27 @@ namespace ProfessorUI.View.Professor
         // 시험 단계와 무관한 기능이라 잠그지 않는다
         private readonly MenuEntryViewModel _quiz       = new("OX 퀴즈");
         private readonly MenuEntryViewModel _monitoring = new("화면 모니터링");
+        // 지난 기록을 보는 화면이라 시험 전에도 열어 둔다 (표가 비어 있을 뿐이다)
+        private readonly MenuEntryViewModel _examLog    = new("시험 로그");
 
         private readonly UiContext _ctx = UiContext.Instance;
+
+        // 거쳐 온 화면. 뒤로가기가 뒤에서부터 하나씩 꺼내 되돌린다.
+        // 화면을 통째로 들고 있으므로 돌아갔을 때 검색어·스크롤 같은 것이 그대로 남는다.
+        //
+        // 오래된 것부터 버리기 때문에 Stack 이 아니라 List 로 둔다.
+        // 화면은 학생 목록을 구독하고 있어, 한 시험 내내 쌓아 두면 버려진 화면들이 계속 따라 움직인다.
+        private readonly List<(UserControl Page, int MenuIndex)> _history = new();
+
+        // 되돌아갈 수 있는 화면 수. 이만큼이면 한 번에 파고든 깊이를 모두 되짚을 수 있다.
+        private const int MaxHistory = 20;
+
+        // 지금 화면이 어느 메뉴의 것인지. 하위 화면(경고 상세 등)은 부모 메뉴 번호를 쓴다.
+        private int _currentMenuIndex;
+
+        // 뒤로 가는 중이거나 Navigate 가 곧 원하는 화면을 올릴 때는
+        // 메뉴 선택이 기본 화면을 띄우지 않도록 잠시 막는다.
+        private bool _suppressMenuPage;
 
         public MainWindow()
         {
@@ -39,7 +58,7 @@ namespace ProfessorUI.View.Professor
 
             MenuList.ItemsSource = new List<MenuEntryViewModel>
             {
-                _dashboard, _prep, _manage, _settle, _chat, _policy, _quiz, _monitoring
+                _dashboard, _prep, _manage, _settle, _chat, _policy, _quiz, _monitoring, _examLog
             };
             ApplyPhaseGates();
             MenuList.SelectedIndex = 0;
@@ -119,20 +138,59 @@ namespace ProfessorUI.View.Professor
 
         private void MenuList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (PageHost == null) return;
+            if (PageHost == null || _suppressMenuPage) return;
 
-            PageHost.Content = MenuList.SelectedIndex switch
+            var page = MenuPageFor(MenuList.SelectedIndex);
+            if (page != null) ShowPage(page, MenuList.SelectedIndex);
+        }
+
+        // 메뉴 한 줄이 여는 기본 화면.
+        private static UserControl? MenuPageFor(int menuIndex) => menuIndex switch
+        {
+            0 => new DashboardWindow(),
+            1 => new ExamWizard(),
+            2 => new ExamManagePage(),
+            3 => new ExamEndWindow(),
+            4 => new AlertAndChat(),
+            5 => new ProgramManageWindow(),
+            6 => new QuizWindow(),
+            7 => new ScreenMonitoring(),
+            8 => new ExamLogWindow(),
+            _ => null
+        };
+
+        // 화면을 갈아 끼우면서 지금 보던 화면을 뒤로가기 기록에 남긴다.
+        private void ShowPage(UserControl page, int menuIndex)
+        {
+            if (PageHost.Content is UserControl current)
             {
-                0 => new DashboardWindow(),
-                1 => new ExamWizard(),
-                2 => new ExamManagePage(),
-                3 => new ExamEndWindow(),
-                4 => new AlertAndChat(),
-                5 => new ProgramManageWindow(),
-                6 => new QuizWindow(),
-                7 => new ScreenMonitoring(),
-                _ => PageHost.Content
-            };
+                _history.Add((current, _currentMenuIndex));
+                if (_history.Count > MaxHistory) _history.RemoveAt(0);
+            }
+
+            PageHost.Content = page;
+            _currentMenuIndex = menuIndex;
+            NavHistory.CanGoBack = _history.Count > 0;
+
+            ScrollPageToTop();
+        }
+
+        // 직전 화면으로 되돌린다. 기록에서 꺼내는 것이라 여기서는 새로 쌓지 않는다.
+        // 좌측 메뉴 표시도 그때의 메뉴로 함께 되돌린다.
+        public void GoBack()
+        {
+            if (_history.Count == 0) return;
+
+            var (page, menuIndex) = _history[^1];
+            _history.RemoveAt(_history.Count - 1);
+
+            _suppressMenuPage = true;
+            MenuList.SelectedIndex = menuIndex;
+            _suppressMenuPage = false;
+
+            PageHost.Content = page;
+            _currentMenuIndex = menuIndex;
+            NavHistory.CanGoBack = _history.Count > 0;
 
             ScrollPageToTop();
         }
@@ -148,10 +206,13 @@ namespace ProfessorUI.View.Professor
         // 좌측 메뉴 표시도 함께 맞춰 준다(하위 화면이면 부모 메뉴를 선택 상태로 둔다).
         public void Navigate(UserControl page, int menuIndex)
         {
-            // SelectionChanged가 기본 화면을 올린 뒤 원하는 화면으로 덮어쓴다.
+            // 메뉴 선택이 기본 화면을 띄우지 않게 막아 둔다.
+            // 그대로 두면 기본 화면이 한 번 올라갔다가 덮이면서 뒤로가기 기록에도 끼어든다.
+            _suppressMenuPage = true;
             MenuList.SelectedIndex = menuIndex;
-            PageHost.Content = page;
-            ScrollPageToTop();
+            _suppressMenuPage = false;
+
+            ShowPage(page, menuIndex);
         }
 
         // 현재 화면이 속한 셸을 찾는다. 화면 쪽 코드비하인드에서 사용한다.

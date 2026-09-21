@@ -114,6 +114,7 @@ namespace ProfessorUI.ViewModel
         public void SetMonitorStatus(bool processOn, bool networkOn, string detail)
         {
             _monitorReported = true;
+            HasEverStarted = true;
             _processMonitorOn = processOn;
             _networkMonitorOn = networkOn;
             _monitorDetail = detail;
@@ -128,6 +129,11 @@ namespace ProfessorUI.ViewModel
         // 학생은 시험을 시작하면(이어 받기 포함) 감시 상태를 보고하므로, 보고가 왔으면 시작한 것이다.
         // 끊기면 모르는 상태로 돌린다 — 다시 켠 학생이 이어 받았는지는 새 보고로 안다.
         public bool HasExamStarted => _monitorReported;
+
+        // 이 시험에서 한 번이라도 시험을 시작했는지. 접속이 끊겨도 남는다.
+        // 시험 로그의 출석 여부는 "지금 접속해 있는가"가 아니라 "응시했는가"를 봐야 하므로,
+        // 끊길 때 지워지는 HasExamStarted 와 따로 둔다.
+        public bool HasEverStarted { get; set; }
 
         public void ClearMonitorStatus()
         {
