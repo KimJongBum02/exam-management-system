@@ -19,7 +19,10 @@
         </Grid.RowDefinitions>
 
         <!-- 제목 (마지막 갱신·서버 상태는 상단바에 있다) -->
-        <TextBlock Grid.Row="0" Text="프로그램 관리" Style="{StaticResource PageTitle}" Margin="0,0,0,18"/>
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,18">
+            <local:BackButton/>
+            <TextBlock Text="프로그램 관리" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
+        </StackPanel>
 
         <!-- 현재 정책 상태 -->
         <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,22">

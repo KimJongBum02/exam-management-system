@@ -41,5 +41,8 @@
       <Link>7za.exe</Link>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.1" />
+  </ItemGroup>
 
 </Project>

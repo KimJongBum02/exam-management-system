@@ -116,6 +116,7 @@ namespace ProfessorUI.Service
                 student.IsApproved = false;
                 student.IsCleanupFailed = false;
                 student.IsCleanupDone = false;
+                student.HasEverStarted = false;
                 student.Status = student.IsConnected ? "대기" : "미접속";
 
                 // 배포 표도 처음 상태로. 그대로 두면 다음 시험 준비 화면에 지난 시험의 '수신완료'가 남는다.

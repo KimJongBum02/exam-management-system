@@ -5,8 +5,6 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Windows;
 using NetworkLib;
 using ProfessorUI.Model;
@@ -23,10 +21,10 @@ namespace ProfessorUI.Service
 
         // 세션 기록을 모아 둘 폴더. 걷은 답안과 같은 자리에 둬서 교수가 한곳만 보면 되게 한다.
         public static string SessionFolder { get; } = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-            "ExamManager", "QuizSessions");
+    Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+    "OX퀴즈");
 
-        private readonly string _sessionFileName = $"quiz_{DateTime.Now:yyyyMMdd_HHmmss}.json";
+        private readonly string _sessionFileName = $"quiz_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
         private bool _started;
 
         private QuizService() { }
@@ -169,18 +167,19 @@ namespace ProfessorUI.Service
         // 응답 하나가 들어올 때마다 통째로 다시 쓴다.
         // 한 수업에 문제 몇 개, 학생 수십 명 규모라 이 정도로 충분하고,
         // 중간에 프로그램이 꺼져도 그때까지의 기록이 남는다.
+        //
+        // 교수가 성적 처리에 바로 쓰도록 엑셀로 남긴다.
+        // 표 만드는 일은 ExcelReport 가 맡는다.
         private void Save()
         {
             try
             {
-                Directory.CreateDirectory(SessionFolder);
-                string json = JsonSerializer.Serialize(Rounds,
-                    new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(Path.Combine(SessionFolder, _sessionFileName), json);
+                ExcelReport.SaveQuizSession(Rounds, Path.Combine(SessionFolder, _sessionFileName));
             }
             catch
             {
                 // 기록 저장에 실패해도 수업은 계속돼야 하므로 여기서 막지 않는다.
+                // (교수가 방금 낸 문제 파일을 엑셀에서 열어 둔 경우가 대부분이다)
             }
         }
     }

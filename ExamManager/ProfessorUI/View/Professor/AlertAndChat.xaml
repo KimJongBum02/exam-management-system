@@ -43,7 +43,10 @@
         </Grid.RowDefinitions>
 
         <!-- 제목 ([전체 공지 작성]은 공지 내역 위로 옮겼다) -->
-        <TextBlock Grid.Row="0" Text="알림·채팅" Style="{StaticResource PageTitle}" Margin="0,0,0,22"/>
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,22">
+            <local:BackButton/>
+            <TextBlock Text="알림·채팅" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
+        </StackPanel>
 
         <!-- 보안 경고. 채팅보다 급한 것이라 맨 위에 둔다. 시험 관리 화면과 같은 목록이다 -->
         <StackPanel Grid.Row="1" Margin="0,0,0,26">
