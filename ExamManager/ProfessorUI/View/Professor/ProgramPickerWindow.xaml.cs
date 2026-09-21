@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -10,6 +10,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using ProfessorUI.Service;
+using ProfessorUI.Model;
 
 namespace ProfessorUI.View.Professor
 {
@@ -42,16 +43,9 @@ namespace ProfessorUI.View.Professor
             var picker = new ProgramPickerWindow(target, toWhiteList) { Owner = Window.GetWindow(caller) };
             if (picker.ShowDialog() != true) return;
 
-            // 반대쪽 목록에 있는 것은 Store 가 조용히 거른다.
-            // 아무 일도 일어나지 않은 것처럼 보이면 곤란하니 미리 추려 알려 준다.
-            var other = toWhiteList ? ProgramControlStore.BlackList : ProgramControlStore.WhiteList;
-            var conflicts = picker.SelectedExecutables.Where(other.Contains).ToList();
-
-            foreach (string exe in picker.SelectedExecutables)
-            {
-                if (toWhiteList) ProgramControlStore.AddToWhiteList(exe);
-                else ProgramControlStore.AddToBlackList(exe);
-            }
+            // 반대쪽 목록에 이미 있어 넣지 못한 것은 Store 가 돌려준다.
+            // 아무 일도 일어나지 않은 것처럼 보이면 곤란하니 그대로 알려 준다.
+            var conflicts = ProgramControlStore.AddPicked(picker.SelectedExecutables, toWhiteList);
 
             if (conflicts.Count > 0)
                 MessageBox.Show(
@@ -77,21 +71,9 @@ namespace ProfessorUI.View.Professor
         {
             LoadingCover.Visibility = Visibility.Visible;
 
-            var programs = await Task.Run(LoadOnStaThread);
-
-            // 다시 읽으면 목록이 새 객체로 바뀌므로, 이미 골라 둔 것에 표시를 다시 입힌다.
             var chosenExecutables = _chosen.Select(c => c.ExecutableName).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            foreach (var program in programs)
-            {
-                program.IsAlreadyAdded = _already.Contains(program.ExecutableName);
-                program.CannotBeAllowed = _forWhiteList && program.OriginalName.Length == 0;
-                program.IsChosen = chosenExecutables.Contains(program.ExecutableName);
-            }
-
-            // 아직 목록에 없어 지금 고를 수 있는 것을 위로 올린다.
-            // 이미 추가됐거나(추가됨) 넣을 수 없는(허용 불가) 항목은 손댈 수 없으니 아래로 내린다.
-            // OrderBy 는 안정 정렬이라 같은 그룹 안에서는 원래의 가나다 순서가 그대로 유지된다.
-            programs = programs.OrderBy(p => (p.IsAlreadyAdded || p.CannotBeAllowed) ? 1 : 0).ToList();
+            List<ProgramEntry> programs =
+                await ProgramPickerService.LoadForPickerAsync(_already, _forWhiteList, chosenExecutables);
 
             ProgramList.ItemsSource = programs;
             _view = CollectionViewSource.GetDefaultView(programs);
@@ -106,25 +88,6 @@ namespace ProfessorUI.View.Professor
             }
 
             LoadingCover.Visibility = Visibility.Collapsed;
-        }
-
-        // 바로가기를 읽는 WScript.Shell 은 STA 스레드에서 부르는 것이 안전하다.
-        // 그렇다고 UI 스레드에서 돌리면 목록을 훑는 동안 창이 멈춘 것처럼 보여
-        // 전용 STA 스레드를 하나 띄운다.
-        private static Task<List<ProgramEntry>> LoadOnStaThread()
-        {
-            var done = new TaskCompletionSource<List<ProgramEntry>>();
-
-            var worker = new Thread(() =>
-            {
-                try { done.SetResult(ProgramCatalog.Load().ToList()); }
-                catch (Exception) { done.SetResult(new List<ProgramEntry>()); }
-            });
-            worker.SetApartmentState(ApartmentState.STA);
-            worker.IsBackground = true;
-            worker.Start();
-
-            return done.Task;
         }
 
         private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -222,7 +185,7 @@ namespace ProfessorUI.View.Professor
             };
             if (dialog.ShowDialog(this) != true) return;
 
-            ProgramEntry? picked = ProgramCatalog.ResolvePickedFile(dialog.FileName);
+            ProgramEntry? picked = ProgramPickerService.ResolvePickedFile(dialog.FileName);
             if (picked == null)
             {
                 MessageBox.Show(

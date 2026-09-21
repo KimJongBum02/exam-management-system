@@ -13,7 +13,7 @@ namespace ProfessorUI.View.Professor
         {
             InitializeComponent();
 
-            PortBox.Text = ServerControl.Port.ToString();
+            PortBox.Text = ServerService.Port.ToString();
             Loaded += (_, _) => { PortBox.Focus(); PortBox.SelectAll(); };
 
             ApplyButton.Click += (_, _) => Apply();
@@ -28,7 +28,7 @@ namespace ProfessorUI.View.Professor
                 return;
             }
 
-            string? failReason = ServerControl.ChangePort(port);
+            string? failReason = ServerService.ChangePort(port);
             if (failReason != null)
             {
                 ErrorText.Text = failReason;
