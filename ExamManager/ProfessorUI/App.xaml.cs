@@ -3,6 +3,7 @@ using NetworkLib;
 using System.Configuration;
 using System.Data;
 using System.Windows;
+using System.Windows.Input;
 
 namespace ProfessorUI
 {
@@ -18,9 +19,13 @@ namespace ProfessorUI
             base.OnStartup(e);
             // 키보드 포커스 점선 사각형을 앱 전체에서 끈다.
             // 알트탭처럼 키보드를 쓴 뒤 창으로 돌아오면 마지막에 누른 버튼·메뉴·스크롤 영역에 점선이 생긴다.
-            // 스타일마다 막으면 빠지는 곳이 생겨, 화면에 올라오는 모든 요소에서 한 번에 끈다.
-            EventManager.RegisterClassHandler(typeof(FrameworkElement), FrameworkElement.LoadedEvent,
-                new RoutedEventHandler((s, _) => ((FrameworkElement)s).FocusVisualStyle = null));
+            // 스타일마다 막으면 빠지는 곳이 생겨, 포커스를 받기 직전에 모든 요소에서 한 번에 끈다(점선은 그 뒤에 그려진다).
+            // Loaded 로 걸면 Loaded 처리기가 따로 붙은 요소에만 신호가 와서 스텝 버튼 같은 곳에 점선이 남는다.
+            EventManager.RegisterClassHandler(typeof(FrameworkElement), Keyboard.PreviewGotKeyboardFocusEvent,
+                new KeyboardFocusChangedEventHandler((_, e) =>
+                {
+                    if (e.NewFocus is FrameworkElement element) element.FocusVisualStyle = null;
+                }));
             // 소프트웨어 렌더링(CPU)으로 강제 전환하여 그래픽 깨짐 방지
             System.Windows.Media.RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;
             // ── 서버 시작 및 학생 접속/응답 이벤트를 현황판(StudentStore)에 연동 ──
@@ -140,6 +145,8 @@ namespace ProfessorUI
         protected override void OnExit(ExitEventArgs e)
         {
             _shuttingDown = true;
+            // 퀴즈 기록은 문제 단위로만 저장하므로, 마지막 문제의 응답은 여기서 남긴다.
+            try { Service.QuizService.Instance.Save(); } catch { }
             try { Service.ServerService.Stop(); } catch { }
             try { Service.NetworkService.Instance.Dispose(); } catch { }
             base.OnExit(e);

@@ -201,6 +201,34 @@ namespace ProfessorUI.ViewModel
             }
         }
 
+        // 마지막으로 답안을 받은 시각. 다시 내면 새 시각으로 바뀐다 — 마지막 제출이 최종본이다.
+        private DateTime? _submittedAt;
+        public DateTime? SubmittedAt
+        {
+            get => _submittedAt;
+            set { _submittedAt = value; OnPropertyChanged(); OnPropertyChanged(nameof(SubmitTimeText)); }
+        }
+
+        // 제출 시각과, 시험 종료 뒤에 냈다면 종료로부터 얼마 뒤였는지.
+        // 종료 뒤에는 학생 PC 감시가 꺼지므로 답안을 고칠 수 있다. 늦게 들어온 답안은 교수가 알아볼 수 있어야 한다.
+        // 자동 수집도 압축·전송에 시간이 걸려 몇 초~몇 분 뒤로 찍힌다. 얼마부터 이상한지는 교수가 판단한다.
+        public string SubmitTimeText
+        {
+            get
+            {
+                if (_submittedAt is not DateTime at) return "-";
+
+                string time = at.ToString("HH:mm:ss");
+                if (Service.ExamState.EndedAt is not DateTime ended || at <= ended) return $"{time} (시험 중)";
+
+                TimeSpan after = at - ended;
+                string elapsed = after.TotalMinutes >= 1
+                    ? $"{(int)after.TotalMinutes}분 {after.Seconds}초"
+                    : $"{after.Seconds}초";
+                return $"{time} (종료 {elapsed} 뒤)";
+            }
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));

@@ -33,6 +33,9 @@ namespace ProfessorUI.View.Professor
                 _ctx.Quiz.PropertyChanged -= OnQuizEdited;
                 _session.ResponseReceived -= OnResponseReceived;
                 ServerService.StateChanged -= UpdateAskState;
+
+                // 퀴즈 화면을 떠날 때 진행 중이던 문제의 응답까지 파일에 남긴다.
+                _session.Save();
             };
 
             RefreshResults();
@@ -146,7 +149,13 @@ namespace ProfessorUI.View.Professor
                 "기록 비우기", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (confirm != MessageBoxResult.Yes) return;
 
-            _session.ClearSession();
+            if (!_session.ClearSession())
+            {
+                MessageBox.Show("기록을 파일로 저장하지 못해 비우지 않았습니다.\n" +
+                                $"바탕화면의 기록 폴더에 쓸 수 있는지 확인해 주세요.\n\n{QuizService.SessionFolder}",
+                                "기록 비우기", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
             RefreshResults();
         }
     }

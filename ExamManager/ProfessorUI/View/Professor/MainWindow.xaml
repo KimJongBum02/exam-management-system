@@ -12,6 +12,7 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/ProfessorUI;component/View/Professor/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+            <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         </ResourceDictionary>
     </Window.Resources>
 
@@ -24,7 +25,7 @@
         <!-- ── 상단바 ── -->
         <Border Grid.Row="0" Background="White" BorderBrush="{StaticResource BorderLight}" BorderThickness="0,0,0,1">
             <Grid Height="56" Margin="26,0">
-                <TextBlock Text="시험 운영" FontSize="17" FontWeight="Bold"
+                <TextBlock Text="교수용" FontSize="17" FontWeight="Bold"
                            Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <!-- 마지막 갱신과 서버 상태. 어느 화면에 있어도 보이도록 상단바에 둔다.
@@ -32,10 +33,26 @@
                     <TextBlock Style="{StaticResource Caption}" Margin="0,0,16,0" VerticalAlignment="Center">
                         <Run Text="마지막 갱신:"/><Run Text=" "/><Run Text="{Binding Overview.LastUpdatedText, Mode=OneWay}"/>
                     </TextBlock>
-                    <TextBlock FontSize="13" Foreground="{StaticResource TextSecondary}"
-                               VerticalAlignment="Center">
-                        <Run Text="● 서버"/><Run Text=" "/><Run Text="{Binding Server.StatusText, Mode=OneWay}"/>
-                    </TextBlock>
+                    <!-- 학생을 실제로 받을 수 있으면 초록, 아니면 빨강 (몇 초마다 다시 확인한다) -->
+                    <Ellipse Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,7,0">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse">
+                                <Setter Property="Fill" Value="{StaticResource AlertRed}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Server.IsHealthy}" Value="True">
+                                        <Setter Property="Fill" Value="#16A34A"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                    <TextBlock Text="{Binding Server.StatusText, Mode=OneWay}" FontSize="13"
+                               Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                    <!-- 꺼졌을 때만 보인다. 같은 포트로 서버만 다시 연다(학생 목록·기록은 그대로) -->
+                    <Button Content="서버 다시 열기" Style="{StaticResource SecondaryButton}"
+                            FontSize="12" Padding="12,6" Margin="10,0,0,0"
+                            Command="{Binding Server.RestartCommand}"
+                            Visibility="{Binding Server.IsDown, Converter={StaticResource BoolToVis}}"/>
                     <!-- 강의실 PC 가 9000번을 이미 쓰고 있을 때 여기서 포트를 바꾼다 -->
                     <Button x:Name="PortButton" Content="포트 변경" Style="{StaticResource SecondaryButton}"
                             FontSize="12" Padding="12,6" Margin="10,0,0,0"

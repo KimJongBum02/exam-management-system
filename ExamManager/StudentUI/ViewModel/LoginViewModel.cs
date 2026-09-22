@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Input;
@@ -119,26 +118,8 @@ namespace StudentUI.ViewModel
                 return;
             }
 
-            // 교수 PC 의 승인·거절을 기다린다. 회신이 빨리 오므로 로그인 패킷보다 먼저 구독해 둔다.
-            var response = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
-            void OnPacket(PacketType type, IntPtr payload, uint payloadLen)
-            {
-                if (type == PacketType.LoginResponse &&
-                    LoginResponsePayload.TryDecode(payload, payloadLen, out bool approved, out string reason))
-                    response.TrySetResult(approved ? null : reason);
-            }
-            NetworkService.Instance.PacketReceived += OnPacket;
-
-            // 학번(16바이트) + 이름을 담은 로그인 패킷 전송 → 교수 PC 현황판에 표시됨
-            byte[] loginPayload = new byte[80];
-            Encoding.UTF8.GetBytes(Student.StudentNumber).CopyTo(loginPayload, 0);
-            Encoding.UTF8.GetBytes(Student.StudentName).CopyTo(loginPayload, 16);
-            NetworkService.Instance.SendPacket(PacketType.StudentLogin, loginPayload);
-
-            // 회신이 오지 않으면 승인된 것으로 보고 넘어간다. 회신 하나 때문에 로그인이 막히지 않게 한다.
-            Task finished = await Task.WhenAny(response.Task, Task.Delay(TimeSpan.FromSeconds(3)));
-            NetworkService.Instance.PacketReceived -= OnPacket;
-            string? rejection = finished == response.Task ? response.Task.Result : null;
+            // 학번·이름을 보내고 승인을 기다린다. 승인되면 로그인 뒤에 보낼 것들까지 LoginService 가 보낸다.
+            string? rejection = await LoginService.LoginAsync(Student);
 
             // 같은 학번이 이미 접속해 있으면 교수 PC 가 받지 않는다(ProfessorServer::HandleLogin).
             // 연결을 끊고 로그인 화면에 머문다.
@@ -163,16 +144,8 @@ namespace StudentUI.ViewModel
                 return;
             }
 
-            // 이 PC 에 설치된 프로그램 목록을 보낸다. 교수의 프로그램 선택창에 강의실 PC 것도 뜨게 한다.
-            // 로그인 패킷 뒤에 보내야 한다 — 교수 PC 는 로그인 전에 온 패킷을 버린다.
-            Service.InstalledProgramReport.Send();
-
-            // 누가 로그인했는지 알리고, 시험 도중 꺼졌다 다시 켠 경우 진행 중이던 시험의 감시와 차단을 다시 건다.
-            // 로그인 뒤에 해야 교수 PC 가 감시 상태 보고를 받는다.
-            Service.ExamMonitorService.Instance.OnLoggedIn(Student.StudentNumber, Student.StudentName);
-
-            // 퀴즈 응답에 학번·이름을 실어 보낼 수 있도록 학생 정보를 넘겨 둔다.
-            Service.QuizService.Instance.Student = Student;
+            // 이제부터 교수 PC 와의 연결이 끊기면 스스로 다시 찾아 붙는다.
+            ReconnectService.Enable(Student, ip, port);
 
             // 교수 UI와 동일한 '시험 준비 마법사' 대시보드로 진입 (1단계: 대기부터 시작)
             _navigationStore.CurrentViewModel = new StudentExamViewModel(_navigationStore, Student);

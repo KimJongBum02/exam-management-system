@@ -31,11 +31,6 @@ namespace ProfessorUI.View.Professor
             InitializeComponent();
             DataContext = _ctx;
 
-            // 학생 대화 목록에는 전체 학생이 한 줄씩 보인다.
-            // 아직 말이 오가지 않은 학생도 줄이 있어야 교수가 먼저 말을 걸 수 있다.
-            _ctx.Chat.EnsureTabs(_ctx.Overview.Students);
-            _ctx.Overview.Students.CollectionChanged += OnStudentsChanged;
-
             // 원본 목록은 건드리지 않고 보기만 거르고 줄 세운다.
             _conversations = (ListCollectionView)CollectionViewSource.GetDefaultView(_ctx.Chat.Tabs);
             _conversations.Filter = MatchesFilter;
@@ -51,6 +46,7 @@ namespace ProfessorUI.View.Professor
             _conversations.IsLiveFiltering = true;
             _conversations.LiveFilteringProperties.Clear();
             _conversations.LiveFilteringProperties.Add(nameof(ChatTabViewModel.HasUnread));
+            _conversations.LiveFilteringProperties.Add(nameof(ChatTabViewModel.LastTimestamp));
 
             ConversationList.ItemsSource = _conversations;
             ((INotifyCollectionChanged)_conversations).CollectionChanged += OnConversationsChanged;
@@ -59,14 +55,13 @@ namespace ProfessorUI.View.Professor
             if (openTab != null) OpenConversation(openTab);
         }
 
-        // 뒤늦게 들어온 학생도 대화 목록에 바로 한 줄이 생긴다.
-        private void OnStudentsChanged(object? sender, NotifyCollectionChangedEventArgs e)
-            => _ctx.Chat.EnsureTabs(_ctx.Overview.Students);
-
         private bool MatchesFilter(object item)
         {
             // 전체 공지 탭(SessionId 없음)은 학생 대화가 아니다.
             if (item is not ChatTabViewModel tab || tab.SessionId == null) return false;
+
+            // 말이 한 번이라도 오간 학생만 보인다. 교수가 먼저 말을 걸 때는 대시보드의 말풍선으로 대화를 연다.
+            if (tab.Messages.Count == 0) return false;
 
             if (FilterUnread?.IsChecked == true && !tab.HasUnread) return false;
             if (FilterRead?.IsChecked == true && tab.HasUnread) return false;
@@ -196,7 +191,6 @@ namespace ProfessorUI.View.Professor
         {
             CloseConversation();
             ((INotifyCollectionChanged)_conversations).CollectionChanged -= OnConversationsChanged;
-            _ctx.Overview.Students.CollectionChanged -= OnStudentsChanged;
         }
     }
 }

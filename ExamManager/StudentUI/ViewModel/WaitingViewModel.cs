@@ -81,6 +81,7 @@ namespace StudentUI.ViewModel
             // 이후 서버가 끊기면(교수 PC 종료 등) 실시간으로 '미연결'로 갱신한다.
             IsConnected = NetworkService.Instance.IsConnected;
             NetworkService.Instance.Disconnected += OnServerDisconnected;
+            ReconnectService.Reconnected += OnServerReconnected;
 
             // 교수가 '시험 준비 상태로 전환'을 누르면 준비 화면으로 넘어간다.
             // 학생이 직접 화면을 넘기던 임시 버튼(TestExamCommand)을 대체하는 경로다.
@@ -96,6 +97,7 @@ namespace StudentUI.ViewModel
             LogoutCommand = new RelayCommand(() =>
             {
                 Cleanup();
+                ReconnectService.Disable(); // 스스로 나가는 것이라 다시 붙지 않는다
                 NetworkService.Instance.Disconnect(); // 로그아웃 시 연결도 정리
                 ChatVM.Clear();
                 _navigationStore.CurrentViewModel = new LoginViewModel(_navigationStore);
@@ -158,11 +160,20 @@ namespace StudentUI.ViewModel
             dispatcher.BeginInvoke(() => IsConnected = false);
         }
 
+        // 자동 재연결로 다시 로그인까지 끝났을 때 (배경 스레드에서 호출됨)
+        private void OnServerReconnected()
+        {
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher == null || dispatcher.HasShutdownStarted) return;
+            dispatcher.BeginInvoke(() => IsConnected = true);
+        }
+
         // 화면을 떠날 때 타이머·이벤트 구독을 정리
         private void Cleanup()
         {
             _clockTimer.Stop();
             NetworkService.Instance.Disconnected -= OnServerDisconnected;
+            ReconnectService.Reconnected -= OnServerReconnected;
             NetworkService.Instance.PacketReceived -= OnPacketReceived;
         }
 

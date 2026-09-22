@@ -86,6 +86,17 @@ namespace ProfessorUI.Service
 
         public int GetConnectedCount() => _server?.GetConnectedCount() ?? 0;
 
+        // 새 학생 접속을 받고 있는지 (네이티브 접속 받기 루프가 살아 있는지)
+        // 이 기능이 없는 예전 DLL 과 함께 배포되면 몇 초마다 앱이 죽는다. 그때는 감지만 포기하고 열려 있다고 본다.
+        public bool IsServerListening
+        {
+            get
+            {
+                try { return _server?.IsListening ?? false; }
+                catch (EntryPointNotFoundException) { return true; }
+            }
+        }
+
         public void Broadcast(PacketType type, byte[] payload) => _server?.Broadcast(type, payload);
 
         public void SendToSession(string sessionId, PacketType type, byte[] payload) => _server?.SendToSession(sessionId, type, payload);

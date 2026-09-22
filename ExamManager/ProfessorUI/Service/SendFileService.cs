@@ -26,6 +26,11 @@ namespace ProfessorUI.Service
         // 이게 없으면 파일을 받고도 풀지 못하고 감시·인터넷 차단·타이머도 켜지지 않는다.
         private readonly HashSet<string> _startOnReceive = new HashSet<string>();
 
+        // 학생마다 마지막으로 보낸 묶음과 그때의 접속. 받은 학생에게 같은 묶음을 또 보내지 않는 데 쓴다.
+        // 묶음을 새로 만들면(다음 T 번호) 경로가 달라지므로 그때는 다시 보낼 수 있다.
+        // 학생 앱을 다시 켜면 받은 파일을 모르는 채로 새로 접속하므로, 접속이 바뀌어도 다시 보낼 수 있다.
+        private readonly Dictionary<string, (string SessionId, string Package)> _sentPackage = new();
+
         private SendFileService()
         {
             var network = NetworkService.Instance;
@@ -78,6 +83,7 @@ namespace ProfessorUI.Service
                 return new SendResult(false, connected.SessionId, SendProblem.SendFailed, "파일을 보내지 못했습니다.");
 
             SendFileState.IsFileDistributed = true;
+            _sentPackage[studentId] = (connected.SessionId, SendFileState.PackagePath!);
 
             // 시험 중이면 받는 대로 이 학생의 시험을 시작시킨다(StartLateStudent).
             if (ExamState.CurrentPhase == ExamPhase.InProgress)
@@ -85,6 +91,13 @@ namespace ProfessorUI.Service
 
             return new SendResult(true, connected.SessionId, SendProblem.None, string.Empty);
         }
+
+        // 지금 준비된 묶음을 지금 접속으로 이미 받았는지. 받았다는 응답까지 온 학생만 해당한다.
+        public bool HasCurrentPackage(string studentId, string sessionId, bool isFileReceived)
+            => isFileReceived
+               && _sentPackage.TryGetValue(studentId, out var sent)
+               && sent.SessionId == sessionId
+               && sent.Package == SendFileState.PackagePath;
 
         // 시험 중에 다시 받은 학생에게만 [시험 시작]과 같은 순서로 보낸다(ExamStartViewModel).
         // 감시 목록 → 시험 시작(타이머) → 압축 해제(해제가 끝나면 감시·인터넷 차단을 켠다)

@@ -61,7 +61,21 @@ namespace StudentUI.ViewModel
 
             // 교수가 시험 종료 신호를 보내면 true가 된다. 학생 화면 전체를 잠근다.
             public bool IsExamEnded => ExamTime.IsFinished;
-            public DateTime? ExamEndedTime => ExamTime.IsFinished ? DateTime.Now : (DateTime?)null;
+            public DateTime? ExamEndedTime => ExamTime.FinishedAt;
+
+            // ── 종료 화면의 답안 제출 ──
+            // 교수의 자동 수집이 실패했거나(편집기를 열어 둠 등) 앱을 다시 켜 아직 내지 못한 학생이
+            // 교수를 기다리지 않고 직접 다시 낼 수 있게 한다. 이미 냈거나 보내는 중이면 숨긴다.
+            public bool CanSubmitAfterEnd => IsExamEnded &&
+                AnswerSubmitService.Instance.State is AnswerSubmitState.Idle or AnswerSubmitState.Failed;
+
+            public string SubmitAfterEndText =>
+                AnswerSubmitService.Instance.State == AnswerSubmitState.Failed ? "답안 다시 제출" : "답안 제출";
+
+            // 종료 화면에 보이는 제출 상태 한 줄. 아직 아무 일도 없으면 비어 있다.
+            public bool HasSubmitStatus => SubmitStatus.Length > 0;
+
+            public ICommand SubmitAfterEndCommand { get; }
 
             public ICommand ToggleNotificationCommand { get; }
             public ICommand ToggleChatCommand { get; }
@@ -154,6 +168,9 @@ namespace StudentUI.ViewModel
                     _submitStatus = value;
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(IsSubmitting));
+                    OnPropertyChanged(nameof(HasSubmitStatus));
+                    OnPropertyChanged(nameof(CanSubmitAfterEnd));
+                    OnPropertyChanged(nameof(SubmitAfterEndText));
                     RefreshStatusItems();
                 }
             }
@@ -215,12 +232,19 @@ namespace StudentUI.ViewModel
 
                 SubmitAnswerCommand = new RelayCommand(SubmitAnswer, () => !IsSubmitting);
 
+                // 시험은 이미 끝났으므로 '시험을 끝냅니다' 확인은 묻지 않는다.
+                // 결과는 StateChanged 로 올라와 종료 화면의 상태 줄과 결과 창에 나온다.
+                SubmitAfterEndCommand = new RelayCommand(
+                    () => _ = AnswerSubmitService.Instance.SubmitAsync(),
+                    () => CanSubmitAfterEnd);
+
                 AnswerSubmitService.Instance.StateChanged += OnSubmitStateChanged;
                 ExamMonitorService.Instance.CheatWarning += OnCheatWarning;
                 ExamMonitorService.Instance.NetworkStateChanged += RefreshStatusItems;
 
                 IsConnected = NetworkService.Instance.IsConnected;
                 NetworkService.Instance.Disconnected += OnServerDisconnected;
+                ReconnectService.Reconnected += OnServerReconnected;
                 NetworkService.Instance.PacketReceived += OnPacketReceived;
 
                 // 채팅 수신 이벤트 구독
@@ -275,6 +299,7 @@ namespace StudentUI.ViewModel
                     OnPropertyChanged(nameof(IsStep4Active));
                     OnPropertyChanged(nameof(IsExamEnded));
                     OnPropertyChanged(nameof(ExamEndedTime));
+                    OnPropertyChanged(nameof(CanSubmitAfterEnd));
                 };
 
                 // 기본은 채팅/알림 오버레이 닫힘 상태
@@ -321,6 +346,7 @@ namespace StudentUI.ViewModel
                 LogoutCommand = new RelayCommand(() =>
                 {
                     Unsubscribe();
+                    ReconnectService.Disable(); // 스스로 나가는 것이라 다시 붙지 않는다
                     NetworkService.Instance.Disconnect();
                     ChatVM.Clear();
                     ExamTime.Reset();
@@ -369,11 +395,24 @@ namespace StudentUI.ViewModel
                     });
 
                     // 3. 답안 제출 파일
-                    string submitText = string.IsNullOrEmpty(SubmitStatus) ? "작성 중 (미제출)" : SubmitStatus;
-                    string submitLevel = submitText.Contains("완료") ? "Success" : (submitText.Contains("실패") ? "Warning" : "Info");
-                    string answerFileName = string.IsNullOrEmpty(Student.StudentName)
-                        ? $"{Student.StudentNumber}_답안.zip"
-                        : $"{Student.StudentNumber}_{Student.StudentName}.zip";
+                    // 상태 칸에는 짧은 말만 둔다. 긴 안내를 넣으면 칸이 늘어나 설명 칸이 한두 글자 폭으로 눌린다.
+                    // 실패 이유 같은 긴 안내는 설명 줄에 보인다.
+                    var submitState = AnswerSubmitService.Instance.State;
+                    string submitText = submitState switch
+                    {
+                        AnswerSubmitState.Succeeded => "제출 완료",
+                        AnswerSubmitState.Failed    => "제출 실패",
+                        AnswerSubmitState.Idle      => "작성 중",
+                        _                           => "제출 중",
+                    };
+                    string submitLevel = submitState switch
+                    {
+                        AnswerSubmitState.Succeeded => "Success",
+                        AnswerSubmitState.Failed    => "Warning",
+                        _                           => "Info",
+                    };
+                    // 교수 PC 에 저장되는 이름과 같게 적는다 — "학번 이름" (교수 AnswerCollectService.BuildFolderName).
+                    string answerFileName = $"{Student.StudentNumber} {Student.StudentName}".Trim();
                     StatusItems.Add(new ExamFileStatusItem
                     {
                         Icon = "📤",
@@ -381,8 +420,10 @@ namespace StudentUI.ViewModel
                         Name = answerFileName,
                         Status = submitText,
                         StatusLevel = submitLevel,
-                        Description = "종료 전 '답안 제출' 버튼을 누르면 작업 폴더 전체가 자동 압축되어 전송됩니다.",
-                        TimeOrNote = submitText.Contains("완료") ? "제출 성공" : "미제출"
+                        Description = string.IsNullOrEmpty(SubmitStatus)
+                            ? "종료 전 '답안 제출' 버튼을 누르면 작업 폴더 전체가 자동 압축되어 전송됩니다."
+                            : SubmitStatus,
+                        TimeOrNote = submitState == AnswerSubmitState.Succeeded ? "제출 성공" : "미제출"
                     });
 
                     // 4. 보안 감시 정책
@@ -471,6 +512,7 @@ namespace StudentUI.ViewModel
                 _toastTimer.Stop();
                 ChatVM.MessageArrived -= OnChatMessageArrived;
                 NetworkService.Instance.Disconnected -= OnServerDisconnected;
+                ReconnectService.Reconnected -= OnServerReconnected;
                 NetworkService.Instance.PacketReceived -= OnPacketReceived;
                 AnswerSubmitService.Instance.StateChanged -= OnSubmitStateChanged;
                 ExamMonitorService.Instance.CheatWarning -= OnCheatWarning;
@@ -553,8 +595,7 @@ namespace StudentUI.ViewModel
                     if (state == AnswerSubmitState.Succeeded)
                         MessageBox.Show(message, "제출 완료", MessageBoxButton.OK, MessageBoxImage.Information);
                     else if (state == AnswerSubmitState.Failed)
-                        MessageBox.Show(message + "\n\n답안은 그대로 남아 있습니다. 다시 시도하거나 교수님께 알려 주세요.",
-                                        "제출 실패", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        MessageBox.Show(message, "제출 실패", MessageBoxButton.OK, MessageBoxImage.Warning);
                 });
             }
 
@@ -590,6 +631,18 @@ namespace StudentUI.ViewModel
                 var dispatcher = Application.Current?.Dispatcher;
                 if (dispatcher == null || dispatcher.HasShutdownStarted) return;
                 dispatcher.BeginInvoke(() => IsConnected = false);
+            }
+
+            // 자동 재연결로 다시 로그인까지 끝났을 때 (배경 스레드에서 호출됨)
+            private void OnServerReconnected()
+            {
+                var dispatcher = Application.Current?.Dispatcher;
+                if (dispatcher == null || dispatcher.HasShutdownStarted) return;
+                dispatcher.BeginInvoke(() =>
+                {
+                    IsConnected = true;
+                    RefreshStatusItems();
+                });
             }
 
             public event PropertyChangedEventHandler? PropertyChanged;

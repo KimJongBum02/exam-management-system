@@ -59,17 +59,18 @@ namespace StudentUI
             Service.ExamTimeStore.Instance.Start();
             // 답안 제출 구독 시작 — 교수의 수집 요청을 기다린다.
             Service.AnswerSubmitService.Instance.Start();
+            // 교수 프로그램이 꺼졌다 다시 켜지면 스스로 다시 붙는다. 로그인한 뒤부터 동작한다.
+            Service.ReconnectService.Start();
 
             // 교수가 답안을 승인하면 PC 를 끈다. 먼저 제출한 학생은 시험 중에도 승인된다.
-            // (2026-09-15 실기 확인 뒤 사용자 요청으로 꺼 둠. 되살리려면 아래 네 줄의 주석만 풀면 된다)
             // Service.NetworkService.Instance.PacketReceived += (type, _, _) =>
             // {
             //     if (type == PacketType.ShutdownPC) ShutdownPc();
             // };
 
-            // 진행 중이던 시험이 있으면 되살린다. (이미 종료된 시험은 제외)
+            // 진행 중이던 시험이 있으면 되살린다. 교수가 이미 끝낸 시험이면 종료 화면에서 답안 제출을 기다린다.
             // 시험 폴더·암호·남은 시간은 바로, 감시와 차단은 같은 학번으로 다시 로그인한 뒤에 건다(LoginViewModel).
-            if (examSession != null && !examSession.ExamEnded)
+            if (examSession != null)
             {
                 Service.ExamFileStore.Instance.Resume(examSession.ArchiveName, examSession.Password, examSession.DeliveredFiles);
                 Service.ExamTimeStore.Instance.Resume(examSession.StartedAtUtc, examSession.ExamEnded);
@@ -244,6 +245,8 @@ namespace StudentUI
         // (정리하지 않으면 종료 중 네이티브 콜백이 CLR로 들어와 오류가 발생한다)
         protected override void OnExit(ExitEventArgs e)
         {
+            // 자동 재연결을 먼저 끈다. 네트워크를 닫는 중에 다시 붙으려 하면 정리된 연결을 건드린다.
+            Service.ReconnectService.Disable();
             // 감시를 먼저 멈춘다. 네트워크를 먼저 닫으면 적발 보고가 갈 곳을 잃는다.
             try { Service.ExamMonitorService.Instance.Dispose(); } catch { }
             try { Service.NetworkService.Instance.Dispose(); } catch { }

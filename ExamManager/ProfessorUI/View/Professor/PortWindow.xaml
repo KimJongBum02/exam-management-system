@@ -1,7 +1,7 @@
 <Window x:Class="ProfessorUI.View.Professor.PortWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="포트 변경" Height="268" Width="380"
+        Title="포트 변경" Width="380" SizeToContent="Height"
         FontFamily="{StaticResource AppFont}"
         Background="#FFFFFF"
         ResizeMode="NoResize"

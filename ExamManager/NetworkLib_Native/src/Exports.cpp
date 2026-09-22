@@ -59,6 +59,12 @@ NL_API int NL_Server_GetConnectedCount()
     return g_server->GetConnectedCount();
 }
 
+NL_API int NL_Server_IsListening()
+{
+    if (!g_server) return 0;
+    return g_server->IsListening() ? 1 : 0;
+}
+
 // ── 콜백 등록 ────────────────────────────────────────────────────────
 
 NL_API void NL_Server_SetOnStudentConnected(NL_OnStudentConnected cb)

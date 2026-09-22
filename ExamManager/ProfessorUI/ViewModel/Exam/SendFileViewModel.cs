@@ -166,9 +166,17 @@ namespace ProfessorUI.ViewModel
             ValidationMessage = "";
 
             // 3. 선택된 학생별로 전송
+            // 같은 묶음을 이미 받은 학생은 건너뛴다. 다시 보내야 하면 시험 관리 화면의 재배포를 쓴다.
             int sentCount = 0;
+            int skippedCount = 0;
             foreach (var student in selectedStudents)
             {
+                if (_deploy.HasCurrentPackage(student.StudentId, student.SessionId, student.IsFileReceived))
+                {
+                    skippedCount++;
+                    continue;
+                }
+
                 var result = _deploy.Send(student.StudentId, student.SendingSessionId);
                 if (!result.Ok)
                 {
@@ -188,7 +196,10 @@ namespace ProfessorUI.ViewModel
                 sentCount++;
             }
 
-            DeployStatusMessage = $"{sentCount}명에게 파일을 전송했습니다. 학생 수신 응답 대기 중...";
+            DeployStatusMessage = sentCount == 0 && skippedCount > 0
+                ? $"선택한 {skippedCount}명은 이미 파일을 받았습니다."
+                : $"{sentCount}명에게 파일을 전송했습니다. 학생 수신 응답 대기 중..."
+                  + (skippedCount > 0 ? $" (이미 받은 {skippedCount}명 제외)" : "");
             _isDeploying = false;
         }
 

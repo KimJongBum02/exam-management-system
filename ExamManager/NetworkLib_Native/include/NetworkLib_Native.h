@@ -68,6 +68,9 @@ NL_API void NL_Server_Stop();
 /// <summary>현재 로그인된 학생 수를 반환합니다.</summary>
 NL_API int  NL_Server_GetConnectedCount();
 
+/// <summary>새 학생 접속을 받고 있으면 1, 접속 받기 루프가 멈췄거나 서버가 없으면 0.</summary>
+NL_API int  NL_Server_IsListening();
+
 // ── 콜백 등록 ────────────────────────────────────────────────────────
 NL_API void NL_Server_SetOnStudentConnected   (NL_OnStudentConnected    cb);
 NL_API void NL_Server_SetOnStudentDisconnected(NL_OnStudentDisconnected cb);

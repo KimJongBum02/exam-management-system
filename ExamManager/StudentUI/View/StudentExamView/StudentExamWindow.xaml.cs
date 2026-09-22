@@ -25,6 +25,30 @@ namespace StudentUI.View.StudentExamView
             // 교수의 채팅·공지가 오면 채팅 버튼을 깜빡인다.
             SharedChatViewModel.Instance.MessageArrived += OnMessageArrived;
             Closed += (_, _) => SharedChatViewModel.Instance.MessageArrived -= OnMessageArrived;
+
+            // 창 크기가 바뀔 때(최대화·복원·끌어서 줄이기) 알림·채팅 패널을 놓는 방식을 다시 정한다.
+            SizeChanged += (_, _) => PlaceSideDrawer();
+        }
+
+        // 알림·채팅 패널이 본문을 밀어도 본문이 이 폭은 남아야 표가 제 모양을 유지한다.
+        // 이보다 좁으면 표의 설명 칸이 눌려 줄이 세로로 길게 늘어진다.
+        private const double MinMainWidthWithDrawer = 1100;
+
+        private static readonly System.Windows.Media.Effects.DropShadowEffect DrawerShadow = new()
+        {
+            BlurRadius = 24, ShadowDepth = 0, Opacity = 0.18, Color = System.Windows.Media.Colors.Black,
+        };
+
+        // 창이 넓으면 패널을 본문 옆에 둔다(본문과 함께 보인다).
+        // 좁으면 본문 위에 겹쳐 띄운다. 본문 폭이 그대로라 표 모양이 흐트러지지 않고, 닫으면 가린 부분이 다시 보인다.
+        private void PlaceSideDrawer()
+        {
+            bool overlay = ActualWidth - SideDrawer.Width < MinMainWidthWithDrawer;
+
+            System.Windows.Controls.Grid.SetColumn(SideDrawer, overlay ? 0 : 1);
+            SideDrawer.HorizontalAlignment = overlay ? HorizontalAlignment.Right : HorizontalAlignment.Stretch;
+            System.Windows.Controls.Panel.SetZIndex(SideDrawer, overlay ? 1 : 0);
+            SideDrawer.Effect = overlay ? DrawerShadow : null;
         }
 
         // 채팅 창을 열어 두고 있으면 이미 보이므로 깜빡이지 않는다.

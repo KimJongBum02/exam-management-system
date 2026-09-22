@@ -54,6 +54,7 @@ bool ProfessorServer::Start()
     }
 
     running_ = true;
+    listening_ = true;
     acceptThread_ = std::thread(&ProfessorServer::AcceptLoop, this);
     heartbeatThread_ = std::thread(&ProfessorServer::HeartbeatLoop, this);
     return true;
@@ -63,6 +64,7 @@ bool ProfessorServer::Start()
 void ProfessorServer::Stop()
 {
     running_ = false;
+    listening_ = false;
 
     // 리슨 소켓 닫기 → AcceptLoop의 accept() 차단 해제
     if (listenSock_ != INVALID_SOCKET)
@@ -93,7 +95,17 @@ void ProfessorServer::AcceptLoop()
 
         SOCKET clientSock = ::accept(listenSock_,
             reinterpret_cast<sockaddr*>(&clientAddr), &addrLen);
-        if (clientSock == INVALID_SOCKET) break; // 서버 중지 시 탈출
+        if (clientSock == INVALID_SOCKET)
+        {
+            if (!running_) break; // 서버 중지 시 탈출
+
+            // 접속하던 쪽이 받기 전에 끊으면 이 연결 하나만 실패한다. 서버를 멈출 일이 아니다.
+            // 예전에는 여기서도 빠져나가 이후 모든 학생이 접속하지 못했다.
+            int err = ::WSAGetLastError();
+            if (err == WSAECONNRESET || err == WSAEINTR) continue;
+
+            break; // 그 밖의 오류는 되살릴 수 없다. listening_ 이 false 가 되어 교수 화면에 알린다
+        }
 
         // TCP_NODELAY — Nagle 알고리즘 비활성화 (응답성 향상)
         int nodelay = 1;
@@ -129,6 +141,8 @@ void ProfessorServer::AcceptLoop()
 
         session->StartRecvLoop();
     }
+
+    listening_ = false;
 }
 
 // ─── Heartbeat 감시 루프 (5초마다 체크) ───────────────────────────
