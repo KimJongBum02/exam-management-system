@@ -58,6 +58,34 @@ namespace ProfessorUI.Service
                 ExamSubmitPayload.Encode("", SendFileState.Password ?? ""));
         }
 
+        // ── 미수집 학생에게 답안 다시 요청 ──
+        // 첫 수집이 실패한 학생(편집기를 열어 둠, 전송 중 끊김 등)을 다시 걷는 경로다.
+        // 결과: 요청을 보낸 학생 수, 접속이 끊겨 보내지 못한 학생.
+        public sealed record RecollectResult(int Requested, IReadOnlyList<string> Offline);
+
+        public RecollectResult RequestMissingAnswers()
+        {
+            var offline = new List<string>();
+            int requested = 0;
+            byte[] payload = ExamSubmitPayload.Encode("", SendFileState.Password ?? "");
+
+            // 이번 시험을 치른 학생만 대상이다. 파일도 받지 않은 학생에게 보내면 그 학생 화면에 '제출 실패' 창만 뜬다.
+            foreach (var student in StudentStore.Instance.Students
+                         .Where(s => !s.IsAnswerSubmitted && (s.HasEverStarted || s.IsFileReceived)))
+            {
+                if (!student.IsConnected || string.IsNullOrEmpty(student.SessionId))
+                {
+                    offline.Add($"{student.StudentId} {student.Name}");
+                    continue;
+                }
+
+                NetworkService.Instance.SendToSession(student.SessionId, PacketType.ExamSubmitRequest, payload);
+                requested++;
+            }
+
+            return new RecollectResult(requested, offline);
+        }
+
         // ── 감시 목록 재전송 ──
         // 시험 도중 목록을 갈아 끼우는 유일한 경로다. 시험 전에는 StartExam 이 함께 보낸다.
         public void SendProgramPolicy()
@@ -113,6 +141,7 @@ namespace ProfessorUI.Service
                 student.IsSelected = false;
                 student.IsFileReceived = false;
                 student.IsAnswerSubmitted = false;
+                student.SubmittedAt = null;
                 student.IsApproved = false;
                 student.IsCleanupFailed = false;
                 student.IsCleanupDone = false;

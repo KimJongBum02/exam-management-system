@@ -26,11 +26,13 @@ namespace ProfessorUI.ViewModel
 
         public ICommand EndExamCommand { get; }
         public ICommand ApproveSelectedCommand { get; }
+        public ICommand RecollectCommand { get; }
 
         public ExamEndViewModel()
         {
             EndExamCommand = new RelayCommand(ExecuteEndExam, canExecute: o => IsContainerEnabled && !IsExamEnded);
             ApproveSelectedCommand = new RelayCommand(ExecuteApproveSelected);
+            RecollectCommand = new RelayCommand(ExecuteRecollect, canExecute: o => IsExamEnded);
 
             ExamState.StateChanged += () =>
             {
@@ -54,6 +56,27 @@ namespace ProfessorUI.ViewModel
 
             MessageBox.Show("시험을 종료하고 답안 수집을 요청했습니다.\n학생이 답안을 보내면 자동으로 저장됩니다.",
                             "안내", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        // [미수집 학생 다시 수집] 버튼 — 시험 종료 뒤 답안이 오지 않은 학생에게만 다시 요청한다.
+        private void ExecuteRecollect(object? obj)
+        {
+            var result = ExamFlowService.Instance.RequestMissingAnswers();
+
+            if (result.Requested == 0 && result.Offline.Count == 0)
+            {
+                MessageBox.Show("모든 학생의 답안이 수집되었습니다.", "다시 수집", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            string message = $"{result.Requested}명에게 답안을 다시 요청했습니다.\n학생이 답안을 보내면 자동으로 저장됩니다.";
+            if (result.Offline.Count > 0)
+                message += $"\n\n접속이 끊겨 요청하지 못한 학생 {result.Offline.Count}명:\n" +
+                           string.Join("\n", result.Offline) +
+                           "\n\n이 학생들은 다시 접속한 뒤 한 번 더 눌러 주세요.";
+
+            MessageBox.Show(message, "다시 수집", MessageBoxButton.OK,
+                result.Offline.Count > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
         }
 
         // [선택 승인] 버튼.

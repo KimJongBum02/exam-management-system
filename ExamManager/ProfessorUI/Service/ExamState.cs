@@ -22,6 +22,12 @@ namespace ProfessorUI.Service
             {
                 if (_currentPhase != value)
                 {
+                    // 시험을 끝낸 시각을 남긴다. 답안이 종료 뒤 얼마 만에 들어왔는지 보여 주는 데 쓴다.
+                    if (value >= ExamPhase.SubmitRequested && _currentPhase < ExamPhase.SubmitRequested)
+                        EndedAt = DateTime.Now;
+                    else if (value < ExamPhase.SubmitRequested)
+                        EndedAt = null;
+
                     _currentPhase = value;
                     StateChanged?.Invoke(); // 상태가 변했음을 모든 뷰모델에 알림
                 }
@@ -35,6 +41,9 @@ namespace ProfessorUI.Service
         // 지금 시험을 치르는 중인지. 시험을 끝내면(SubmitRequested) false 가 되어
         // 다음 시험을 위한 준비 화면이 다시 열린다.
         public static bool IsExamRunning => _currentPhase == ExamPhase.InProgress;
+
+        // 교수가 [시험 종료]를 누른 시각. 시험 전·중에는 null.
+        public static DateTime? EndedAt { get; private set; }
 
         public static event Action StateChanged;
     }

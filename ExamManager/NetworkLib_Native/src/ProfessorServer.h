@@ -35,6 +35,9 @@ public:
     void Stop();
     int  GetConnectedCount() const;
 
+    // 새 학생 접속을 받고 있는지. 접속 받기 루프가 뜻밖에 멈췄으면 false (교수 화면의 '서버 꺼짐')
+    bool IsListening() const { return listening_; }
+
     // 패킷 브로드캐스트 / 개별 전송
     int Broadcast        (PacketType type, const void* payload, uint32_t payloadLen);
     int SendToSession    (const std::string& sessionId, PacketType type, const void* payload, uint32_t payloadLen);
@@ -47,6 +50,7 @@ private:
     int                   port_;
     SOCKET                listenSock_{ INVALID_SOCKET };
     std::atomic<bool>     running_{ false };
+    std::atomic<bool>     listening_{ false };
     std::thread           acceptThread_;
     std::thread           heartbeatThread_;
 

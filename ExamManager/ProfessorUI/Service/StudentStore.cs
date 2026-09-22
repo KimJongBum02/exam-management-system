@@ -32,6 +32,12 @@ namespace ProfessorUI.Service
                 existing.Ip = ip;
                 existing.Status = "대기";
                 existing.IsConnected = true;
+
+                // 다시 들어온 학생이 시험 파일을 갖고 있는지는 아직 모른다(앱을 다시 켰으면 없다).
+                // 갖고 있으면 로그인 직후 '수신 완료'를 다시 알려 오므로(학생 LoginService) 그때 되돌아간다.
+                existing.IsFileReceived = false;
+                existing.DeployStatus = "대기 중";
+                existing.DeployProgress = 0;
             }
             else
             {
@@ -59,6 +65,12 @@ namespace ProfessorUI.Service
             if (student == null) return;
 
             student.IsConnected = false;
+
+            // 배포 표도 끊겼음을 보여 준다. 그대로 두면 끊긴 학생이 '수신완료 100%'로 남는다.
+            // 보내던 중이었다면 그 전송은 끝난 것이라 보내는 중 표시도 지운다(늦게 오는 실패 알림은 무시된다).
+            student.SendingSessionId = null;
+            student.DeployStatus = "접속 끊김";
+            student.DeployProgress = 0;
 
             // 다시 접속했을 때 시험을 이어 받았는지는 학생의 새 감시 보고로 판단한다.
             student.ClearMonitorStatus();
@@ -89,6 +101,7 @@ namespace ProfessorUI.Service
             if (student != null)
             {
                 student.IsAnswerSubmitted = true;
+                student.SubmittedAt = DateTime.Now;
                 student.Status = "제출완료";
             }
         }

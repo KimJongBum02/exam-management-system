@@ -1,6 +1,9 @@
+using System.Collections;
 using System.ComponentModel;
+using System.Net;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
 using ExamManager.Shared;
 using ProfessorUI.ViewModel;
@@ -16,7 +19,14 @@ namespace ProfessorUI.View.Professor
         {
             InitializeComponent();
             DataContext = _ctx;
-            StudentCards.ItemsSource = _ctx.Overview.Students;
+
+            // 강의실 PC 는 자리마다 IP 가 1씩 늘어나므로 IP 순으로 두면 칸 배치가 좌석 배치와 같아진다.
+            // 같은 학생 목록을 다른 화면도 쓰므로 원본은 그대로 두고 이 화면의 보기만 줄 세운다.
+            // 다시 접속해 IP 가 바뀌면 그 자리로 옮겨 간다.
+            var byIp = new ListCollectionView(_ctx.Overview.Students) { CustomSort = new IpOrder() };
+            byIp.IsLiveSorting = true;
+            byIp.LiveSortingProperties.Add(nameof(StudentStatusViewModel.Ip));
+            StudentCards.ItemsSource = byIp;
 
             // 학생이 붙고 빠질 때마다 '아직 없습니다' 안내를 켜고 끈다.
             // 화면은 메뉴를 옮길 때마다 새로 만들어지므로 떠날 때 구독을 푼다.
@@ -29,6 +39,26 @@ namespace ProfessorUI.View.Professor
             };
 
             UpdateEmptyNote();
+        }
+
+        // IP 를 숫자로 비교한다. 문자열로 비교하면 192.168.0.10 이 192.168.0.9 보다 앞에 온다.
+        // IP 를 모르는 학생은 뒤로, IP 가 같으면 학번순으로 둔다.
+        private sealed class IpOrder : IComparer
+        {
+            public int Compare(object? x, object? y)
+            {
+                var a = (StudentStatusViewModel)x!;
+                var b = (StudentStatusViewModel)y!;
+                int byIp = Key(a.Ip).CompareTo(Key(b.Ip));
+                return byIp != 0 ? byIp : string.CompareOrdinal(a.StudentId, b.StudentId);
+            }
+
+            private static ulong Key(string ip)
+            {
+                if (!IPAddress.TryParse(ip, out IPAddress? address) || address.GetAddressBytes() is not { Length: 4 } bytes)
+                    return ulong.MaxValue;
+                return (ulong)bytes[0] << 24 | (ulong)bytes[1] << 16 | (ulong)bytes[2] << 8 | bytes[3];
+            }
         }
 
         private void OnStudentsChanged(object? sender,
@@ -58,7 +88,9 @@ namespace ProfessorUI.View.Professor
             };
             if (color == null) return;
 
-            if (StudentCards.ItemContainerGenerator.ContainerFromItem(student) is ContentPresenter presenter &&
+            // 칸이 아직 그려지기 전이면(학생이 막 들어오자마자 상태가 바뀐 경우) 깜빡일 것이 없다.
+            // 그려지기 전에 템플릿 안을 찾으면 예외가 나 교수 앱이 통째로 죽는다.
+            if (StudentCards.ItemContainerGenerator.ContainerFromItem(student) is ContentPresenter { IsLoaded: true } presenter &&
                 presenter.ContentTemplate?.FindName("CardBox", presenter) is Border card)
                 UiSignal.Blink(card, Border.BackgroundProperty, color.Value);
         }

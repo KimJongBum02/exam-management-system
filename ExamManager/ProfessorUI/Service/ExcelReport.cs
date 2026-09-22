@@ -41,22 +41,24 @@ namespace ProfessorUI.Service
             }
             Finish(bySheet);
 
+            // 학번순으로 모으고, 한 학생 안에서는 낸 순서대로 둔다.
             var detailSheet = book.AddWorksheet("응답 상세");
-            WriteHeader(detailSheet, "번호", "문제", "학번", "이름", "응답", "결과", "응답 시각");
+            WriteHeader(detailSheet, "학번", "이름", "번호", "문제", "응답", "결과", "응답 시각");
+            var details = ordered
+                .SelectMany((round, index) => round.Responses.Select(response => (Number: index + 1, round.Question, Response: response)))
+                .OrderBy(d => d.Response.StudentId, StringComparer.Ordinal)
+                .ThenBy(d => d.Number);
             int line = 2;
-            for (int i = 0; i < ordered.Count; i++)
+            foreach (var (number, question, response) in details)
             {
-                foreach (var response in ordered[i].Responses)
-                {
-                    detailSheet.Cell(line, 1).Value = i + 1;
-                    detailSheet.Cell(line, 2).Value = ordered[i].Question;
-                    detailSheet.Cell(line, 3).Value = response.StudentId;
-                    detailSheet.Cell(line, 4).Value = response.StudentName;
-                    detailSheet.Cell(line, 5).Value = response.AnswerText;
-                    detailSheet.Cell(line, 6).Value = response.ResultText;
-                    detailSheet.Cell(line, 7).Value = response.RespondedAt;
-                    line++;
-                }
+                detailSheet.Cell(line, 1).Value = response.StudentId;
+                detailSheet.Cell(line, 2).Value = response.StudentName;
+                detailSheet.Cell(line, 3).Value = number;
+                detailSheet.Cell(line, 4).Value = question;
+                detailSheet.Cell(line, 5).Value = response.AnswerText;
+                detailSheet.Cell(line, 6).Value = response.ResultText;
+                detailSheet.Cell(line, 7).Value = response.RespondedAt;
+                line++;
             }
             Finish(detailSheet);
 

@@ -27,6 +27,8 @@
                 <TextBlock Text="시험 종료 및 답안 수집" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Button Content="미수집 학생 다시 수집" Style="{StaticResource SecondaryButton}"
+                        Margin="0,0,10,0" Command="{Binding ExamEnd.RecollectCommand}"/>
                 <Button Content="{Binding Overview.ApproveTargetText}" Style="{StaticResource PrimaryButton}"
                         Margin="0,0,10,0" Command="{Binding ExamEnd.ApproveSelectedCommand}"/>
                 <Button Content="종료 완료 현황 보기" Style="{StaticResource SecondaryButton}"
@@ -119,6 +121,11 @@
                     <GridViewColumn Header="수집 상태" Width="130">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate><TextBlock Text="{Binding CollectText}" Style="{StaticResource Cell}"/></DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="제출 시각" Width="190">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate><TextBlock Text="{Binding SubmitTimeText}" Style="{StaticResource Cell}"/></DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
                     <GridViewColumn Header="마지막 갱신" Width="130">

@@ -24,7 +24,10 @@ namespace ProfessorUI.Service
     Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
     "OX퀴즈");
 
-        private readonly string _sessionFileName = $"quiz_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+        // 기록 비우기를 하면 새 파일로 넘어간다. 같은 파일에 이어 쓰면 비우기 전 기록을 덮어쓴다.
+        private string _sessionFileName = NewSessionFileName();
+
+        private static string NewSessionFileName() => $"quiz_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
         private bool _started;
 
         private QuizService() { }
@@ -78,16 +81,20 @@ namespace ProfessorUI.Service
                 PacketType.QuizQuestion,
                 QuizQuestionPayload.Encode(round.QuizId, round.Question));
 
+            // 새 문제를 내는 때가 앞 문제의 응답이 다 모인 때다. 그때까지의 기록을 파일로 남긴다.
             Rounds.Insert(0, round);
             Save();
             return true;
         }
 
-        // 세션을 비운다. 파일은 그대로 두므로 기록이 사라지지는 않는다.
-        public void ClearSession()
+        // 세션을 비운다. 지금까지의 기록을 저장해 두고 다음 문제부터는 새 파일에 쓴다.
+        // 저장하지 못했으면 비우지 않고 false — 비우면 그 기록은 어디에도 남지 않는다.
+        public bool ClearSession()
         {
+            if (!Save()) return false;
             Rounds.Clear();
-            Save();
+            _sessionFileName = NewSessionFileName();
+            return true;
         }
 
         // 학생별 누적. 문제를 낸 순서와 상관없이 학번순으로 돌려준다.
@@ -152,7 +159,6 @@ namespace ProfessorUI.Service
                 response.RespondedAt = DateTime.Now.ToString("HH:mm:ss");
                 round.NotifyCounts();
 
-                Save();
                 ResponseReceived?.Invoke(student);
             }
         }
@@ -164,22 +170,43 @@ namespace ProfessorUI.Service
             dispatcher.BeginInvoke(action);
         }
 
-        // 응답 하나가 들어올 때마다 통째로 다시 쓴다.
-        // 한 수업에 문제 몇 개, 학생 수십 명 규모라 이 정도로 충분하고,
-        // 중간에 프로그램이 꺼져도 그때까지의 기록이 남는다.
+        // 문제 단위로 저장한다 — 새 문제를 낼 때, 기록을 비울 때, 퀴즈 화면·프로그램을 닫을 때.
+        // xlsx 는 한 줄만 덧붙일 수 없는 형식이라 저장할 때마다 파일 전체를 다시 쓴다.
+        // 응답마다 쓰면 학생 수십 명이 한꺼번에 답할 때 화면이 끊겨 응답 중에는 쓰지 않는다.
+        // 그래서 프로그램이 도중에 죽으면 진행 중이던 문제의 응답만 파일에 빠진다.
         //
         // 교수가 성적 처리에 바로 쓰도록 엑셀로 남긴다.
         // 표 만드는 일은 ExcelReport 가 맡는다.
-        private void Save()
+        //
+        // 교수가 기록 파일을 엑셀로 열어 두면 그 파일에는 쓸 수 없다(수업 중에 열어 보는 일이 흔하다).
+        // 그때는 새 이름으로 저장하고 이후로도 그 파일에 쓴다. 한 파일에 늘 세션 전체가 담기므로 가장 최근 파일이 최종본이다.
+        // 저장했으면 true.
+        public bool Save()
+        {
+            if (Rounds.Count == 0) return true;   // 낸 문제가 없으면 빈 파일을 만들지 않는다
+
+            if (TrySave(_sessionFileName)) return true;
+
+            string fallback = NewSessionFileName();
+            if (fallback == _sessionFileName)
+                fallback = Path.GetFileNameWithoutExtension(fallback) + "_2.xlsx";   // 같은 초 안이면 이름이 겹친다
+            if (!TrySave(fallback)) return false;
+
+            _sessionFileName = fallback;
+            return true;
+        }
+
+        // 기록 저장에 실패해도 수업은 계속돼야 하므로 예외를 밖으로 내지 않는다.
+        private bool TrySave(string fileName)
         {
             try
             {
-                ExcelReport.SaveQuizSession(Rounds, Path.Combine(SessionFolder, _sessionFileName));
+                ExcelReport.SaveQuizSession(Rounds, Path.Combine(SessionFolder, fileName));
+                return true;
             }
             catch
             {
-                // 기록 저장에 실패해도 수업은 계속돼야 하므로 여기서 막지 않는다.
-                // (교수가 방금 낸 문제 파일을 엑셀에서 열어 둔 경우가 대부분이다)
+                return false;
             }
         }
     }

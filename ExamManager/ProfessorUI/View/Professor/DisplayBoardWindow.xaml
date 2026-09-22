@@ -53,22 +53,23 @@
                     </Border>
                 </StackPanel>
 
-                <!-- 학생이 이 화면을 보고 직접 입력한다. 숫자만큼 크게 둔다 -->
+                <!-- 현재 시각. 강의실 어디서든 보이도록 카드 안에 가장 크게 둔다 -->
                 <Border Background="{StaticResource BgSubtle}" BorderBrush="{StaticResource BorderLight}"
                         BorderThickness="1" CornerRadius="14" Padding="64,30" HorizontalAlignment="Center"
                         Margin="0,0,0,44">
                     <StackPanel>
-                        <TextBlock Text="접속 주소" FontSize="24" HorizontalAlignment="Center"
+                        <TextBlock x:Name="DateText" FontSize="24" HorizontalAlignment="Center"
                                    Foreground="{StaticResource TextSecondary}" Margin="0,0,0,10"/>
-                        <TextBlock Text="{Binding Server.Address}" FontSize="112" FontWeight="Bold"
+                        <TextBlock x:Name="TimeText" FontSize="200" FontWeight="Bold"
                                    HorizontalAlignment="Center" Foreground="{StaticResource TextPrimary}"
                                    FontFamily="Consolas, Menlo, monospace"/>
                     </StackPanel>
                 </Border>
 
-                <TextBlock x:Name="DateText" FontSize="40" HorizontalAlignment="Center"
+                <!-- 학생이 이 화면을 보고 직접 입력한다 -->
+                <TextBlock Text="접속 주소" FontSize="40" HorizontalAlignment="Center"
                            Foreground="{StaticResource TextSecondary}" Margin="0,0,0,6"/>
-                <TextBlock x:Name="TimeText" FontSize="168" FontWeight="Bold" HorizontalAlignment="Center"
+                <TextBlock Text="{Binding Server.Address}" FontSize="112" FontWeight="Bold" HorizontalAlignment="Center"
                            Foreground="{StaticResource TextPrimary}" FontFamily="Consolas, Menlo, monospace"/>
             </StackPanel>
         </Viewbox>

@@ -139,10 +139,10 @@ namespace StudentUI.Service
                 // 그대로 묶으면 '시험 파일' 폴더 전체(예전 시험, 같은 PC 의 교수 배포 파일까지)를 보내고,
                 // 교수의 회신을 받은 뒤 그 폴더를 통째로 지운다. 시험 파일을 다시 받을 때까지 제출하지 않는다.
                 if (!ExamFileStore.Instance.HasExamFolder)
-                    return Fail("이번 시험 파일을 받은 기록이 없어 답안 폴더를 찾지 못했습니다. 교수님께 시험 파일 재배포를 요청해 주세요.");
+                    return Fail("답안 제출 실패.\n시험 파일을 받은 기록이 없습니다. 교수님께 재배포를 요청하십시오.");
 
                 if (!NetworkService.Instance.IsConnected)
-                    return Fail("교수 PC와 연결이 끊어져 있습니다.");
+                    return Fail("답안 제출 실패.\n교수 PC와 연결된 뒤 다시 시도하십시오.");
 
                 // 1. 답안 폴더를 통째로 압축·암호화한다.
                 SetState(AnswerSubmitState.Compressing, "답안을 압축하는 중입니다...");
@@ -152,8 +152,8 @@ namespace StudentUI.Service
                     // 7za는 못 읽은 파일이 있으면 코드 1을 주고 그 파일만 빼고 묶는다.
                     // 학생이 편집기를 켜 둔 채 제출하는 흔한 상황이라, 무엇을 해야 하는지 알려 준다.
                     return Fail(code == SevenZipSomeFilesSkipped
-                        ? "답안 파일을 열어 둔 프로그램이 있어 일부가 빠질 뻔했습니다. 편집기를 모두 닫고 다시 제출해 주세요."
-                        : "답안을 압축하지 못했습니다.");
+                        ? "답안 제출 실패.\n시험 중이던 프로그램 종료 후 다시 시도하십시오."
+                        : "답안 제출 실패.\n답안을 압축하지 못했습니다. 다시 시도하십시오.");
                 }
 
                 // 2. 교수 PC로 보낸다.
@@ -165,12 +165,12 @@ namespace StudentUI.Service
 
                 SetState(AnswerSubmitState.Sending, "답안을 전송하는 중입니다...");
                 if (!await SendAndWaitAsync(archivePath, archivePassword))
-                    return Fail("답안을 전송하지 못했습니다.");
+                    return Fail("답안 제출 실패.\n전송이 끊겼습니다. 다시 시도하십시오.");
 
                 // 3. 교수가 잘 받았는지 확인한다. 이 확인이 있어야 파일을 지울 수 있다.
                 SetState(AnswerSubmitState.WaitingAck, "교수님 PC의 확인을 기다리는 중입니다...");
                 if (!await WaitForAckAsync())
-                    return Fail("교수님 PC에서 답안 수신 확인이 오지 않았습니다.");
+                    return Fail("답안 제출 실패.\n교수 PC의 수신 확인이 없습니다. 다시 시도하십시오.");
 
                 // 4. 여기서부터가 되돌릴 수 없는 구간이다.
                 //    교수가 확실히 받았다고 회신한 뒤에만 시험 파일을 지운다.
@@ -180,7 +180,7 @@ namespace StudentUI.Service
             }
             catch (Exception ex)
             {
-                return Fail($"답안 제출 중 오류가 발생했습니다: {ex.Message}");
+                return Fail($"답안 제출 실패.\n{ex.Message}");
             }
             finally
             {

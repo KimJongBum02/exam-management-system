@@ -757,6 +757,7 @@ namespace NetworkLib
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Server_Start();
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Server_Stop();
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Server_GetConnectedCount();
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Server_IsListening();
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Server_SetOnStudentConnected   (StudentConnectedCallback    cb);
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Server_SetOnStudentDisconnected(StudentDisconnectedCallback cb);
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Server_SetOnPacketReceived     (PacketReceivedCallback      cb);
@@ -889,6 +890,7 @@ namespace NetworkLib
         public bool Start()                => NativeNetwork.NL_Server_Start() == 1;
         public void Stop()                 => NativeNetwork.NL_Server_Stop();
         public int  GetConnectedCount()    => NativeNetwork.NL_Server_GetConnectedCount();
+        public bool IsListening            => NativeNetwork.NL_Server_IsListening() == 1;
 
         public void Broadcast(PacketType type, byte[] payload)
             => NativeNetwork.NL_Server_Broadcast(type, payload, (uint)(payload?.Length ?? 0));

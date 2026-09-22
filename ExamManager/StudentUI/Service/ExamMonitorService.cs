@@ -189,8 +189,20 @@ namespace StudentUI.Service
             if (processOn) flags |= MonitorFlags.ProcessMonitor;
             if (networkOn) flags |= MonitorFlags.NetworkMonitor;
 
-            NetworkService.Instance.SendPacket(PacketType.MonitorStatusReport,
-                MonitorStatusPayload.Encode(flags, _monitorFailReason));
+            _lastMonitorReport = MonitorStatusPayload.Encode(flags, _monitorFailReason);
+            NetworkService.Instance.SendPacket(PacketType.MonitorStatusReport, _lastMonitorReport);
+        }
+
+        // 마지막으로 보낸 감시 상태 보고. 자동 재연결 뒤 새로 켜진 교수 프로그램에 다시 보낸다.
+        private byte[]? _lastMonitorReport;
+
+        // 자동 재연결(ReconnectService)로 다시 로그인한 뒤 부른다.
+        // 다시 켜진 교수 프로그램은 이 학생의 감시가 켜져 있는지 모른다. 시험 중이면 다시 알려
+        // 교수 화면이 '감시 없음'으로 보이지 않게 한다. (파일 수신은 LoginService 가 로그인 때마다 알린다)
+        public void ReportAfterReconnect()
+        {
+            if (ExamTimeStore.Instance.IsRunning && _lastMonitorReport != null)
+                NetworkService.Instance.SendPacket(PacketType.MonitorStatusReport, _lastMonitorReport);
         }
 
         // 감시를 켜지 못한 이유. 교수 화면에 그대로 보인다.
@@ -217,6 +229,15 @@ namespace StudentUI.Service
             // 잘못 읽고 시험 도중에 감시를 꺼버리는 것이 더 위험하다.
             if (!ExamPhasePayload.TryDecode(payload, payloadLen, out ExamPhase phase)) return;
 
+            // 교수가 새 시험을 준비하면(대기) 지난 시험은 끝났다. 이어 받을 기록도 지운다.
+            // 남겨 두면 다시 켰을 때 지난 시험의 종료 화면이 뜬다.
+            if (phase == ExamPhase.Waiting)
+            {
+                _resumeSession = null;
+                ExamSessionStore.Clear();
+                return;
+            }
+
             // 아직 시험 중이라는 알림이면 감시를 건드리지 않는다.
             if (phase < ExamPhase.SubmitRequested) return;
 
@@ -224,9 +245,14 @@ namespace StudentUI.Service
             // 멈추자고 네이티브 DLL을 새로 불러올 이유가 없다.
             _processControl?.StopMonitoring();
 
-            // 시험이 종료되었으므로 남은 세션 기록을 지운다. (다시 켰을 때 종료 화면으로 잠기지 않도록)
-            _resumeSession = null;
-            ExamSessionStore.Clear();
+            // 이어 받기 기록은 지우지 않고 끝났다고만 남긴다. 답안을 내기 전에 앱이 다시 켜져도
+            // 어느 폴더를 어떤 암호로 묶을지 알아야 제출할 수 있다. 다시 켜면 감시는 켜지 않고 종료 화면에서 제출을 기다린다.
+            // 기록은 답안 제출에 성공하면 지운다(OnSubmitStateChanged).
+            if (ExamSessionStore.Load() is { } session && !session.ExamEnded)
+            {
+                session.ExamEnded = true;
+                ExamSessionStore.Save(session);
+            }
 
             // 네트워크 차단은 여기서 풀지 않는다(OnSubmitStateChanged 참고).
         }

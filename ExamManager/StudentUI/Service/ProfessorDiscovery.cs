@@ -27,7 +27,10 @@ namespace StudentUI.Service
         private const int Attempts = 2;
 
         // 찾으면 교수 PC 의 주소와 포트, 못 찾으면 null.
-        public static async Task<(string Ip, int Port)?> FindAsync()
+        // knownIp — 지난번 교수 PC 주소. 주면 그 주소에도 직접 묻는다(자동 재연결).
+        // 시험 중에는 방화벽이 교수 PC 외의 주소를 막아 대역 브로드캐스트가 나가지 않지만,
+        // 교수 PC 로 직접 묻는 것은 통한다. 교수가 포트를 바꿔 다시 켰어도 새 포트를 알아낸다.
+        public static async Task<(string Ip, int Port)?> FindAsync(string? knownIp = null)
         {
             // 회신을 받아야 하므로 보내기 전에 자리를 잡아 둔다(포트는 윈도우가 남는 것으로 준다).
             using var udp = new UdpClient(new IPEndPoint(IPAddress.Any, 0)) { EnableBroadcast = true };
@@ -35,7 +38,7 @@ namespace StudentUI.Service
 
             for (int attempt = 0; attempt < Attempts; attempt++)
             {
-                foreach (IPAddress target in BroadcastTargets())
+                foreach (IPAddress target in Targets(knownIp))
                 {
                     try { await udp.SendAsync(request, request.Length, new IPEndPoint(target, DiscoveryPort)); }
                     catch (SocketException) { }   // 이 랜 카드로는 못 나간다. 나머지로 계속 뿌린다.
@@ -67,6 +70,15 @@ namespace StudentUI.Service
                 catch (OperationCanceledException) { return null; }   // 이번엔 아무도 답하지 않았다
                 catch (SocketException)            { return null; }
             }
+        }
+
+        private static IEnumerable<IPAddress> Targets(string? knownIp)
+        {
+            if (knownIp != null && IPAddress.TryParse(knownIp, out IPAddress? known))
+                yield return known;
+
+            foreach (IPAddress target in BroadcastTargets())
+                yield return target;
         }
 
         // 뿌릴 곳들. 255.255.255.255 하나만 쓰면 가상 랜 카드(VMware 등)로 나가 버리는 PC 가 있어,

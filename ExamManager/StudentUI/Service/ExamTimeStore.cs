@@ -116,6 +116,7 @@ namespace StudentUI.Service
             _ticker.Stop();
             IsRunning = false;
             IsFinished = false;
+            FinishedAt = null;
             Remaining = ExamDuration;
             OnPropertyChanged(nameof(IsRunning));
             OnPropertyChanged(nameof(IsFinished));
@@ -141,12 +142,14 @@ namespace StudentUI.Service
         public DateTime StartedAtUtc => _startedAt;
 
         // 다시 켠 프로그램이 진행 중이던 시험의 남은 시간을 이어서 센다.
+        // 교수가 이미 끝낸 시험이면 끝난 상태로 되돌린다 — 종료 화면에서 답안을 낼 수 있게 한다.
         public void Resume(DateTime startedAtUtc, bool examEnded)
         {
             _startedAt = startedAtUtc;
             if (examEnded)
             {
-                Reset();
+                Finish();
+                FinishedAt = null;   // 언제 끝났는지는 기록에 없다
                 return;
             }
 
@@ -162,8 +165,17 @@ namespace StudentUI.Service
         {
             _ticker.Stop();
             IsRunning = false;
+            if (!IsFinished) FinishedAt = DateTime.Now;   // 종료 신호가 두 번 와도 처음 시각을 남긴다
             IsFinished = true;
             OnPropertyChanged(nameof(StatusText));
+        }
+
+        // 시험이 끝난 시각. 종료 화면에 보여 준다. 모르면 null.
+        private DateTime? _finishedAt;
+        public DateTime? FinishedAt
+        {
+            get => _finishedAt;
+            private set { _finishedAt = value; OnPropertyChanged(); }
         }
 
         private void Tick()

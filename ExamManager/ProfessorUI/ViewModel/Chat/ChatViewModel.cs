@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -159,14 +158,6 @@ namespace ProfessorUI.ViewModel
             else if (!string.IsNullOrEmpty(sessionId)) tab.SessionId = sessionId;
 
             return tab;
-        }
-
-        // 학생 대화 목록에 전체 학생을 띄운다.
-        // 아직 말이 오가지 않은 학생도 줄이 있어야 교수가 먼저 말을 걸 수 있다.
-        public void EnsureTabs(IEnumerable<StudentStatusViewModel> students)
-        {
-            foreach (var student in students)
-                GetOrCreateTab(student.StudentId, student.Name, student.SessionId);
         }
 
         // 알림·채팅 화면에서 한 학생과의 대화를 연다. 그 학생 몫의 안 읽음은 상단 배지에서도 뺀다.
