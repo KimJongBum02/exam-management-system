@@ -77,6 +77,9 @@ namespace StudentUI
                 Service.ExamMonitorService.Instance.ResumeFromSession(examSession);
             }
 
+            // 전체 공지는 팝업으로 띄운다. 채팅창을 열어 두지 않아도 바로 보인다.
+            ViewModel.SharedChatViewModel.Instance.NoticeArrived += ShowNoticeWindow;
+
             // OX 퀴즈 구독 시작 — 교수가 낸 문제를 기다린다.
             // 수업 중 이해도 확인에도 쓰는 기능이라 시험 화면에 묶지 않고 여기서 받는다.
             Service.QuizService.Instance.Start();
@@ -103,6 +106,12 @@ namespace StudentUI
 
             Service.NetworkService.Instance.Disconnected += reason =>
                 Service.ScreenCaptureService.Instance.Stop();
+        }
+
+        // 공지는 온 순서대로 각각 띄운다. 앞 공지를 닫기 전에 다음 공지가 와도 둘 다 읽을 수 있어야 한다.
+        private void ShowNoticeWindow(string notice)
+        {
+            new View.Shared.NoticeWindow(notice).Show();
         }
 
         // 새 문제가 오면 앞 문제 창은 닫고 새로 띄운다.
