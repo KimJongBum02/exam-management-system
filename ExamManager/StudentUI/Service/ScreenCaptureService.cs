@@ -22,14 +22,14 @@ namespace StudentUI.Service
         /// <summary>캡처 주기 (초). 기본 2초.</summary>
         public double IntervalSeconds { get; set; } = 2.0;
 
-        /// <summary>전송할 썸네일 가로 픽셀. 기본 320.</summary>
-        public int ThumbWidth  { get; set; } = 320;
+        /// <summary>전송할 썸네일 가로 픽셀. 기본 1280.</summary>
+        public int ThumbWidth  { get; set; } = 1280;
 
-        /// <summary>전송할 썸네일 세로 픽셀. 기본 180.</summary>
-        public int ThumbHeight { get; set; } = 180;
+        /// <summary>전송할 썸네일 세로 픽셀. 기본 720.</summary>
+        public int ThumbHeight { get; set; } = 720;
 
-        /// <summary>JPEG 품질 (1~100). 기본 60.</summary>
-        public int JpegQuality { get; set; } = 60;
+        /// <summary>JPEG 품질 (1~100). 기본 80.</summary>
+        public int JpegQuality { get; set; } = 80;
 
         // ── 내부 ─────────────────────────────────────────────────────────────
         private DispatcherTimer? _timer;
