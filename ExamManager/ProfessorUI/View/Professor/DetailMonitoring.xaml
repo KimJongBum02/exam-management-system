@@ -51,7 +51,7 @@
 
         <!-- ── 하단 바 ── -->
         <TextBlock Grid.Row="2" x:Name="ResolutionText"
-                   Text="320 × 180 · JPEG" Foreground="#A8B0BA" FontSize="11"
+                   Text="1280 × 720 · JPEG" Foreground="#A8B0BA" FontSize="11"
                    HorizontalAlignment="Right" Margin="0,8,0,0"/>
     </Grid>
 </Window>

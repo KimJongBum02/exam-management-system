@@ -17,6 +17,8 @@ namespace ProfessorUI.View.Professor
             NameText.Text   = item.DisplayName;
             UpdatedText.Text = $"마지막 수신: {item.LastUpdated}";
             ScreenImage.Source = item.Screen;
+            if (item.Screen != null)
+                ResolutionText.Text = $"{item.Screen.PixelWidth} × {item.Screen.PixelHeight} · JPEG";
 
             if (item.Screen == null)
                 WaitingText.Visibility = Visibility.Visible;
@@ -36,6 +38,8 @@ namespace ProfessorUI.View.Professor
                 ScreenImage.Source      = _item.Screen;
                 UpdatedText.Text        = $"마지막 수신: {_item.LastUpdated}";
                 WaitingText.Visibility  = _item.HasScreen ? Visibility.Collapsed : Visibility.Visible;
+                if (_item.Screen != null)
+                    ResolutionText.Text = $"{_item.Screen.PixelWidth} × {_item.Screen.PixelHeight} · JPEG";
             });
         }
 
