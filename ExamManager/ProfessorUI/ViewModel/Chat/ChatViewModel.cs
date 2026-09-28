@@ -90,6 +90,7 @@ namespace ProfessorUI.ViewModel
             // 받은 메시지·공지 회신 구독 (보내고 받는 일은 ChatService 가 맡는다)
             _chat.MessageReceived += OnMessageReceived;
             _chat.NoticeAcknowledged += OnNoticeAcknowledged;
+            _chat.ChatRead += OnChatRead;
         }
 
         private void SendMessage()
@@ -99,25 +100,21 @@ namespace ProfessorUI.ViewModel
             string msgToSend = InputMessage;
             InputMessage = string.Empty; // 보낸 후 지우기
 
-            // UI에 내 메시지 추가
-            var myMsg = new ChatMessageModel
+            // 1:1 은 메시지마다 번호를 받아 둔다. 학생이 읽었다는 회신이 그 번호로 온다.
+            // 전체 공지(SessionId == null)는 받는 사람이 여럿이라 말풍선 하나로 읽음을 셀 수 없다 —
+            // 공지의 수신 인원은 [공지 전송 결과 요약]이 따로 센다.
+            uint messageId = 0;
+            if (SelectedTab.SessionId == null) _chat.SendToAll(msgToSend);
+            else messageId = _chat.SendTo(SelectedTab.SessionId, msgToSend);
+
+            SelectedTab.Messages.Add(new ChatMessageModel
             {
                 SenderName = "나(교수)",
                 Message = msgToSend,
                 Timestamp = DateTime.Now,
-                IsMine = true
-            };
-            SelectedTab.Messages.Add(myMsg);
-
-            // 실제 네트워크 전송
-            if (SelectedTab.SessionId == null) // 전체 공지
-            {
-                _chat.SendToAll(msgToSend);
-            }
-            else // 특정 학생 1:1
-            {
-                _chat.SendTo(SelectedTab.SessionId, msgToSend);
-            }
+                IsMine = true,
+                MessageId = messageId
+            });
         }
 
         // 전체 공지를 보낸다. 받은 학생을 세기 위해 번호를 붙인다(NoticePayload 참고).
@@ -218,11 +215,29 @@ namespace ProfessorUI.ViewModel
             dispatcher.BeginInvoke(() => Notices.FirstOrDefault(n => n.Id == noticeId)?.MarkReceived(studentId));
         }
 
+        // 학생이 1:1 메시지를 읽었다는 회신. 그 말풍선을 '읽음'으로 바꾼다.
+        //
+        // 학생은 채팅창을 열 때 그때까지 쌓인 것을 한꺼번에 회신하므로 여러 건이 잇따라 들어온다.
+        // 접속이 끊긴 채 보낸 메시지는 회신이 오지 않아 '안 읽음'으로 남는다 — 실제로 못 본 것이 맞다.
+        private void OnChatRead(uint messageId, string studentId)
+        {
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher == null || dispatcher.HasShutdownStarted) return;
+
+            dispatcher.BeginInvoke(() =>
+            {
+                var tab = Tabs.FirstOrDefault(t => t.SessionId != null && t.StudentId == studentId);
+                var message = tab?.Messages.FirstOrDefault(m => m.MessageId == messageId);
+                if (message != null) message.IsRead = true;
+            });
+        }
+
         // 메모리 누수 방지를 위해 이벤트 구독 해제 (UiContext 가 싱글턴으로 들고 있어 안 불릴 수도 있음)
         public void Cleanup()
         {
             _chat.MessageReceived -= OnMessageReceived;
             _chat.NoticeAcknowledged -= OnNoticeAcknowledged;
+            _chat.ChatRead -= OnChatRead;
         }
     }
 }

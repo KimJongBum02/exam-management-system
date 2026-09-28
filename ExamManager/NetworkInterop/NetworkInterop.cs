@@ -538,6 +538,24 @@ namespace NetworkLib
         }
     }
 
+    // 교수가 학생 한 명에게 보내는 1:1 메시지. 공지와 똑같은 형식으로 번호를 붙인다.
+    //   [char message[512]][uint32 messageId]
+    //
+    // 학생이 채팅창을 열어 읽으면 이 번호를 CommandAck 로 돌려보내고,
+    // 교수 화면은 번호로 어느 말풍선을 '읽음'으로 바꿀지 찾는다.
+    // 번호는 512바이트 뒤에 붙으므로, 메시지를 문자열 끝까지만 읽는 쪽에서는 그냥 무시된다.
+    public static class ChatMessagePayload
+    {
+        public const int Size = NoticePayload.Size;
+
+        public static byte[] Encode(uint messageId, string message)
+            => NoticePayload.Encode(messageId, message);
+
+        // 번호가 붙지 않은 메시지(네이티브 SendChatToSession 으로 보낸 것)면 false.
+        public static bool TryReadId(IntPtr payload, uint payloadLen, out uint messageId)
+            => NoticePayload.TryReadId(payload, payloadLen, out messageId);
+    }
+
     // ══════════════════════════════════════════════════════════════════
     //  퀴즈 — 수업 중 이해도 확인용 OX 문제
     //

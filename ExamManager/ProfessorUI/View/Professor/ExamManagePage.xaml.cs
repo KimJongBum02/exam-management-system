@@ -21,7 +21,7 @@ namespace ProfessorUI.View.Professor
             DataContext = _ctx;
 
             // 재배포가 필요한 학생만 거른다.
-            // 종료·정산 화면도 같은 학생 목록을 쓰므로 기본 보기(GetDefaultView)에 필터를 걸면
+            // 시험 종료·답안 수집 화면도 같은 학생 목록을 쓰므로 기본 보기(GetDefaultView)에 필터를 걸면
             // 그 화면 표까지 걸러진다. 이 화면만의 보기를 따로 만든다.
             _studentView = new ListCollectionView(_ctx.Overview.Students) { Filter = MatchesFilter };
 
@@ -85,8 +85,8 @@ namespace ProfessorUI.View.Professor
 
         // 시험 종료 실행. 학생 PC의 감시를 멈추는 신호까지 ExamEndViewModel 이 보낸다.
         // 교수가 확인 창에서 취소하면 단계가 그대로이므로 화면도 옮기지 않는다.
-        // 끝난 뒤에는 답안 수집 현황과 승인이 있는 종료 및 정산 화면으로 넘어간다.
-        // 다음 시험 준비는 정산까지 끝난 뒤 종료 완료 현황의 [처음 화면으로] 에서 시작한다.
+        // 끝난 뒤에는 답안 수집 현황과 승인이 있는 시험 종료·답안 수집 화면으로 넘어간다.
+        // 다음 시험 준비는 승인까지 끝난 뒤 종료 완료 현황의 [처음 화면으로] 에서 시작한다.
         private void EndExam_Click(object sender, RoutedEventArgs e)
         {
             var command = _ctx.ExamEnd.EndExamCommand;

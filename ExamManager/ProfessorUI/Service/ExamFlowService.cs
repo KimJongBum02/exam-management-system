@@ -34,7 +34,7 @@ namespace ProfessorUI.Service
 
             network.Broadcast(PacketType.ExtractArchive, Array.Empty<byte>());
 
-            // 단계를 올리면 시험 관리·종료 및 정산 메뉴가 열린다.
+            // 단계를 올리면 시험 관리·시험 종료·답안 수집 메뉴가 열린다.
             ExamState.CurrentPhase = ExamPhase.InProgress;
         }
 
@@ -112,7 +112,7 @@ namespace ProfessorUI.Service
 
                 student.IsApproved = true;
                 student.IsSelected = false; // 승인한 학생은 더 고를 수 없으므로 체크도 푼다
-                student.Status = "종료";
+                student.Status = "시험 종료";
                 approved++;
             }
 

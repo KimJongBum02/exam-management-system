@@ -26,7 +26,7 @@ namespace ProfessorUI.View.Professor
         // 수업 중에도 채팅·공지를 쓰므로 잠그지 않는다
         private readonly MenuEntryViewModel _chat = new("알림·채팅");
         private readonly MenuEntryViewModel _policy = new("프로그램 관리");
-        private readonly MenuEntryViewModel _settle = new("종료 및 정산");
+        private readonly MenuEntryViewModel _settle = new("시험 종료·답안 수집");
         // 시험 단계와 무관한 기능이라 잠그지 않는다
         private readonly MenuEntryViewModel _quiz       = new("퀴즈");
         private readonly MenuEntryViewModel _monitoring = new("화면 모니터링");

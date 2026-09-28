@@ -22,10 +22,10 @@ namespace ProfessorUI.View.Professor
             => MainWindow.From(this)?.Navigate(new ExamEndWindow(), 3);
 
         // 모든 과정이 끝났으니 다음 시험을 위해 상태를 되돌린다.
-        // 단계가 Waiting 이 되면서 시험 관리 / 종료 및 정산 메뉴가 다시 잠긴다.
+        // 단계가 Waiting 이 되면서 시험 관리 / 시험 종료·답안 수집 메뉴가 다시 잠긴다.
         private void RestartSession_Click(object sender, RoutedEventArgs e)
         {
-            // 종료 및 정산은 먼저 낸 학생을 승인하려고 시험 중에도 열린다.
+            // 시험 종료·답안 수집은 먼저 낸 학생을 승인하려고 시험 중에도 열린다.
             // 시험 중에 초기화하면 아직 푸는 학생들이 있는데 시험 단계가 대기로 돌아가므로 막는다.
             if (ExamState.CurrentPhase < NetworkLib.ExamPhase.SubmitRequested)
             {

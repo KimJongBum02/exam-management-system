@@ -16,6 +16,10 @@ namespace ProfessorUI.View.Professor
         private static readonly SolidColorBrush ActiveBorder = new(Color.FromRgb(0x2A, 0x2D, 0x31));
         private static readonly SolidColorBrush IdleBorder = new(Color.FromRgb(0x8C, 0x94, 0xA0));
 
+        // 잠긴 칸의 바탕. 흰 칸과 나란히 놓였을 때 눌러 봐야 소용없음이 한눈에 보이게 한다.
+        private static readonly SolidColorBrush LockedBox = new(Color.FromRgb(0xE4, 0xE5, 0xE7));
+        private static readonly SolidColorBrush OpenBox = new(Color.FromRgb(0xFF, 0xFF, 0xFF));
+
         private const int LastStep = 3;
 
         private readonly UiContext _ctx = UiContext.Instance;
@@ -96,10 +100,15 @@ namespace ProfessorUI.View.Professor
         // 이동 자체는 막지 않는다 — 무엇이 남았는지 보러 갈 수 있어야 한다.
         private void UpdateStepLocks()
         {
-            Step2Lock.Visibility = SendFileState.IsFilePrepared
-                                 ? Visibility.Collapsed : Visibility.Visible;
-            Step3Lock.Visibility = SendFileState.IsFileDistributed
-                                 ? Visibility.Collapsed : Visibility.Visible;
+            SetLock(Step2Box, Step2Lock, SendFileState.IsFilePrepared);
+            SetLock(Step3Box, Step3Lock, SendFileState.IsFileDistributed);
+        }
+
+        // 잠긴 칸은 자물쇠를 띄우고 바탕을 회색으로 바꾼다.
+        private static void SetLock(Button box, TextBlock lockMark, bool open)
+        {
+            lockMark.Visibility = open ? Visibility.Collapsed : Visibility.Visible;
+            box.Background = open ? OpenBox : LockedBox;
         }
 
         // ── 시험 시작 ─────────────────────────────────────────
