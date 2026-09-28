@@ -24,10 +24,8 @@ namespace ProfessorUI.Common
         public WhiteListViewModel WhiteList { get; } = new();
         public BlackListViewModel BlackList { get; } = new();
         public ChatViewModel Chat { get; } = new();
+        public SurveyViewModel Survey { get; } = new();
         public QuizViewModel Quiz { get; } = new();
-
-        // 출제와 응답 기록은 서비스가 맡는다. 화면은 그것을 보여 주기만 한다.
-        public Service.QuizService QuizSession => Service.QuizService.Instance;
 
         // ── 새 흐름에서 필요해진 것 ──
         public ServerStatusViewModel Server { get; } = new();

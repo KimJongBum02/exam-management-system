@@ -14,6 +14,7 @@ namespace StudentUI
         private NavigationStore _navigationStore;
         private Window _currentWindow;
         private Window _quizWindow;
+        private View.QuizView.ClassQuizWindow? _classQuizWindow;
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -80,10 +81,11 @@ namespace StudentUI
             // 전체 공지는 팝업으로 띄운다. 채팅창을 열어 두지 않아도 바로 보인다.
             ViewModel.SharedChatViewModel.Instance.NoticeArrived += ShowNoticeWindow;
 
-            // OX 퀴즈 구독 시작 — 교수가 낸 문제를 기다린다.
+            // 퀴즈 구독 시작 — 교수가 낸 설문·수업 확인 퀴즈를 기다린다.
             // 수업 중 이해도 확인에도 쓰는 기능이라 시험 화면에 묶지 않고 여기서 받는다.
             Service.QuizService.Instance.Start();
             Service.QuizService.Instance.QuestionReceived += ShowQuizWindow;
+            Service.QuizService.Instance.ClassQuizReceived += ShowClassQuizWindow;
 
             // ── 시험 파일을 수신하면 교수 PC로 '수신 완료' 응답을 보낸다 ──
             // 실제 접속/로그인 패킷 전송은 교수 PC 를 찾은 뒤 LoginViewModel.CompleteLogin 에서 수행한다.
@@ -123,6 +125,17 @@ namespace StudentUI
             _quizWindow = new View.QuizView.QuizWindow(question);
             _quizWindow.Closed += (_, _) => _quizWindow = null;
             _quizWindow.Show();
+        }
+
+        // 수업 확인 퀴즈도 새 것이 오면 앞 창을 닫는다. 앞 퀴즈를 내지 않았으면 미제출로 남는다.
+        private void ShowClassQuizWindow(string quizId, System.Collections.Generic.List<(string Question, string[] Options)> questions)
+        {
+            _classQuizWindow?.CloseWithoutAsking();
+
+            _classQuizWindow = new View.QuizView.ClassQuizWindow(quizId, questions);
+            _classQuizWindow.Closed += (_, _) => _classQuizWindow = null;
+            _classQuizWindow.Show();
+            _classQuizWindow.Activate();
         }
 
         // 교수가 답안을 승인하면 PC 를 끈다.

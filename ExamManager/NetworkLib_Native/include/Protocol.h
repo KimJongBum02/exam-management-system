@@ -53,7 +53,6 @@ enum class PacketType : uint32_t
     // 퀴즈 (50~59)
     QuizQuestion             = 50,   // 가변 길이 페이로드
     QuizAnswer               = 51,
-    QuizResult               = 52,
 
     // 공통 응답
     CommandAck               = 100,
@@ -230,7 +229,7 @@ struct ShutdownPCPayload
 struct QuizQuestionHeader
 {
     char     quizId[37];
-    uint32_t questionType;    // 0=OX, 1=ShortAnswer, 2=MultipleChoice
+    uint32_t questionType;    // 0=OX, 3=ClassQuiz(여러 문제, NetworkInterop.cs ClassQuizPayload)
     char     question[512];
     uint32_t optionCount;
     uint32_t timeoutSeconds;  // 0 = 제한 없음
@@ -242,13 +241,6 @@ struct QuizAnswerPayload
     char studentId[16];
     char studentName[64];
     char answer[256];
-};
-
-struct QuizResultPayload
-{
-    char quizId[37];
-    char correctAnswer[256];
-    char explanation[512];
 };
 
 // ─── 공통 응답 ────────────────────────────────────────────────────

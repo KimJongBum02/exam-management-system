@@ -40,7 +40,6 @@ namespace NetworkLib
         InstalledProgramsReport = 44,   // 학생 → 교수. 학생 PC 에 설치된 프로그램 목록
         QuizQuestion            = 50,
         QuizAnswer              = 51,
-        QuizResult              = 52,
 
         // 채팅
         ChatBroadcast           = 60,  // 교수 → 전체 학생
@@ -555,8 +554,7 @@ namespace NetworkLib
     public enum QuizQuestionType : uint
     {
         OX             = 0,
-        ShortAnswer    = 1,
-        MultipleChoice = 2,
+        ClassQuiz      = 3,   // 수업 확인 퀴즈 — 여러 문제를 한 번에 보낸다 (ClassQuizPayload)
     }
 
     public static class QuizQuestionPayload
@@ -583,7 +581,7 @@ namespace NetworkLib
             return payload;
         }
 
-        // OX 가 아닌 문제 유형은 아직 화면이 없으므로 받아도 버린다.
+        // 설문(OX 한 문제)만 읽는다. 수업 확인 퀴즈는 ClassQuizPayload 가 읽는다.
         public static bool TryDecode(IntPtr payload, uint payloadLen,
                                      out string quizId, out string question, out uint timeoutSeconds)
         {
@@ -605,12 +603,96 @@ namespace NetworkLib
     }
 
     // ══════════════════════════════════════════════════════════════════
+    //  수업 확인 퀴즈 — QuizQuestion(50) 에 questionType = ClassQuiz 로 싣는다
+    //
+    //  헤더는 QuizQuestionHeader 그대로다. question 칸은 비우고 optionCount 에 문제 수를 적는다.
+    //  헤더 뒤에 Protocol.h 의 가변 길이 형식대로 문제 수만큼 [uint16 len][len bytes UTF-8] 이 붙는다.
+    //
+    //  문제 하나의 문자열은 딜리미터(Delimiter)로 나뉜다:
+    //    문제␟보기1␟보기2␟...    (N지선다)
+    //    문제                      (OX — 딜리미터가 없다)
+    //  첫 딜리미터 앞이 문제, 뒤가 보기다. 보기 수는 문제마다 다를 수 있다.
+    //
+    //  정답은 보내지 않는다. 채점은 교수 PC 가 한다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class ClassQuizPayload
+    {
+        // 키보드로 칠 수 없는 단위 구분 문자(U+001F)를 쓴다.
+        // 교수가 문제에 | / , 같은 글자를 써도 문제와 보기가 섞이지 않는다.
+        public const char Delimiter = '\u001F';
+
+        private const int QuizIdSize     = 37;
+        private const int TypeOffset     = QuizIdSize;          // 37
+        private const int OptionOffset   = 553;                 // QuizQuestionPayload 와 같은 자리
+        private const int HeaderSize     = QuizQuestionPayload.Size;   // 561
+
+        // options 가 비어 있으면 OX 문제다.
+        public static byte[] Encode(string quizId, IReadOnlyList<(string Question, IReadOnlyList<string> Options)> questions)
+        {
+            var body = new List<byte[]>();
+            foreach (var (question, options) in questions)
+            {
+                // 입력에 딜리미터가 섞여 있으면 문제와 보기가 어긋나므로 지운다.
+                var parts = new List<string> { Clean(question) };
+                foreach (var option in options) parts.Add(Clean(option));
+                body.Add(Encoding.UTF8.GetBytes(string.Join(Delimiter, parts)));
+            }
+
+            byte[] payload = new byte[HeaderSize + body.Sum(b => 2 + b.Length)];
+            ExamSubmitPayload.WriteFixedString(payload, 0, quizId, QuizIdSize);
+            BitConverter.GetBytes((uint)QuizQuestionType.ClassQuiz).CopyTo(payload, TypeOffset);
+            BitConverter.GetBytes((uint)questions.Count).CopyTo(payload, OptionOffset);
+
+            int offset = HeaderSize;
+            foreach (var text in body)
+            {
+                BitConverter.GetBytes((ushort)text.Length).CopyTo(payload, offset);
+                Array.Copy(text, 0, payload, offset + 2, text.Length);
+                offset += 2 + text.Length;
+            }
+            return payload;
+
+            static string Clean(string text) => text.Replace(Delimiter.ToString(), "").Trim();
+        }
+
+        public static bool TryDecode(IntPtr payload, uint payloadLen,
+                                     out string quizId, out List<(string Question, string[] Options)> questions)
+        {
+            quizId = "";
+            questions = new List<(string, string[])>();
+            if (payload == IntPtr.Zero || payloadLen < HeaderSize) return false;
+
+            byte[] buffer = new byte[payloadLen];
+            Marshal.Copy(payload, buffer, 0, (int)payloadLen);
+
+            if (BitConverter.ToUInt32(buffer, TypeOffset) != (uint)QuizQuestionType.ClassQuiz) return false;
+
+            quizId = ExamSubmitPayload.ReadFixedString(buffer, 0, QuizIdSize);
+            uint count = BitConverter.ToUInt32(buffer, OptionOffset);
+
+            int offset = HeaderSize;
+            for (uint i = 0; i < count; i++)
+            {
+                if (offset + 2 > buffer.Length) return false;
+                int length = BitConverter.ToUInt16(buffer, offset);
+                if (offset + 2 + length > buffer.Length) return false;
+
+                string[] parts = Encoding.UTF8.GetString(buffer, offset + 2, length).Split(Delimiter);
+                questions.Add((parts[0], parts.Skip(1).ToArray()));
+                offset += 2 + length;
+            }
+            return quizId.Length > 0 && questions.Count > 0;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
     //  QuizAnswer(51) 페이로드 — 학생이 보내는 응답
     //
     //  Protocol.h의 QuizAnswerPayload와 같은 형식(고정 373바이트):
     //    [char quizId[37]][char studentId[16]][char studentName[64]][char answer[256]]
     //
-    //  answer 는 "O" 또는 "X" 한 글자만 쓴다.
+    //  설문은 answer 에 "O" 또는 "X" 한 글자만 쓴다.
+    //  수업 확인 퀴즈는 answer 를 비우고, 고정 부분 뒤에 문제별 답을 가변 길이로 붙인다.
     //  학번·이름을 함께 실어 보내지만, 교수 쪽은 세션으로도 누구인지 알 수 있으므로
     //  이 값이 비어 있어도 응답을 버리지 않는다.
     // ══════════════════════════════════════════════════════════════════
@@ -634,6 +716,41 @@ namespace NetworkLib
             ExamSubmitPayload.WriteFixedString(payload, NameOffset,       studentName, NameSize);
             ExamSubmitPayload.WriteFixedString(payload, AnswerOffset,     answer ? "O" : "X", AnswerSize);
             return payload;
+        }
+
+        // 수업 확인 퀴즈의 답. 문제 순서대로 ClassQuizPayload.Delimiter 로 잇는다.
+        // 한 칸은 "O"·"X" 또는 보기 번호("1"~)이고, 풀지 않은 문제는 빈 칸이다.
+        // 문제 수에 제한이 없어 256바이트 answer 칸에 다 들어가지 않을 수 있으므로,
+        // answer 칸은 비우고 고정 373바이트 뒤에 UTF-8 문자열로 이어 붙인다.
+        public static byte[] Encode(string quizId, string studentId, string studentName, IEnumerable<string> answers)
+        {
+            byte[] tail = Encoding.UTF8.GetBytes(string.Join(ClassQuizPayload.Delimiter, answers));
+            byte[] payload = new byte[Size + tail.Length];
+            ExamSubmitPayload.WriteFixedString(payload, 0,                quizId,      QuizIdSize);
+            ExamSubmitPayload.WriteFixedString(payload, StudentIdOffset,  studentId,   StudentIdSize);
+            ExamSubmitPayload.WriteFixedString(payload, NameOffset,       studentName, NameSize);
+            Array.Copy(tail, 0, payload, Size, tail.Length);
+            return payload;
+        }
+
+        public static bool TryDecode(IntPtr payload, uint payloadLen,
+                                     out string quizId, out string studentId, out string studentName,
+                                     out string[] answers)
+        {
+            quizId = "";
+            studentId = "";
+            studentName = "";
+            answers = Array.Empty<string>();
+            if (payload == IntPtr.Zero || payloadLen < Size) return false;
+
+            byte[] buffer = new byte[payloadLen];
+            Marshal.Copy(payload, buffer, 0, (int)payloadLen);
+
+            quizId      = ExamSubmitPayload.ReadFixedString(buffer, 0,               QuizIdSize);
+            studentId   = ExamSubmitPayload.ReadFixedString(buffer, StudentIdOffset, StudentIdSize);
+            studentName = ExamSubmitPayload.ReadFixedString(buffer, NameOffset,      NameSize);
+            answers     = Encoding.UTF8.GetString(buffer, Size, buffer.Length - Size).Split(ClassQuizPayload.Delimiter);
+            return quizId.Length > 0;
         }
 
         public static bool TryDecode(IntPtr payload, uint payloadLen,

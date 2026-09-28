@@ -1,0 +1,212 @@
+<Window x:Class="StudentUI.View.QuizView.ClassQuizWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="수업 확인 퀴즈" Width="1000" Height="680" MinWidth="720" MinHeight="460"
+        FontFamily="{StaticResource AppFont}" Background="#F1F5F9"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <!-- 번호 동그라미. 고른 보기는 검게 채워진다 -->
+        <Style x:Key="MarkCircle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="BorderBrush" Value="#475569"/>
+            <Setter Property="BorderThickness" Value="1.3"/>
+            <Setter Property="Background" Value="White"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter Property="Background" Value="#1E293B"/>
+                    <Setter Property="BorderBrush" Value="#1E293B"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="MarkText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#334155"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter Property="Foreground" Value="White"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- 보기 한 줄 전체를 누를 수 있게 한다 -->
+        <Style x:Key="ChoiceButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="8,6">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#F1F5F9"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Background" Value="Transparent"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="BarButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="Foreground" Value="#1E293B"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#94A3B8"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="12"/>
+            <ColumnDefinition Width="270"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 머리: 제목과 문제 수 -->
+        <Border Grid.Row="0" Grid.ColumnSpan="3" Background="White" BorderBrush="#E2E8F0" BorderThickness="1"
+                CornerRadius="8" Padding="18,12" Margin="0,0,0,12">
+            <Grid>
+                <TextBlock Text="수업 확인 퀴즈" FontSize="18" FontWeight="Bold" Foreground="#1E293B"
+                           VerticalAlignment="Center"/>
+                <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock x:Name="TotalText" FontSize="13" Foreground="#334155" HorizontalAlignment="Right"/>
+                    <TextBlock x:Name="RemainText" FontSize="13" Foreground="#B91C1C" HorizontalAlignment="Right"
+                               Margin="0,2,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 왼쪽: 문제와 보기. 보기를 누르면 답이 골라진다 -->
+        <Border Grid.Row="1" Grid.Column="0" Background="White" BorderBrush="#E2E8F0" BorderThickness="1"
+                CornerRadius="8">
+            <ScrollViewer x:Name="QuestionScroll" VerticalScrollBarVisibility="Auto" Padding="24,20">
+                <ItemsControl x:Name="QuestionList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="0,0,0,30">
+                                <TextBlock Text="{Binding Title}" FontSize="16" Foreground="#1E293B"
+                                           TextWrapping="Wrap" LineHeight="26" Margin="0,0,0,12"/>
+                                <ItemsControl ItemsSource="{Binding Options}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Style="{StaticResource ChoiceButton}" Click="Choice_Click" Margin="0,0,0,2">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Border Style="{StaticResource MarkCircle}" Width="28" Height="28">
+                                                        <TextBlock Text="{Binding Mark}" Style="{StaticResource MarkText}"/>
+                                                    </Border>
+                                                    <TextBlock Text="{Binding Text}" FontSize="15" Foreground="#1E293B"
+                                                               TextWrapping="Wrap" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                                </StackPanel>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <!-- 오른쪽: 답안 표기란. 여기서 골라도 왼쪽과 같이 바뀐다 -->
+        <Border Grid.Row="1" Grid.Column="2" Background="White" BorderBrush="#E2E8F0" BorderThickness="1"
+                CornerRadius="8">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Border Grid.Row="0" Background="#334155" CornerRadius="8,8,0,0" Padding="0,10">
+                    <TextBlock Text="답안 표기란" FontSize="14" FontWeight="Bold" Foreground="White"
+                               HorizontalAlignment="Center"/>
+                </Border>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="12,10">
+                    <ItemsControl x:Name="AnswerSheet">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="34"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding Number}" FontSize="14" FontWeight="Bold"
+                                               Foreground="#334155" VerticalAlignment="Center"/>
+                                    <ItemsControl Grid.Column="1" ItemsSource="{Binding Options}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button Style="{StaticResource ChoiceButton}" Click="SheetChoice_Click"
+                                                        Padding="0" Margin="0,0,4,0">
+                                                    <Border Style="{StaticResource MarkCircle}" Width="26" Height="26">
+                                                        <TextBlock Text="{Binding Mark}" Style="{StaticResource MarkText}" FontSize="12"/>
+                                                    </Border>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- 아래: 안 푼 문제로 가기 · 답안 제출 -->
+        <Grid Grid.Row="2" Grid.ColumnSpan="3" Margin="0,12,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Button Grid.Column="0" x:Name="UnansweredButton" Content="안 푼 문제" Style="{StaticResource BarButton}"
+                    Click="Unanswered_Click"/>
+            <TextBlock Grid.Column="1" x:Name="StatusText" FontSize="13" Foreground="#64748B"
+                       TextWrapping="Wrap" TextAlignment="Center" Margin="16,0"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Text="답을 고른 뒤 [답안 제출]을 눌러야 교수님께 전달됩니다. 제출 전에는 답을 바꿀 수 있습니다."/>
+            <Button Grid.Column="2" x:Name="SubmitButton" Content="답안 제출" Style="{StaticResource BarButton}"
+                    FontWeight="Bold"
+                    Background="#1E293B" BorderBrush="#1E293B" Foreground="White"
+                    Click="Submit_Click"/>
+        </Grid>
+    </Grid>
+</Window>
