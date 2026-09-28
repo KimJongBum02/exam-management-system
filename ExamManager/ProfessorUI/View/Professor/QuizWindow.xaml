@@ -1,18 +1,23 @@
 <UserControl x:Class="ProfessorUI.View.Professor.QuizWindow"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:ProfessorUI.View.Professor">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/ProfessorUI;component/View/Professor/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- 정답 O / X 고르기. 고른 쪽만 진한 테두리로 남긴다 -->
+            <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+
+            <!-- 결과 표의 칸 색. 맞으면 연한 초록, 틀리면 빨강. 엑셀(ExcelReport.CorrectFill·WrongFill)도 같은 색이다 -->
+            <SolidColorBrush x:Key="CorrectCell" Color="#D9F2DF"/>
+            <SolidColorBrush x:Key="WrongCell"   Color="#F5B5B5"/>
+
+            <!-- OX 문제의 정답 O / X 고르기. 고른 쪽만 진한 테두리로 남긴다 -->
             <Style x:Key="AnswerChoice" TargetType="RadioButton">
                 <Setter Property="Cursor" Value="Hand"/>
-                <Setter Property="Width" Value="86"/>
-                <Setter Property="Height" Value="52"/>
+                <Setter Property="Width" Value="72"/>
+                <Setter Property="Height" Value="44"/>
                 <Setter Property="Margin" Value="0,0,10,0"/>
                 <Setter Property="Template">
                     <Setter.Value>
@@ -27,8 +32,107 @@
                                 </Trigger>
                                 <Trigger Property="IsChecked" Value="True">
                                     <Setter TargetName="Bd" Property="BorderThickness" Value="2.4"/>
+                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgHeader}"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- N지선다의 정답 표시. 보기 번호 동그라미를 누르면 검게 채워진다.
+                 Tab 이 보기 입력칸끼리만 오가도록 탭 순서에서 뺀다 -->
+            <Style x:Key="CorrectMark" TargetType="RadioButton">
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="IsTabStop" Value="False"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="RadioButton">
+                            <Border x:Name="Bd" Width="30" Height="30" CornerRadius="15" Background="White"
+                                    BorderBrush="{StaticResource BorderStrong}" BorderThickness="1.2">
+                                <TextBlock x:Name="Txt" Text="{TemplateBinding Content}" FontSize="13" FontWeight="Bold"
+                                           Foreground="{StaticResource TextPrimary}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgSubtle}"/>
+                                </Trigger>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource BtnDark}"/>
+                                    <Setter TargetName="Txt" Property="Foreground" Value="White"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- 누를 수 없을 때 흐려지는 밑줄 링크 (보기가 최소·최대 개수일 때) -->
+            <Style x:Key="EditLink" TargetType="Button" BasedOn="{StaticResource LinkButton}">
+                <Setter Property="VerticalAlignment" Value="Center"/>
+                <!-- Tab 을 누르면 보기 입력칸끼리만 오가도록 링크는 탭 순서에서 뺀다 -->
+                <Setter Property="IsTabStop" Value="False"/>
+                <Style.Triggers>
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter Property="Opacity" Value="0.35"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="OptionBox" TargetType="TextBox" BasedOn="{StaticResource NoteBox}">
+                <Setter Property="AcceptsReturn" Value="False"/>
+                <Setter Property="Padding" Value="10,7"/>
+                <Setter Property="MaxLength" Value="200"/>
+            </Style>
+
+            <!-- 왼쪽 문제 목록 한 줄. 고른 문제는 회색 바탕과 왼쪽 검은 띠로 표시한다 -->
+            <Style x:Key="QuestionItem" TargetType="ListBoxItem">
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ListBoxItem">
+                            <Border x:Name="Bd" Background="Transparent" BorderBrush="Transparent"
+                                    BorderThickness="3,0,0,0" Padding="10,9" Margin="0,0,0,2">
+                                <ContentPresenter/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgSubtle}"/>
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgHeader}"/>
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource BorderStrong}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- 결과 표. 목록 표(FlatTable)와 같은 모양으로 맞춘다 -->
+            <Style x:Key="ResultHeader" TargetType="DataGridColumnHeader">
+                <Setter Property="Background" Value="{StaticResource BgHeader}"/>
+                <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+                <Setter Property="FontSize" Value="12.5"/>
+                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                <Setter Property="Padding" Value="4,7"/>
+                <Setter Property="BorderBrush" Value="{StaticResource Placeholder}"/>
+                <Setter Property="BorderThickness" Value="0,0,1,0"/>
+            </Style>
+            <!-- 보기만 하는 표다. 기본 테마는 누른 칸의 글씨를 흰색으로 바꾸므로 글씨 색을 고정한다 -->
+            <Style x:Key="ResultCell" TargetType="DataGridCell">
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Focusable" Value="False"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="DataGridCell">
+                            <ContentPresenter VerticalAlignment="Stretch"/>
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
@@ -44,65 +148,174 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 제목 -->
-        <Grid Grid.Row="0" Margin="0,0,0,18">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <local:BackButton/>
-                <TextBlock Text="OX 퀴즈" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
-            </StackPanel>
-            <TextBlock Text="{Binding Quiz.FeedbackMessage}" Style="{StaticResource Caption}"
-                       HorizontalAlignment="Right" VerticalAlignment="Center"/>
+        <!-- ═══ 문제 작성 ═══ 왼쪽에서 문제를 고르고 오른쪽에서 그 문제 하나만 고친다 (Kahoot 방식) -->
+        <Grid Grid.Row="0">
+            <TextBlock Text="문제 작성" Style="{StaticResource SectionTitle}"/>
+            <TextBlock x:Name="CountText" Style="{StaticResource Caption}"
+                       HorizontalAlignment="Right" VerticalAlignment="Top"/>
         </Grid>
 
-        <!-- 문제를 그 자리에서 써서 바로 낸다. 문제를 모아 두지 않으므로 목록이 없다 -->
-        <StackPanel Grid.Row="1">
-            <TextBlock Text="문제 작성" Style="{StaticResource SectionTitle}"/>
-            <Border Style="{StaticResource Card}">
-                <StackPanel>
-                    <TextBlock Text="문제" Style="{StaticResource FieldLabel}"/>
-                    <TextBox Height="112" Style="{StaticResource NoteBox}" Margin="0,0,0,18"
-                             Text="{Binding Quiz.CurrentQuestion, UpdateSourceTrigger=PropertyChanged}"/>
+        <Border Grid.Row="1" Style="{StaticResource Card}">
+            <StackPanel>
+                <!-- 문제가 몇 개가 되든 이 높이를 넘지 않는다. 목록은 5문제쯤 보이고 나머지는 목록 안에서 스크롤된다 -->
+                <Grid Height="360">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="270"/>
+                        <ColumnDefinition Width="22"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
 
-                    <TextBlock Text="정답" Style="{StaticResource FieldLabel}"/>
-                    <StackPanel Orientation="Horizontal">
-                        <RadioButton Style="{StaticResource AnswerChoice}" GroupName="Answer"
-                                     AutomationProperties.Name="정답 O"
-                                     IsChecked="{Binding Quiz.IsOSelected}">
-                            <TextBlock Text="O" FontSize="21" FontWeight="Bold"
-                                       Foreground="{StaticResource TextPrimary}"/>
-                        </RadioButton>
-                        <RadioButton Style="{StaticResource AnswerChoice}" GroupName="Answer"
-                                     AutomationProperties.Name="정답 X"
-                                     IsChecked="{Binding Quiz.IsXSelected}">
-                            <TextBlock Text="X" FontSize="21" FontWeight="Bold"
-                                       Foreground="{StaticResource TextPrimary}"/>
-                        </RadioButton>
+                    <!-- 왼쪽: 문제 목록. ✓ 는 다 쓴 문제, ! 는 아직 채울 것이 남은 문제 -->
+                    <Border Grid.Column="0" BorderBrush="{StaticResource BorderLight}" BorderThickness="1" CornerRadius="6">
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="10">
+                                <Button Content="+ OX" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"
+                                        Click="AddOX_Click"/>
+                                <Button Content="+ N지선다" Style="{StaticResource SecondaryButton}"
+                                        Click="AddChoice_Click"/>
+                            </StackPanel>
+                            <ListBox x:Name="QuestionList" BorderThickness="0" Background="Transparent" Padding="6"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ItemContainerStyle="{StaticResource QuestionItem}"
+                                     ItemsSource="{Binding Quiz.Questions}"
+                                     SelectedItem="{Binding Quiz.SelectedQuestion}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="28"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding Number}" FontSize="14" FontWeight="Bold"
+                                                       Foreground="{StaticResource TextPrimary}" VerticalAlignment="Top"/>
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock Text="{Binding TypeText}" Style="{StaticResource Caption}"/>
+                                                <TextBlock Text="{Binding Preview}" FontSize="13" Foreground="{StaticResource TextPrimary}"
+                                                           TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="2" FontSize="14" FontWeight="Bold" Margin="8,0,0,0"
+                                                       VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="!"/>
+                                                        <Setter Property="Foreground" Value="{StaticResource AlertRed}"/>
+                                                        <Setter Property="ToolTip" Value="아직 채울 것이 남았습니다"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsComplete}" Value="True">
+                                                                <Setter Property="Text" Value="✓"/>
+                                                                <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
+                                                                <Setter Property="ToolTip" Value="{x:Null}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </DockPanel>
+                    </Border>
+
+                    <!-- 오른쪽: 고른 문제 하나 -->
+                    <TextBlock Grid.Column="2" x:Name="EmptyText" Style="{StaticResource Caption}" TextWrapping="Wrap"
+                               Text="왼쪽 아래 [+ OX] · [+ N지선다] 로 문제를 추가하십시오. 두 형식을 섞어 낼 수 있습니다."/>
+
+                    <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto"
+                                  Visibility="{Binding Quiz.HasSelection, Converter={StaticResource BoolToVisibility}}">
+                        <ContentControl Content="{Binding Quiz.SelectedQuestion}" IsTabStop="False" Margin="0,0,8,0">
+                            <ContentControl.ContentTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <Grid Margin="0,0,0,12">
+                                            <TextBlock Text="{Binding Header}" FontSize="15" FontWeight="Bold"
+                                                       Foreground="{StaticResource TextPrimary}"/>
+                                            <Button Content="문제 지우기" Style="{StaticResource EditLink}"
+                                                    HorizontalAlignment="Right" Click="RemoveQuestion_Click"/>
+                                        </Grid>
+
+                                        <TextBlock Text="문제" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox Height="64" Style="{StaticResource NoteBox}" MaxLength="500" Margin="0,0,0,14"
+                                                 Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                        <!-- OX: 정답만 고른다 -->
+                                        <StackPanel Visibility="{Binding IsOX, Converter={StaticResource BoolToVisibility}}">
+                                            <TextBlock Text="정답" Style="{StaticResource FieldLabel}"/>
+                                            <StackPanel Orientation="Horizontal">
+                                                <RadioButton Style="{StaticResource AnswerChoice}"
+                                                             AutomationProperties.Name="정답 O"
+                                                             IsChecked="{Binding IsOCorrect}">
+                                                    <TextBlock Text="O" FontSize="19" FontWeight="Bold"
+                                                               Foreground="{StaticResource TextPrimary}"/>
+                                                </RadioButton>
+                                                <RadioButton Style="{StaticResource AnswerChoice}"
+                                                             AutomationProperties.Name="정답 X"
+                                                             IsChecked="{Binding IsXCorrect}">
+                                                    <TextBlock Text="X" FontSize="19" FontWeight="Bold"
+                                                               Foreground="{StaticResource TextPrimary}"/>
+                                                </RadioButton>
+                                            </StackPanel>
+                                        </StackPanel>
+
+                                        <!-- N지선다: 보기를 늘리고 줄이며, 정답 보기의 번호를 누른다 -->
+                                        <StackPanel Visibility="{Binding IsChoice, Converter={StaticResource BoolToVisibility}}">
+                                            <TextBlock Text="보기 — 정답인 보기의 번호를 누르십시오" Style="{StaticResource FieldLabel}"/>
+                                            <ItemsControl ItemsSource="{Binding Options}" IsTabStop="False">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="0,0,0,8">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <RadioButton Grid.Column="0" Style="{StaticResource CorrectMark}"
+                                                                         Content="{Binding Mark}" Margin="0,0,10,0"
+                                                                         IsChecked="{Binding IsCorrect}"/>
+                                                            <TextBox Grid.Column="1" Style="{StaticResource OptionBox}"
+                                                                     Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"/>
+                                                            <Button Grid.Column="2" Content="지우기" Style="{StaticResource EditLink}"
+                                                                    Margin="12,0,0,0" Click="RemoveOption_Click"
+                                                                    IsEnabled="{Binding DataContext.CanRemoveOption,
+                                                                                RelativeSource={RelativeSource AncestorType=ItemsControl}}"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <Button Content="+ 보기 추가" Style="{StaticResource EditLink}" Margin="40,2,0,0"
+                                                    Click="AddOption_Click" IsEnabled="{Binding CanAddOption}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ContentControl.ContentTemplate>
+                        </ContentControl>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- 출제 버튼은 작성 칸 바로 아래, 오른쪽 끝에 둔다 -->
+                <Grid Margin="0,18,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" x:Name="SendHint" Style="{StaticResource Caption}"
+                               TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <Button Content="문제 모두 비우기" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0"
+                                Click="ClearQuestions_Click"/>
+                        <Button x:Name="SendQuizButton" Content="출제하기" Style="{StaticResource PrimaryButton}"
+                                Click="AskQuiz_Click"/>
                     </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
 
-                    <!-- 출제 버튼은 문제를 다 쓴 자리 바로 아래, 오른쪽 끝에 둔다 -->
-                    <Grid Margin="0,22,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" x:Name="SendHint" Style="{StaticResource Caption}"
-                                   TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,20,0"/>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal">
-                            <Button Content="문제 비우기" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0"
-                                    Command="{Binding Quiz.NewCommand}"/>
-                            <Button x:Name="SendQuizButton" Content="출제하기" Style="{StaticResource PrimaryButton}"
-                                    Click="AskQuiz_Click"/>
-                        </StackPanel>
-                    </Grid>
-                </StackPanel>
-            </Border>
-        </StackPanel>
-
-        <!-- ═══ 출제 현황 ═══ -->
+        <!-- ═══ 퀴즈 출제 현황 ═══ -->
         <Grid Grid.Row="2" Margin="0,30,0,12">
-            <TextBlock Text="출제 현황" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Bottom"/>
+            <TextBlock Text="퀴즈 출제 현황" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Bottom"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom">
-                <CheckBox x:Name="SortWrongFirst" Content="오답·미응답 먼저 보기" IsChecked="True"
+                <CheckBox x:Name="SortLowFirst" Content="미제출·낮은 점수 먼저 보기" IsChecked="True"
                           Style="{StaticResource AppCheckBox}"
                           Checked="SortToggle_Changed" Unchecked="SortToggle_Changed"
                           VerticalAlignment="Center" Margin="0,0,16,0"/>
@@ -113,115 +326,90 @@
         <Grid Grid.Row="3">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="30"/>
-                <ColumnDefinition Width="530"/>
+                <ColumnDefinition Width="24"/>
+                <ColumnDefinition Width="420"/>
             </Grid.ColumnDefinitions>
 
-            <!-- 좌: 방금 낸 문제와 학생별 응답 -->
-            <Grid Grid.Column="0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-
-                <Border Grid.Row="0" x:Name="RoundCard" Style="{StaticResource Card}" Margin="0,0,0,14">
+            <!-- 좌: 방금 낸 퀴즈. 학생이 한 줄, 문제가 한 칸이다 -->
+            <StackPanel Grid.Column="0">
+                <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                     <StackPanel>
-                        <TextBlock x:Name="RoundLabel" Text="방금 낸 문제" Style="{StaticResource FieldLabel}"/>
-                        <TextBlock x:Name="RoundQuestion" Style="{StaticResource Body}" Margin="0,0,0,16"
-                                   Text="아직 낸 문제가 없습니다."/>
-                        <UniformGrid Columns="4">
+                        <TextBlock x:Name="RoundLabel" Text="방금 낸 퀴즈" Style="{StaticResource FieldLabel}"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock x:Name="RoundEmpty" Style="{StaticResource Body}" Margin="0,0,0,16"
+                                   Text="아직 낸 퀴즈가 없습니다."/>
+                        <UniformGrid Columns="3">
                             <Border Style="{StaticResource KpiCard}" Margin="0,0,10,0">
                                 <StackPanel>
-                                    <TextBlock Text="정답" Style="{StaticResource FieldLabel}"/>
-                                    <TextBlock x:Name="RoundAnswer" Text="-" Style="{StaticResource KpiValue}"/>
+                                    <TextBlock Text="제출" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock x:Name="RoundSubmitted" Text="0" Style="{StaticResource KpiValue}"/>
                                 </StackPanel>
                             </Border>
                             <Border Style="{StaticResource KpiCard}" Margin="0,0,10,0">
                                 <StackPanel>
-                                    <TextBlock Text="맞음" Style="{StaticResource FieldLabel}"/>
-                                    <TextBlock x:Name="RoundCorrect" Text="0" Style="{StaticResource KpiValue}"/>
-                                </StackPanel>
-                            </Border>
-                            <Border Style="{StaticResource KpiCard}" Margin="0,0,10,0">
-                                <StackPanel>
-                                    <TextBlock Text="틀림" Style="{StaticResource FieldLabel}"/>
-                                    <TextBlock x:Name="RoundWrong" Text="0" Style="{StaticResource KpiValue}"/>
+                                    <TextBlock Text="미제출" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock x:Name="RoundMissed" Text="0" Style="{StaticResource KpiValue}"/>
                                 </StackPanel>
                             </Border>
                             <Border Style="{StaticResource KpiCard}">
                                 <StackPanel>
-                                    <TextBlock Text="미응답" Style="{StaticResource FieldLabel}"/>
-                                    <TextBlock x:Name="RoundMissed" Text="0" Style="{StaticResource KpiValue}"/>
+                                    <TextBlock Text="평균 점수" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock x:Name="RoundAverage" Text="-" Style="{StaticResource KpiValue}"/>
                                 </StackPanel>
                             </Border>
                         </UniformGrid>
                     </StackPanel>
                 </Border>
 
-                <ListView Grid.Row="1" x:Name="ResponseTable" Style="{StaticResource FlatTable}" Height="320">
-                    <ListView.View>
-                        <GridView ColumnHeaderContainerStyle="{StaticResource TableHeader}">
-                            <GridViewColumn Header="학번" Width="150">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate><TextBlock Text="{Binding StudentId}" Style="{StaticResource Cell}"/></DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="이름" Width="130">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate><TextBlock Text="{Binding StudentName}" Style="{StaticResource Cell}"/></DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="응답" Width="110">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate><TextBlock Text="{Binding AnswerText}" Style="{StaticResource Cell}"/></DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="결과" Width="130">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate><TextBlock Text="{Binding ResultText}" Style="{StaticResource Cell}"/></DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="응답 시각" Width="130">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate><TextBlock Text="{Binding RespondedAt}" Style="{StaticResource Cell}"/></DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                        </GridView>
-                    </ListView.View>
-                </ListView>
-            </Grid>
+                <TextBlock Style="{StaticResource Caption}" Margin="0,0,0,8" TextWrapping="Wrap"
+                           Text="문제 번호에 마우스를 올리면 문제와 정답이, 칸에 올리면 학생이 고른 답이 보입니다."/>
+                <!-- 열은 퀴즈마다 문제 수가 달라 코드에서 만든다 (QuizWindow.BuildColumns).
+                     학번·이름 두 칸은 가로로 넘겨도 제자리에 남는다 -->
+                <DataGrid x:Name="ResultGrid" Height="520" AutoGenerateColumns="False" IsReadOnly="True"
+                          HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False"
+                          CanUserSortColumns="False" CanUserReorderColumns="False" CanUserResizeRows="False"
+                          SelectionMode="Single" FrozenColumnCount="2" RowHeight="38"
+                          Background="White" RowBackground="White"
+                          BorderBrush="{StaticResource BorderLight}" BorderThickness="1"
+                          GridLinesVisibility="All"
+                          HorizontalGridLinesBrush="{StaticResource Placeholder}"
+                          VerticalGridLinesBrush="{StaticResource Placeholder}"
+                          ColumnHeaderStyle="{StaticResource ResultHeader}"
+                          CellStyle="{StaticResource ResultCell}"
+                          SelectionChanged="ResultGrid_SelectionChanged"/>
+            </StackPanel>
 
-            <!-- 우: 학생별 누적. 수업 태도를 볼 때 실제로 쓰이는 표다 -->
+            <!-- 우: 학생별 누적. 수업을 따라오고 있는지 볼 때 실제로 쓰이는 표다 -->
             <StackPanel Grid.Column="2">
                 <TextBlock Text="학생별 누적" Style="{StaticResource SectionTitle}"/>
                 <TextBlock x:Name="TallyHint" Style="{StaticResource Caption}" Margin="0,0,0,12" TextWrapping="Wrap"
-                           Text="이번 세션에서 낸 문제를 모두 합친 것입니다."/>
-                <ListView x:Name="TallyTable" Style="{StaticResource FlatTable}" Height="404">
+                           Text="이번 세션에서 낸 퀴즈를 모두 합친 것입니다."/>
+                <ListView x:Name="TallyTable" Style="{StaticResource FlatTable}" Height="700">
                     <ListView.View>
                         <GridView ColumnHeaderContainerStyle="{StaticResource TableHeader}">
-                            <GridViewColumn Header="학번" Width="140">
+                            <GridViewColumn Header="학번" Width="110">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate><TextBlock Text="{Binding StudentId}" Style="{StaticResource Cell}"/></DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn Header="이름" Width="110">
+                            <GridViewColumn Header="이름" Width="80">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate><TextBlock Text="{Binding StudentName}" Style="{StaticResource Cell}"/></DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn Header="응답" Width="80">
+                            <GridViewColumn Header="제출" Width="55">
                                 <GridViewColumn.CellTemplate>
-                                    <DataTemplate><TextBlock Text="{Binding AnsweredCount}" Style="{StaticResource Cell}"/></DataTemplate>
+                                    <DataTemplate><TextBlock Text="{Binding SubmittedCount}" Style="{StaticResource Cell}"/></DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn Header="맞음" Width="80">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate><TextBlock Text="{Binding CorrectCount}" Style="{StaticResource Cell}"/></DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="미응답" Width="90">
+                            <GridViewColumn Header="미제출" Width="65">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate><TextBlock Text="{Binding MissedCount}" Style="{StaticResource Cell}"/></DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="맞힌 문제" Width="85">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate><TextBlock Text="{Binding ScoreText}" Style="{StaticResource Cell}"/></DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
                         </GridView>

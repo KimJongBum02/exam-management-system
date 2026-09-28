@@ -1,0 +1,164 @@
+<UserControl x:Class="ProfessorUI.View.Professor.SurveyWindow"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/ProfessorUI;component/View/Professor/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 문제를 그 자리에서 써서 바로 낸다. 정답이 없어 학생이 고른 O·X 를 그대로 모은다 -->
+        <StackPanel Grid.Row="0">
+            <TextBlock Text="문제 작성" Style="{StaticResource SectionTitle}"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="문제" Style="{StaticResource FieldLabel}"/>
+                    <TextBox Height="112" Style="{StaticResource NoteBox}"
+                             Text="{Binding Survey.CurrentQuestion, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <!-- 출제 버튼은 문제를 다 쓴 자리 바로 아래, 오른쪽 끝에 둔다 -->
+                    <Grid Margin="0,22,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" x:Name="SendHint" Style="{StaticResource Caption}"
+                                   TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Content="문제 비우기" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0"
+                                    Command="{Binding Survey.NewCommand}"/>
+                            <Button x:Name="SendQuizButton" Content="출제하기" Style="{StaticResource PrimaryButton}"
+                                    Click="AskQuiz_Click"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- ═══ 설문 응답 현황 ═══ -->
+        <Grid Grid.Row="1" Margin="0,30,0,12">
+            <TextBlock Text="설문 응답 현황" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Bottom"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                <CheckBox x:Name="SortByAnswer" Content="응답별로 모아 보기" IsChecked="True"
+                          Style="{StaticResource AppCheckBox}"
+                          Checked="SortToggle_Changed" Unchecked="SortToggle_Changed"
+                          VerticalAlignment="Center" Margin="0,0,16,0"/>
+                <Button Content="기록 비우기" Style="{StaticResource SecondaryButton}" Click="ClearSession_Click"/>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="30"/>
+                <ColumnDefinition Width="530"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 좌: 방금 낸 문제와 학생별 응답 -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" x:Name="RoundCard" Style="{StaticResource Card}" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock x:Name="RoundLabel" Text="방금 낸 문제" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock x:Name="RoundQuestion" Style="{StaticResource Body}" Margin="0,0,0,16"
+                                   Text="아직 낸 문제가 없습니다."/>
+                        <UniformGrid Columns="3">
+                            <Border Style="{StaticResource KpiCard}" Margin="0,0,10,0">
+                                <StackPanel>
+                                    <TextBlock Text="O" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock x:Name="RoundO" Text="0" Style="{StaticResource KpiValue}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource KpiCard}" Margin="0,0,10,0">
+                                <StackPanel>
+                                    <TextBlock Text="X" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock x:Name="RoundX" Text="0" Style="{StaticResource KpiValue}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource KpiCard}">
+                                <StackPanel>
+                                    <TextBlock Text="미응답" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock x:Name="RoundMissed" Text="0" Style="{StaticResource KpiValue}"/>
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+                    </StackPanel>
+                </Border>
+
+                <ListView Grid.Row="1" x:Name="ResponseTable" Style="{StaticResource FlatTable}" Height="320">
+                    <ListView.View>
+                        <GridView ColumnHeaderContainerStyle="{StaticResource TableHeader}">
+                            <GridViewColumn Header="학번" Width="150">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate><TextBlock Text="{Binding StudentId}" Style="{StaticResource Cell}"/></DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="이름" Width="130">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate><TextBlock Text="{Binding StudentName}" Style="{StaticResource Cell}"/></DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="응답" Width="120">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate><TextBlock Text="{Binding AnswerText}" Style="{StaticResource Cell}"/></DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="응답 시각" Width="130">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate><TextBlock Text="{Binding RespondedAt}" Style="{StaticResource Cell}"/></DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </Grid>
+
+            <!-- 우: 학생별 누적. 설문에 얼마나 참여했는지 본다 -->
+            <StackPanel Grid.Column="2">
+                <TextBlock Text="학생별 누적" Style="{StaticResource SectionTitle}"/>
+                <TextBlock x:Name="TallyHint" Style="{StaticResource Caption}" Margin="0,0,0,12" TextWrapping="Wrap"
+                           Text="이번 세션에서 낸 문제를 모두 합친 것입니다."/>
+                <ListView x:Name="TallyTable" Style="{StaticResource FlatTable}" Height="404">
+                    <ListView.View>
+                        <GridView ColumnHeaderContainerStyle="{StaticResource TableHeader}">
+                            <GridViewColumn Header="학번" Width="140">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate><TextBlock Text="{Binding StudentId}" Style="{StaticResource Cell}"/></DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="이름" Width="110">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate><TextBlock Text="{Binding StudentName}" Style="{StaticResource Cell}"/></DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="응답" Width="80">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate><TextBlock Text="{Binding AnsweredCount}" Style="{StaticResource Cell}"/></DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="미응답" Width="90">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate><TextBlock Text="{Binding MissedCount}" Style="{StaticResource Cell}"/></DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

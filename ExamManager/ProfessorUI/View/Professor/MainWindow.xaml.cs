@@ -28,7 +28,7 @@ namespace ProfessorUI.View.Professor
         private readonly MenuEntryViewModel _policy = new("프로그램 관리");
         private readonly MenuEntryViewModel _settle = new("종료 및 정산");
         // 시험 단계와 무관한 기능이라 잠그지 않는다
-        private readonly MenuEntryViewModel _quiz       = new("OX 퀴즈");
+        private readonly MenuEntryViewModel _quiz       = new("퀴즈");
         private readonly MenuEntryViewModel _monitoring = new("화면 모니터링");
         // 지난 기록을 보는 화면이라 시험 전에도 열어 둔다 (표가 비어 있을 뿐이다)
         private readonly MenuEntryViewModel _examLog    = new("시험 로그");
@@ -78,7 +78,7 @@ namespace ProfessorUI.View.Professor
             ExamState.StateChanged += ApplyPhaseGates;
             Closed += (_, _) => ExamState.StateChanged -= ApplyPhaseGates;
 
-            // 화면 안의 목록·대화창이 휠을 삼켜도 전체 화면이 내려가게 한다.
+            // 스크롤할 것이 없는 목록·입력칸 위에서 굴린 휠이 삼켜져도 전체 화면은 내려가게 한다.
             // 이미 처리된 휠까지 받아야 하므로 handledEventsToo 로 단다.
             PageScroll.AddHandler(MouseWheelEvent, new MouseWheelEventHandler(OnPageWheel), true);
         }
@@ -86,8 +86,12 @@ namespace ProfessorUI.View.Professor
         // 휠 한 칸에 움직일 거리. WPF 기본값(세 줄)과 비슷하게 맞춘다.
         private const double WheelStep = 48;
 
-        // 안쪽 스크롤은 끝에 닿아도 휠을 자기가 처리한 것으로 표시해 버린다.
-        // 그래서 바깥 화면이 더 내려갈 곳이 있어도 멈춰 버린다 — 그 몫을 여기서 대신 움직인다.
+        // 스크롤 영역마다 휠을 따로 쓴다.
+        //   · 스크롤 막대가 있는 목록(퀴즈 문제 목록 등) 위에서는 그 목록만 움직인다.
+        //     끝에 닿아도 바깥 화면으로 넘기지 않는다 — 목록 끝을 보려고 휠을 계속 돌리다가
+        //     화면 전체가 갑자기 내려가 버리면 보던 자리를 잃는다.
+        //   · 그 밖의 자리(빈 곳, 스크롤할 것이 없는 목록·입력칸)에서는 전체 화면이 움직인다.
+        //     스크롤할 것이 없는 안쪽 스크롤도 휠을 처리한 것으로 표시해 버리므로 그 몫을 여기서 대신 움직인다.
         private void OnPageWheel(object sender, MouseWheelEventArgs e)
         {
             // 휠이 놓인 자리에서 바깥으로 훑는다.
@@ -98,8 +102,8 @@ namespace ProfessorUI.View.Professor
             {
                 if (node is not ScrollViewer inner) continue;
 
-                // 안쪽이 아직 더 움직일 수 있으면 그쪽 몫이다
-                if (CanScrollFurther(inner, e.Delta)) return;
+                // 스크롤 막대가 있는 안쪽 영역이면 끝에 닿았어도 그쪽 몫으로 끝낸다
+                if (inner.ScrollableHeight > 0) return;
                 swallowedInside = true;
             }
 
@@ -153,7 +157,7 @@ namespace ProfessorUI.View.Professor
             3 => new ExamEndWindow(),
             4 => new AlertAndChat(),
             5 => new ProgramManageWindow(),
-            6 => new QuizWindow(),
+            6 => new QuizTab(),
             7 => new ScreenMonitoring(),
             8 => new ExamLogWindow(),
             _ => null

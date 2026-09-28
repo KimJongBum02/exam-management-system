@@ -1,46 +1,40 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Windows;
 using NetworkLib;
 using ProfessorUI.Model;
 
 namespace ProfessorUI.Service
 {
-    // OX 퀴즈 한 세션(대개 수업 한 번)을 맡는다.
+    // 수업 확인 퀴즈 한 세션(대개 수업 한 번)을 맡는다.
     //
-    // 문제를 내고, 학생 응답을 받아 기록하고, 세션 기록을 파일로 남긴다.
-    // 화면은 붙이지 않는다 — 교수 UI 가 정해진 뒤에 연결한다.
+    // 여러 문제를 한 번에 내고, 학생이 [답안 제출]로 보낸 답안을 채점해 기록하고,
+    // 퀴즈 한 번마다 엑셀 파일 하나("0928_퀴즈1.xlsx", "0928_퀴즈2.xlsx" …)로 남긴다.
+    // 정답 없는 설문은 SurveyService 가 맡고, 파일로 남기지 않는다.
     public class QuizService
     {
         public static QuizService Instance { get; } = new QuizService();
 
-        // 세션 기록을 모아 둘 폴더. 걷은 답안과 같은 자리에 둬서 교수가 한곳만 보면 되게 한다.
+        // 퀴즈 기록을 모아 둘 폴더. 걷은 답안처럼 바탕화면에 둬서 교수가 바로 찾게 한다.
         public static string SessionFolder { get; } = Path.Combine(
-    Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-    "OX퀴즈");
+            Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "퀴즈");
 
-        // 기록 비우기를 하면 새 파일로 넘어간다. 같은 파일에 이어 쓰면 비우기 전 기록을 덮어쓴다.
-        private string _sessionFileName = NewSessionFileName();
-
-        private static string NewSessionFileName() => $"quiz_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
         private bool _started;
 
         private QuizService() { }
 
-        // 최근에 낸 문제가 앞에 온다.
+        // 최근에 낸 퀴즈가 앞에 온다.
         public ObservableCollection<QuizRound> Rounds { get; } = new();
 
         public QuizRound? CurrentRound => Rounds.FirstOrDefault();
 
-        // 응답이 하나 들어올 때마다 알린다 (학번). 화면 갱신용.
-        public event Action<string>? ResponseReceived;
+        // 답안이 하나 들어올 때마다 알린다 (학번). 화면 갱신용.
+        public event Action<string>? SubmissionReceived;
 
-        // 앱 시작 시 한 번 호출 — 학생 응답 구독만 해 둔다.
+        // 앱 시작 시 한 번 호출 — 학생 답안 구독만 해 둔다.
         public void Start()
         {
             if (_started) return;
@@ -49,11 +43,11 @@ namespace ProfessorUI.Service
             NetworkService.Instance.PacketReceived += OnPacketReceived;
         }
 
-        // 문제를 낸다. 출제 시점에 접속해 있는 학생만 대상이 된다.
+        // 퀴즈를 낸다. 출제 시점에 접속해 있는 학생만 대상이 된다.
         // 보낸 학생이 한 명도 없으면 아무 것도 하지 않고 false 를 돌려준다.
-        public bool Ask(string question, bool correctAnswer)
+        public bool Ask(List<QuizQuestion> questions)
         {
-            if (string.IsNullOrWhiteSpace(question)) return false;
+            if (questions.Count == 0) return false;
 
             var targets = StudentStore.Instance.Students.Where(s => s.IsConnected).ToList();
             if (targets.Count == 0) return false;
@@ -61,71 +55,65 @@ namespace ProfessorUI.Service
             var round = new QuizRound
             {
                 QuizId = Guid.NewGuid().ToString(),
-                Question = question.Trim(),
-                CorrectAnswer = correctAnswer,
                 AskedAt = DateTime.Now.ToString("HH:mm:ss"),
+                Title = NextTitle(),
+                Questions = questions,
             };
 
-            // 학번순으로 채워 둔다. 응답이 들어와도 줄 위치가 바뀌지 않아 눈으로 좇기 쉽다.
+            // 학번순으로 채워 둔다. 답안이 들어와도 줄 위치가 바뀌지 않아 눈으로 좇기 쉽다.
             foreach (var student in targets.OrderBy(s => s.StudentId))
             {
-                round.Responses.Add(new QuizResponse
+                round.Submissions.Add(new QuizSubmission
                 {
                     StudentId = student.StudentId,
                     StudentName = student.Name,
-                    CorrectAnswer = correctAnswer,
                 });
             }
 
             NetworkService.Instance.Broadcast(
                 PacketType.QuizQuestion,
-                QuizQuestionPayload.Encode(round.QuizId, round.Question));
+                ClassQuizPayload.Encode(round.QuizId,
+                    questions.Select(q => (q.Text, (IReadOnlyList<string>)q.Options)).ToList()));
 
-            // 새 문제를 내는 때가 앞 문제의 응답이 다 모인 때다. 그때까지의 기록을 파일로 남긴다.
+            // 새 퀴즈를 내는 때가 앞 퀴즈의 답안이 다 모인 때다. 앞 퀴즈 파일을 마무리하고 새 파일을 만든다.
             Rounds.Insert(0, round);
             Save();
             return true;
         }
 
-        // 세션을 비운다. 지금까지의 기록을 저장해 두고 다음 문제부터는 새 파일에 쓴다.
-        // 저장하지 못했으면 비우지 않고 false — 비우면 그 기록은 어디에도 남지 않는다.
+        // 그날 몇 번째 퀴즈인지 정한다. 폴더에 이미 있는 "0928_퀴즈N" 중 가장 큰 N 다음 번호다.
+        // 프로그램을 다시 켜도 번호가 이어지고, 앞 파일을 덮어쓰지 않는다.
+        private string NextTitle()
+        {
+            string prefix = $"{DateTime.Now:MMdd}_퀴즈";
+            int last = Rounds.Select(r => NumberOf(r.Title)).DefaultIfEmpty(0).Max();
+
+            if (Directory.Exists(SessionFolder))
+            {
+                foreach (string file in Directory.GetFiles(SessionFolder, prefix + "*.xlsx"))
+                    last = Math.Max(last, NumberOf(Path.GetFileNameWithoutExtension(file)));
+            }
+            return prefix + (last + 1);
+
+            // "0928_퀴즈12" 와 "0928_퀴즈12_사본" 모두 12 로 읽는다. 오늘 것이 아니면 0.
+            int NumberOf(string name)
+            {
+                if (!name.StartsWith(prefix)) return 0;
+                string digits = new string(name.Substring(prefix.Length).TakeWhile(char.IsDigit).ToArray());
+                return int.TryParse(digits, out int n) ? n : 0;
+            }
+        }
+
+        // 화면의 기록을 비운다. 파일은 퀴즈마다 이미 따로 저장돼 있으므로, 비우기 전에 한 번 더 저장만 한다.
+        // 저장하지 못했으면 비우지 않고 false — 비우면 마지막 답안이 어디에도 남지 않는다.
         public bool ClearSession()
         {
             if (!Save()) return false;
             Rounds.Clear();
-            _sessionFileName = NewSessionFileName();
             return true;
         }
 
-        // 학생별 누적. 문제를 낸 순서와 상관없이 학번순으로 돌려준다.
-        public List<QuizStudentTally> BuildTally()
-        {
-            var byStudent = new Dictionary<string, QuizStudentTally>();
-
-            foreach (var round in Rounds)
-            {
-                foreach (var response in round.Responses)
-                {
-                    if (!byStudent.TryGetValue(response.StudentId, out var tally))
-                    {
-                        tally = new QuizStudentTally
-                        {
-                            StudentId = response.StudentId,
-                            StudentName = response.StudentName,
-                        };
-                        byStudent[response.StudentId] = tally;
-                    }
-
-                    tally.AskedCount++;
-                    if (response.HasAnswered) tally.AnsweredCount++;
-                    if (response.IsCorrect) tally.CorrectCount++;
-                }
-            }
-
-            return byStudent.Values.OrderBy(t => t.StudentId).ToList();
-        }
-
-        // 학생 응답 수신. 네이티브 스레드에서 올라오므로 화면은 건드리지 않고 UI 스레드로 넘긴다.
+        // 학생 답안 수신. 네이티브 스레드에서 올라오므로 화면은 건드리지 않고 UI 스레드로 넘긴다.
         private void OnPacketReceived(string sessionId, string studentId, string studentName,
                                       PacketType type, IntPtr payload, uint payloadLen)
         {
@@ -133,7 +121,7 @@ namespace ProfessorUI.Service
 
             if (!QuizAnswerPayload.TryDecode(payload, payloadLen,
                                              out string quizId, out string payloadStudentId,
-                                             out _, out bool answer))
+                                             out _, out string[] answers))
                 return;
 
             // 학번은 서버가 로그인 때 등록한 값을 먼저 믿는다.
@@ -147,19 +135,17 @@ namespace ProfessorUI.Service
             void Record(string id, string student)
             {
                 var round = Rounds.FirstOrDefault(r => r.QuizId == id);
-                if (round == null) return;   // 이미 지운 세션의 응답이면 버린다
+                if (round == null) return;   // 설문의 응답이거나 이미 지운 세션의 답안이면 버린다
 
-                var response = round.Responses.FirstOrDefault(r => r.StudentId == student);
-                if (response == null) return; // 출제 시점에 없던 학생이면 세지 않는다
+                var submission = round.Submissions.FirstOrDefault(s => s.StudentId == student);
+                if (submission == null) return; // 출제 시점에 없던 학생이면 세지 않는다
 
-                // 먼저 낸 응답만 인정한다. 다시 보내도 바뀌지 않는다.
-                if (response.HasAnswered) return;
+                // 학생 화면은 제출 뒤 답을 바꿀 수 없다. 혹시 다시 와도 처음 것만 인정한다.
+                if (submission.HasSubmitted) return;
 
-                response.Answer = answer;
-                response.RespondedAt = DateTime.Now.ToString("HH:mm:ss");
-                round.NotifyCounts();
+                submission.Submit(answers, round.Questions);
 
-                ResponseReceived?.Invoke(student);
+                SubmissionReceived?.Invoke(student);
             }
         }
 
@@ -170,38 +156,35 @@ namespace ProfessorUI.Service
             dispatcher.BeginInvoke(action);
         }
 
-        // 문제 단위로 저장한다 — 새 문제를 낼 때, 기록을 비울 때, 퀴즈 화면·프로그램을 닫을 때.
-        // xlsx 는 한 줄만 덧붙일 수 없는 형식이라 저장할 때마다 파일 전체를 다시 쓴다.
-        // 응답마다 쓰면 학생 수십 명이 한꺼번에 답할 때 화면이 끊겨 응답 중에는 쓰지 않는다.
-        // 그래서 프로그램이 도중에 죽으면 진행 중이던 문제의 응답만 파일에 빠진다.
+        // 퀴즈마다 자기 파일에 다시 쓴다 — 퀴즈를 낼 때, 기록을 비울 때, 퀴즈 화면·프로그램을 닫을 때.
+        // xlsx 는 한 줄만 덧붙일 수 없는 형식이라 파일 전체를 다시 쓴다. 응답마다 쓰면 학생 수십 명이
+        // 한꺼번에 낼 때 화면이 끊겨 응답 중에는 쓰지 않는다.
         //
-        // 교수가 성적 처리에 바로 쓰도록 엑셀로 남긴다.
-        // 표 만드는 일은 ExcelReport 가 맡는다.
-        //
-        // 교수가 기록 파일을 엑셀로 열어 두면 그 파일에는 쓸 수 없다(수업 중에 열어 보는 일이 흔하다).
-        // 그때는 새 이름으로 저장하고 이후로도 그 파일에 쓴다. 한 파일에 늘 세션 전체가 담기므로 가장 최근 파일이 최종본이다.
-        // 저장했으면 true.
+        // 교수가 파일을 엑셀로 열어 두면 그 파일에는 쓸 수 없다. 그때는 "0928_퀴즈3_사본" 으로 저장하고
+        // 그 퀴즈는 이후로도 사본에 쓴다. 모두 저장했으면 true.
         public bool Save()
         {
-            if (Rounds.Count == 0) return true;   // 낸 문제가 없으면 빈 파일을 만들지 않는다
+            bool saved = true;
+            foreach (var round in Rounds)
+            {
+                if (round.FilePath.Length == 0)
+                    round.FilePath = Path.Combine(SessionFolder, round.Title + ".xlsx");
 
-            if (TrySave(_sessionFileName)) return true;
+                if (TrySave(round, round.FilePath)) continue;
 
-            string fallback = NewSessionFileName();
-            if (fallback == _sessionFileName)
-                fallback = Path.GetFileNameWithoutExtension(fallback) + "_2.xlsx";   // 같은 초 안이면 이름이 겹친다
-            if (!TrySave(fallback)) return false;
-
-            _sessionFileName = fallback;
-            return true;
+                string copy = Path.Combine(SessionFolder, round.Title + "_사본.xlsx");
+                if (copy != round.FilePath && TrySave(round, copy)) round.FilePath = copy;
+                else saved = false;
+            }
+            return saved;
         }
 
         // 기록 저장에 실패해도 수업은 계속돼야 하므로 예외를 밖으로 내지 않는다.
-        private bool TrySave(string fileName)
+        private static bool TrySave(QuizRound round, string path)
         {
             try
             {
-                ExcelReport.SaveQuizSession(Rounds, Path.Combine(SessionFolder, fileName));
+                ExcelReport.SaveQuizRound(round, path);
                 return true;
             }
             catch

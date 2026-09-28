@@ -6,7 +6,7 @@ using StudentUI.Service;
 
 namespace StudentUI.View.QuizView
 {
-    // 교수가 낸 OX 문제를 띄우고 답을 받는 작은 창.
+    // 교수가 낸 설문(정답 없는 OX 한 문제)을 띄우고 답을 받는 작은 창.
     //
     // 시험 화면·대기 화면 어디에 있든 떠야 하므로 별도 창으로 둔다.
     //

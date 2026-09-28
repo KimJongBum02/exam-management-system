@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="OX 퀴즈" Height="290" Width="420"
+        Title="설문" Height="290" Width="420"
         FontFamily="{StaticResource AppFont}"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         WindowStartupLocation="CenterScreen" Topmost="True"
@@ -23,7 +23,7 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <TextBlock Grid.Row="0" Text="OX 퀴즈" FontSize="13" FontWeight="Bold" Foreground="#64748B"
+            <TextBlock Grid.Row="0" Text="설문" FontSize="13" FontWeight="Bold" Foreground="#64748B"
                        Margin="0,0,0,14"/>
 
             <!-- 문제 본문. 길어질 수 있어 남는 공간을 다 쓴다 -->

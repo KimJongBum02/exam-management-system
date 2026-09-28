@@ -85,8 +85,9 @@ namespace ProfessorUI
                 }
             };
 
-            // OX 퀴즈 응답 구독 시작 — 학생이 보낸 O/X 를 받아 기록한다.
+            // 퀴즈 응답 구독 시작 — 설문의 O/X 와 수업 확인 퀴즈의 답안을 받아 기록한다.
             // 수업 중에도 쓰는 기능이라 시험 단계와 무관하게 앱 시작 때 켜 둔다.
+            Service.SurveyService.Instance.Start();
             Service.QuizService.Instance.Start();
 
             // 답안 수집 구독 시작 — 학생이 보낸 답안을 저장하고 확인 회신을 보낸다.
@@ -145,7 +146,7 @@ namespace ProfessorUI
         protected override void OnExit(ExitEventArgs e)
         {
             _shuttingDown = true;
-            // 퀴즈 기록은 문제 단위로만 저장하므로, 마지막 문제의 응답은 여기서 남긴다.
+            // 퀴즈 기록은 출제·화면 이동 때만 저장하므로, 마지막 퀴즈의 답안은 여기서 남긴다.
             try { Service.QuizService.Instance.Save(); } catch { }
             try { Service.ServerService.Stop(); } catch { }
             try { Service.NetworkService.Instance.Dispose(); } catch { }
