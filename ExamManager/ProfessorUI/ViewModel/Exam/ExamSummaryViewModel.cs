@@ -9,7 +9,7 @@ using ProfessorUI.Model;
 
 namespace ProfessorUI.ViewModel
 {
-    // 대시보드 · 시험 관리 창 · 종료 및 정산이 함께 쓰는 집계.
+    // 대시보드 · 시험 관리 창 · 시험 종료·답안 수집이 함께 쓰는 집계.
     //
     // 세 화면이 같은 숫자를 각자 세면 서로 어긋나기 쉬워서 한곳에서만 센다.
     // 학생 목록이 바뀌거나 학생 한 명의 상태가 바뀔 때마다 다시 센다.
@@ -52,7 +52,7 @@ namespace ProfessorUI.ViewModel
         public int AlertCount { get; private set; }
         public int UnreadAlertCount { get; private set; }
 
-        // ── 수집 · 정산 ──
+        // ── 수집 · 승인 ──
         public int CollectedCount { get; private set; }
         public int NotCollectedCount { get; private set; }
         public int CleanupFailedCount { get; private set; }

@@ -43,8 +43,8 @@ namespace ProfessorUI.ViewModel
 
         // ── 시험 파일 배포 상태 (시험 준비 2단계 표) ──
 
-        // 배포 표의 체크. 정산 화면의 승인 체크(IsSelected)와 따로 둔다 —
-        // 하나를 같이 쓰면 배포 때 전체 선택한 것이 정산 화면의 승인 대상까지 바꿔 놓는다.
+        // 배포 표의 체크. 승인 화면의 승인 체크(IsSelected)와 따로 둔다 —
+        // 하나를 같이 쓰면 배포 때 전체 선택한 것이 승인 화면의 승인 대상까지 바꿔 놓는다.
         private bool _isDeployTarget = true;   // 접속한 학생은 기본적으로 모두 보낸다
         public bool IsDeployTarget
         {
@@ -164,7 +164,7 @@ namespace ProfessorUI.ViewModel
             set { _isCleanupDone = value; OnPropertyChanged(); OnPropertyChanged(nameof(CleanupText)); }
         }
 
-        // ── 종료 및 정산 화면에 그대로 나갈 문구 ──
+        // ── 시험 종료·답안 수집 화면에 그대로 나갈 문구 ──
         // 흔적 삭제는 학생이 답안 회신을 받은 뒤 스스로 하므로, 답안을 걷었는지로 판단한다.
         // 다만 학생이 "못 지웠다"고 알려 오면 그쪽이 우선이다.
         public string CollectText => IsAnswerSubmitted ? "완료" : "미수집";

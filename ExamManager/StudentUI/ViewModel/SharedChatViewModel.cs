@@ -45,6 +45,26 @@ namespace StudentUI.ViewModel
         public void MarkAsRead()
         {
             UnreadCount = 0;
+            SendReadReceipts();
+        }
+
+        // 아직 읽었다고 알리지 않은 교수 메시지의 번호. 화면 스레드에서만 건드린다.
+        private readonly List<uint> _unreadChatIds = new();
+
+        // 채팅창을 열어 본 시점에 그때까지 쌓인 것을 한꺼번에 돌려보낸다.
+        // 교수 화면의 말풍선이 이 회신을 받아 '읽음'으로 바뀐다.
+        //
+        // 도착한 순간이 아니라 열어 본 순간에 보내는 것이 중요하다 —
+        // 도착만으로 읽음이라고 하면 교수는 학생이 본 줄 알고 넘어가게 된다.
+        private void SendReadReceipts()
+        {
+            if (_unreadChatIds.Count == 0) return;
+
+            foreach (uint id in _unreadChatIds)
+                NetworkService.Instance.SendPacket(PacketType.CommandAck,
+                    CommandAckPayload.Encode(PacketType.ChatDirect, true, id.ToString()));
+
+            _unreadChatIds.Clear();
         }
 
         private string _inputMessage = string.Empty;
@@ -83,6 +103,7 @@ namespace StudentUI.ViewModel
             Messages.Clear();
             InputMessage = string.Empty;
             UnreadCount = 0;
+            _unreadChatIds.Clear();
             LastSender = string.Empty;
             LastMessage = string.Empty;
         }
@@ -123,6 +144,11 @@ namespace StudentUI.ViewModel
                 NetworkService.Instance.SendPacket(PacketType.CommandAck,
                     CommandAckPayload.Encode(PacketType.ChatBroadcast, true, noticeId.ToString()));
 
+            // 1:1 메시지에 붙은 번호. 읽었다고 알릴 때 쓴다.
+            // 수신 버퍼는 이 콜백이 끝나면 사라지므로 화면 스레드로 넘기기 전에 읽어 둔다.
+            uint chatId = 0;
+            bool hasChatId = !isNotice && ChatMessagePayload.TryReadId(payload, payloadLen, out chatId);
+
             // 콜백은 네이티브 스레드에서 올라오므로 UI 스레드로 넘겨 처리한다.
             // 동기 Invoke는 종료 중 수신 스레드를 붙잡아 앱이 멈추므로 BeginInvoke를 쓴다.
             var dispatcher = Application.Current?.Dispatcher;
@@ -149,6 +175,9 @@ namespace StudentUI.ViewModel
                 LastSender = "[교수님]";
                 LastMessage = message;
                 UnreadCount++;
+
+                // 아직 열어 보지 않았으므로 회신은 미뤄 둔다. MarkAsRead 가 한꺼번에 보낸다.
+                if (hasChatId) _unreadChatIds.Add(chatId);
 
                 // 창을 내려 두었거나 다른 창을 보고 있어도 알 수 있게 한다.
                 MessageArrived?.Invoke();

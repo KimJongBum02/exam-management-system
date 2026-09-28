@@ -26,7 +26,7 @@
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                 <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,16,0"
                            TextWrapping="Wrap" MaxWidth="430"
-                           Text="시험을 끝내고 접속 중인 학생의 답안을 바로 걷습니다. 먼저 제출한 학생은 종료 및 정산 화면에서 승인합니다."/>
+                           Text="시험을 끝내고 접속 중인 학생의 답안을 바로 걷습니다. 먼저 제출한 학생은 시험 종료·답안 수집 화면에서 승인합니다."/>
                 <Button Content="시험 종료 및 답안 수집" Style="{StaticResource PrimaryButton}" Click="EndExam_Click"/>
             </StackPanel>
         </Grid>

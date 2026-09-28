@@ -11,7 +11,7 @@
     </UserControl.Resources>
 
     <!-- 화면 제목 왼쪽에 붙는 뒤로가기.
-         갈 곳이 있으면 검은 바탕, 없으면 흐려져 눌리지 않는다. -->
+         갈 곳이 있으면 검은 바탕, 없으면 회색 바탕이 되어 눌리지 않는다. -->
     <Button x:Name="Button" Click="Back_Click" Cursor="Hand"
             VerticalAlignment="Center" Margin="0,0,10,0"
             ToolTip="이전 화면으로"
@@ -30,11 +30,11 @@
                         <Setter TargetName="Bd" Property="Background" Value="{StaticResource BtnDarkHover}"/>
                         <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource BtnDarkHover}"/>
                     </Trigger>
-                    <!-- 뒤로 갈 곳이 없을 때. 테두리와 화살표를 함께 흐려 눌러도 소용없음을 알린다 -->
+                    <!-- 뒤로 갈 곳이 없을 때. 자리는 그대로 두고 회색으로 바꿔 눌러도 소용없음을 알린다 -->
                     <Trigger Property="IsEnabled" Value="False">
-                        <Setter TargetName="Bd" Property="Background" Value="Transparent"/>
-                        <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Placeholder}"/>
-                        <Setter TargetName="Arrow" Property="Foreground" Value="{StaticResource Placeholder}"/>
+                        <Setter TargetName="Bd" Property="Background" Value="#B4BAC2"/>
+                        <Setter TargetName="Bd" Property="BorderBrush" Value="#B4BAC2"/>
+                        <Setter TargetName="Arrow" Property="Foreground" Value="White"/>
                         <Setter Property="Cursor" Value="Arrow"/>
                     </Trigger>
                 </ControlTemplate.Triggers>

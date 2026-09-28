@@ -18,16 +18,17 @@
             <Style x:Key="StepBox" TargetType="Button">
                 <Setter Property="Cursor" Value="Hand"/>
                 <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                <!-- 현재 단계 표시는 코드비하인드가 이 두 값을 바꿔서 한다 -->
+                <Setter Property="Background" Value="White"/>
+                <!-- 현재 단계 표시와 잠긴 칸의 회색 바탕은 코드비하인드가 이 값들을 바꿔서 한다 -->
                 <Setter Property="BorderBrush" Value="{StaticResource BorderLight}"/>
                 <Setter Property="BorderThickness" Value="1"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
-                            <Border x:Name="Bd" Background="White" CornerRadius="8" Padding="18,14"
+                            <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="8" Padding="18,14"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}">
-                                <ContentPresenter HorizontalAlignment="Center"/>
+                                <ContentPresenter/>
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
@@ -71,36 +72,36 @@
         <UniformGrid Grid.Row="1" Columns="3" Margin="0,0,0,24">
             <Button x:Name="Step1Box" Style="{StaticResource StepBox}" Margin="0,0,10,0" Click="GoStep1_Click"
                     AutomationProperties.Name="1단계 시험 준비">
-                <StackPanel HorizontalAlignment="Center">
+                <StackPanel>
                     <TextBlock Text="1단계" Style="{StaticResource Caption}" HorizontalAlignment="Center" Margin="0,0,0,7"/>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock x:Name="Step1Name" Text="시험 준비" FontSize="14"
-                                   Foreground="{StaticResource TextPrimary}"/>
-                    </StackPanel>
+                    <TextBlock x:Name="Step1Name" Text="시험 준비" FontSize="14" HorizontalAlignment="Center"
+                               Foreground="{StaticResource TextPrimary}"/>
                 </StackPanel>
             </Button>
             <Button x:Name="Step2Box" Style="{StaticResource StepBox}" Margin="0,0,10,0" Click="GoStep2_Click"
                     AutomationProperties.Name="2단계 파일 배포">
-                <StackPanel HorizontalAlignment="Center">
+                <StackPanel>
                     <TextBlock Text="2단계" Style="{StaticResource Caption}" HorizontalAlignment="Center" Margin="0,0,0,7"/>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock x:Name="Step2Name" Text="파일 배포" FontSize="14"
+                    <!-- 자물쇠는 칸 오른쪽 끝에 따로 둔다. 이름과 나란히 세우면 이름이 왼쪽으로 밀려
+                         위의 '2단계'와 가운데가 어긋난다 -->
+                    <Grid>
+                        <TextBlock x:Name="Step2Name" Text="파일 배포" FontSize="14" HorizontalAlignment="Center"
                                    Foreground="{StaticResource TextPrimary}"/>
-                        <TextBlock x:Name="Step2Lock" Text="&#x1F512;" FontSize="12" Margin="7,0,0,0"
-                                   VerticalAlignment="Center" Visibility="Collapsed"/>
-                    </StackPanel>
+                        <TextBlock x:Name="Step2Lock" Text="&#x1F512;" FontSize="16"
+                                   HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed"/>
+                    </Grid>
                 </StackPanel>
             </Button>
             <Button x:Name="Step3Box" Style="{StaticResource StepBox}" Click="GoStep3_Click"
                     AutomationProperties.Name="3단계 시험 시작">
-                <StackPanel HorizontalAlignment="Center">
+                <StackPanel>
                     <TextBlock Text="3단계" Style="{StaticResource Caption}" HorizontalAlignment="Center" Margin="0,0,0,7"/>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock x:Name="Step3Name" Text="시험 시작" FontSize="14"
+                    <Grid>
+                        <TextBlock x:Name="Step3Name" Text="시험 시작" FontSize="14" HorizontalAlignment="Center"
                                    Foreground="{StaticResource TextPrimary}"/>
-                        <TextBlock x:Name="Step3Lock" Text="&#x1F512;" FontSize="12" Margin="7,0,0,0"
-                                   VerticalAlignment="Center" Visibility="Collapsed"/>
-                    </StackPanel>
+                        <TextBlock x:Name="Step3Lock" Text="&#x1F512;" FontSize="16"
+                                   HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed"/>
+                    </Grid>
                 </StackPanel>
             </Button>
         </UniformGrid>

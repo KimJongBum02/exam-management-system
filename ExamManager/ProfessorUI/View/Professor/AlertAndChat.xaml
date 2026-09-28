@@ -246,6 +246,9 @@
                                             </Grid>
                                             <TextBlock Text="{Binding Message}" Style="{StaticResource Body}"
                                                        Foreground="{StaticResource TextSecondary}"/>
+                                            <!-- 내가 보낸 1:1 메시지에만 값이 있다. 나머지는 빈 줄이라 보이지 않는다 -->
+                                            <TextBlock Text="{Binding ReadStateText}" Style="{StaticResource Caption}"
+                                                       HorizontalAlignment="Right" Margin="0,3,0,0"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
