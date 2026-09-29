@@ -54,6 +54,6 @@
                    HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
 
         <Button Grid.Row="2" Content="닫기" Style="{StaticResource PrimaryButton}"
-                HorizontalAlignment="Right" Margin="0,14,0,0" IsCancel="True" Padding="20,8"/>
+                HorizontalAlignment="Right" Margin="0,14,0,0" IsCancel="True"/>
     </Grid>
 </Window>

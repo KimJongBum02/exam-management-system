@@ -19,14 +19,14 @@ namespace ProfessorUI.ViewModel
         private static readonly TimeSpan CheckInterval = TimeSpan.FromSeconds(3);
 
         private ServerService.Health _health = ServerService.Health.Active;
+        private readonly DispatcherTimer _timer = new() { Interval = CheckInterval };
 
         public ServerStatusViewModel()
         {
             ServerService.StateChanged += Refresh;
 
-            var timer = new DispatcherTimer { Interval = CheckInterval };
-            timer.Tick += (_, _) => Refresh();
-            timer.Start();
+            _timer.Tick += (_, _) => Refresh();
+            _timer.Start();
 
             RestartCommand = new RelayCommand(_ => ExecuteRestart());
             Refresh();
@@ -53,6 +53,8 @@ namespace ProfessorUI.ViewModel
         };
 
         public ICommand RestartCommand { get; }
+
+        public void StopChecking() => _timer.Stop();
 
         private void Refresh()
         {

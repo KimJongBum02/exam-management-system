@@ -5,6 +5,7 @@
         Width="920" Height="620"
         MinWidth="640" MinHeight="440"
         WindowStartupLocation="CenterOwner"
+        FontFamily="{StaticResource AppFont}"
         Background="#1A1D21">
 
     <Window.Resources>
@@ -30,9 +31,8 @@
                 <TextBlock x:Name="UpdatedText" FontSize="12"
                            Foreground="#B4BBC4" Margin="0,4,0,0"/>
             </StackPanel>
-            <Button Content="✕  닫기" HorizontalAlignment="Right" VerticalAlignment="Center"
-                    Click="Close_Click" Foreground="#E4E7EB" Background="Transparent"
-                    BorderThickness="0" FontSize="13" Cursor="Hand"/>
+            <Button Content="✕  닫기" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Right"
+                    Click="Close_Click"/>
         </Grid>
 
         <!-- ── 화면 이미지 ── -->

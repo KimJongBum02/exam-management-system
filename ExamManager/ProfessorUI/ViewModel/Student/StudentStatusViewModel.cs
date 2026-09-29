@@ -13,7 +13,7 @@ namespace ProfessorUI.ViewModel
         private string _status = string.Empty; // 메인 화면용 (대기, 미접속, 시험중 등)
         private string _ip = string.Empty;
 
-        // ⭐ 2, 3단계 lifecycle을 위한 속성 추가
+        // 파일 수신 · 답안 제출 · 승인 상태
         private bool _isSelected;
         private bool _isFileReceived = false; // 💡 기본값 false -> 무조건 "미수집"으로 시작!
         private bool _isApproved;

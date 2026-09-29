@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using ProfessorUI.Service;
 using ProfessorUI.Common;
@@ -16,6 +17,11 @@ namespace ProfessorUI.ViewModel
         private string _inputProcessName = string.Empty;
 
         public ObservableCollection<string> WhiteList => ProgramControlStore.WhiteList;
+
+        // 금지 목록과 같이 기본 항목과 교수가 직접 넣은 항목을 따로 보여 준다.
+        // 저장은 한 목록(ProgramControlStore.WhiteList) 그대로이고 보여 줄 때만 가른다.
+        public ICollectionView DefaultItems { get; }
+        public ICollectionView AddedItems { get; }
 
         public string InputProcessName
         {
@@ -33,6 +39,15 @@ namespace ProfessorUI.ViewModel
             AddCommand = new RelayCommand(_ => AddProcess());
             RemoveCommand = new RelayCommand(param => RemoveProcess(param as string));
             ClearAllCommand = new RelayCommand(_ => ClearAll());
+
+            DefaultItems = new ListCollectionView(ProgramControlStore.WhiteList)
+            {
+                Filter = item => item is string entry && ProgramControlStore.IsDefaultWhite(entry),
+            };
+            AddedItems = new ListCollectionView(ProgramControlStore.WhiteList)
+            {
+                Filter = item => item is string entry && !ProgramControlStore.IsDefaultWhite(entry),
+            };
         }
 
 

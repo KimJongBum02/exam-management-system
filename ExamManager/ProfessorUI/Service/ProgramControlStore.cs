@@ -43,20 +43,26 @@ namespace ProfessorUI.Service
 
         public static bool IsDefaultBlack(string entry) => DefaultBlackList.Contains(entry);
 
+        // 기본으로 채우는 허용 항목 — 개발 도구. 금지 목록처럼 화면에서 기본/직접 추가를 가를 때도 쓴다.
+        //
+        // 허용은 실행 파일 이름과 원래 이름이 모두 목록에 있어야 인정된다.
+        // 하나만 넣으면 학생 PC 에서 허용으로 잡히지 않아 '목록에 없는 프로그램'
+        // 알림이 뜬다. 두 이름이 같으면 한 번만 넣는다.
+        public static IReadOnlyList<string> DefaultWhiteList { get; } =
+            KnownPrograms.DevTools.SelectMany(program => new[] { program.ExecutableName, program.EffectiveOriginalName })
+                .Distinct()
+                .ToList();
+
+        public static bool IsDefaultWhite(string entry) => DefaultWhiteList.Contains(entry);
+
         // 기본값을 다시 채운다. 이미 들어 있는 것은 건드리지 않는다.
         public static void LoadDefaults()
         {
             foreach (string entry in DefaultBlackList)
                 AddToBlackList(entry);
 
-            // 허용은 실행 파일 이름과 원래 이름이 모두 목록에 있어야 인정된다.
-            // 하나만 넣으면 학생 PC 에서 허용으로 잡히지 않아 '목록에 없는 프로그램'
-            // 알림이 뜬다. 두 이름이 같으면 두 번째 호출은 그냥 무시된다.
-            foreach (var program in KnownPrograms.DevTools)
-            {
-                AddToWhiteList(program.ExecutableName);
-                AddToWhiteList(program.EffectiveOriginalName);
-            }
+            foreach (string entry in DefaultWhiteList)
+                AddToWhiteList(entry);
         }
 
         public static bool AddToBlackList(string processName)

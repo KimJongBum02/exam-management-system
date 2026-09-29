@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using NetworkLib;
 using ProfessorUI.Service;
 using ProfessorUI.Common;
 using ProfessorUI.ViewModel;
@@ -55,6 +56,12 @@ namespace ProfessorUI.View.Professor
         public MainWindow()
         {
             InitializeComponent();
+
+            // 처음부터 최대화로 뜨는 창에는 CenterScreen 이 먹지 않아, 복원하면 화면 왼쪽 위로 간다.
+            // 복원했을 때 화면 가운데에 오도록 자리를 직접 잡아 둔다.
+            var area = SystemParameters.WorkArea;
+            Left = area.Left + (area.Width - Width) / 2;
+            Top = area.Top + (area.Height - Height) / 2;
 
             MenuList.ItemsSource = new List<MenuEntryViewModel>
             {
@@ -128,7 +135,7 @@ namespace ProfessorUI.View.Professor
 
             // 시험을 끝내면 다음 시험을 준비할 수 있도록 준비 화면이 다시 열린다.
             _prep.SetGate(!ExamState.IsExamRunning, "시험이 진행 중입니다. 지각생 파일 전송은 시험 관리 창의 파일 재배포를 쓰십시오.");
-            _manage.SetGate(started, "시험을 시작하면 열립니다. 시험 준비 마법사를 4단계까지 진행하십시오.");
+            _manage.SetGate(started, "시험을 시작하면 열립니다. 시험 준비 마법사 3단계에서 [시험 시작 실행]을 누르십시오.");
             // 먼저 답안을 낸 학생을 시험 중에 승인·종료해야 하므로 시험 종료를 기다리지 않고 연다.
             // 시험 종료·답안 수집 버튼은 ExamEndViewModel 이 시험 단계에 따라 따로 막는다.
             _settle.SetGate(started, "시험을 시작하면 열립니다. 먼저 답안을 낸 학생은 시험 중에도 여기서 승인합니다.");
@@ -138,6 +145,44 @@ namespace ProfessorUI.View.Professor
         private void PortButton_Click(object sender, RoutedEventArgs e)
         {
             new PortWindow { Owner = this }.ShowDialog();
+        }
+
+        // 종료 버튼 클릭 시 예외 사항 사전에 미리 방지하고 종료
+        private void ExitButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_ctx.FileReady.IsProcessing)
+            {
+                MessageBox.Show("시험 파일 암호화·압축이 진행 중입니다.\n끝난 뒤에 종료해 주세요.",
+                                "종료", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var students = StudentStore.Instance.Students;
+            var warnings = new List<string>();
+
+            if (students.Any(s => s.SendingSessionId != null))
+                warnings.Add("학생에게 시험 파일을 보내는 중입니다.\n지금 종료하면 전송이 끊깁니다.");
+
+            if (ExamState.IsExamRunning)
+            {
+                warnings.Add("시험이 진행 중입니다.\n지금 종료하면 시험 진행 상태가 사라져, 다시 켜도 이 시험을 끝내거나 답안을 걷을 수 없습니다.");
+            }
+            else if (ExamState.CurrentPhase == ExamPhase.SubmitRequested)
+            {
+                int uncollected = students.Count(s => !s.IsAnswerSubmitted);
+                if (uncollected > 0)
+                    warnings.Add($"답안을 아직 걷지 못한 학생이 {uncollected}명 있습니다.\n지금 종료하면 다시 켜도 이 학생들의 답안을 걷을 수 없습니다.");
+            }
+
+            string message = warnings.Count == 0
+                ? "프로그램을 종료하시겠습니까?"
+                : string.Join("\n\n", warnings) + "\n\n그래도 종료하시겠습니까?";
+
+            if (MessageBox.Show(message, "종료 확인", MessageBoxButton.YesNo, MessageBoxImage.Warning,
+                                MessageBoxResult.No) != MessageBoxResult.Yes)
+                return;
+
+            Application.Current.Shutdown();
         }
 
         private void MenuList_SelectionChanged(object sender, SelectionChangedEventArgs e)
