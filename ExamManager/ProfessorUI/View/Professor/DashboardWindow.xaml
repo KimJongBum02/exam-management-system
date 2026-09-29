@@ -68,7 +68,7 @@
                                 <TextBlock x:Name="NameText" Text="{Binding Name}" Style="{StaticResource StudentCardName}"
                                            Margin="0,0,0,10"/>
                                 <Border x:Name="Badge" Style="{StaticResource StudentCardBadge}" Margin="0,0,0,7">
-                                    <TextBlock x:Name="BadgeText" Text="{Binding ConnectionText}" FontSize="11.5"
+                                    <TextBlock x:Name="BadgeText" Text="{Binding ConnectionText}" FontSize="{StaticResource FontMini}"
                                                FontWeight="Bold" Foreground="White"/>
                                 </Border>
                                 <TextBlock x:Name="StatusText" Text="{Binding Status}" Style="{StaticResource Caption}"

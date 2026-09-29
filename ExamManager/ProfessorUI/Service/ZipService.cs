@@ -4,7 +4,7 @@ using System.Text;
 
 namespace ProfessorUI.Service
 {
-    // 선택한 파일들을 스테이징 폴더 하나로 묶어 7za로 압축+암호화한다.
+    // 선택한 파일들을 스테이징 폴더 하나로 묶어 7za로 압축·암호화한다.
     //   "무엇을 압축할지(파일 정리·암호)" → 이 클래스 (C#)
     //   "어떻게 압축할지(7za 실행)"      → FileControl.dll (C++)
     internal static class ZipService

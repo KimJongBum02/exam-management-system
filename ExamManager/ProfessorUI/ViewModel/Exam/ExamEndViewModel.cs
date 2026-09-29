@@ -79,8 +79,8 @@ namespace ProfessorUI.ViewModel
                 result.Offline.Count > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
         }
 
-        // [선택 승인] 버튼.
-        // 승인과 학생 PC 종료 명령은 ExamFlowService 가 맡고, 여기서는 대상 고르기와 결과 안내만 한다.
+        // [흔적 삭제] 버튼.
+        // 승인은 ExamFlowService 가 맡고, 여기서는 대상 고르기와 결과 안내만 한다.
         private void ExecuteApproveSelected(object obj)
         {
             var targets = Students.Where(s => s.IsSelected && s.IsAnswerSubmitted && !s.IsApproved).ToList();
@@ -91,19 +91,10 @@ namespace ProfessorUI.ViewModel
                 return;
             }
 
-            var result = ExamFlowService.Instance.ApproveStudents(targets);
+            int approved = ExamFlowService.Instance.ApproveStudents(targets);
 
             // 표의 비고 칸만 바뀌어서는 승인이 됐는지 알아채기 어렵다. 결과를 창으로 알린다.
-            // 접속이 끊긴 학생에게는 명령이 가지 않으므로 누구인지 따로 적는다.
-            string message = $"{result.Approved}명을 승인했습니다.\n" +
-                             $"{result.Approved - result.Offline.Count}명의 PC에 종료 명령을 보냈습니다.";
-            if (result.Offline.Count > 0)
-                message += $"\n\n접속이 끊겨 종료 명령을 보내지 못한 학생 {result.Offline.Count}명:\n" +
-                           string.Join("\n", result.Offline) +
-                           "\n\n이 학생들의 PC는 자리에서 직접 확인해 주세요.";
-
-            MessageBox.Show(message, "승인 완료", MessageBoxButton.OK,
-                result.Offline.Count > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
+            MessageBox.Show($"{approved}명을 승인했습니다.", "승인 완료", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         // 승인이 끝났다고 해서 상태를 초기화하지 않는다.

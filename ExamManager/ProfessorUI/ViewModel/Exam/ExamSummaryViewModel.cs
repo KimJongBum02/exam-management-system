@@ -22,7 +22,9 @@ namespace ProfessorUI.ViewModel
 
             Students.CollectionChanged += OnStudentsChanged;
             foreach (var s in Students) s.PropertyChanged += OnStudentChanged;
-            Alerts.CollectionChanged += (_, _) => Recount();
+            // 경고를 확인하면(IsAcknowledged) 목록은 그대로라 항목 변화도 따로 듣는다. 그래야 미확인 수가 바로 준다.
+            Alerts.CollectionChanged += OnAlertsChanged;
+            foreach (var a in Alerts) a.PropertyChanged += OnAlertChanged;
 
             ExamState.StateChanged += Recount;
             SendFileState.StateChanged += Recount;
@@ -59,13 +61,16 @@ namespace ProfessorUI.ViewModel
         public int ApprovedCount { get; private set; }
         public string CompletionRate { get; private set; } = "0%";
 
+        // 답안을 걷었고 아직 흔적 삭제를 승인하지 않은 학생. 시험 중에 먼저 낸 학생도 여기 든다.
+        // 시험 종료·답안 수집 메뉴 배지가 이 수를 보인다.
+        public int ApprovalWaitingCount => CollectedCount - ApprovedCount;
+
         // ── 화면에 그대로 나갈 문구 ──
         // 단위까지 붙여 둔다. 변환기를 두지 않기 위함이다.
         public string ConnectedText => $"{ConnectedCount} / {TotalCount}";
         public string CollectedText => $"{CollectedCount} / {TotalCount}";
         public string LastUpdatedText { get; private set; } = "-";
-        public string ApproveTargetText => $"흔적 삭제 및 PC 종료 승인 ({CollectedCount}명)";
-        public string ApprovedText => $"{ApprovedCount} / {CollectedCount}명";
+        public string ApproveTargetText => $"흔적 삭제 ({CollectedCount}명)";
         public string EndSummaryText => $"승인 완료 {ApprovedCount}명 · 미수집 {NotCollectedCount}명 · 정리 실패 {CleanupFailedCount}명";
 
         private void OnStudentsChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -79,6 +84,18 @@ namespace ProfessorUI.ViewModel
         }
 
         private void OnStudentChanged(object? sender, PropertyChangedEventArgs e) => Recount();
+
+        private void OnAlertsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems != null)
+                foreach (AlertItem a in e.OldItems) a.PropertyChanged -= OnAlertChanged;
+            if (e.NewItems != null)
+                foreach (AlertItem a in e.NewItems) a.PropertyChanged += OnAlertChanged;
+
+            Recount();
+        }
+
+        private void OnAlertChanged(object? sender, PropertyChangedEventArgs e) => Recount();
 
         private void Recount()
         {

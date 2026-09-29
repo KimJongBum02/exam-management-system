@@ -95,38 +95,21 @@ namespace ProfessorUI.Service
         }
 
         // ── 학생 승인 ──
-        // 승인 결과. Offline 은 접속이 끊겨 종료 명령을 보내지 못한 학생들이다.
-        public sealed record ApproveResult(int Approved, IReadOnlyList<string> Offline);
-
-        // 고른 학생을 승인하고 그 PC 에 종료 명령을 보낸다.
-        // 시험 흔적 삭제는 답안 회신을 받은 학생 쪽에서 이미 진행되므로 여기서는 종료만 지시한다.
-        public ApproveResult ApproveStudents(IEnumerable<StudentStatusViewModel> students)
+        // 고른 학생을 승인하고 승인한 수를 돌려준다.
+        // 시험 흔적 삭제는 답안 회신을 받은 학생 쪽에서 이미 진행된다.
+        public int ApproveStudents(IEnumerable<StudentStatusViewModel> students)
         {
-            var offline = new List<string>();
             int approved = 0;
 
             foreach (var student in students)
             {
-                if (!ShutdownStudentPc(student))
-                    offline.Add($"{student.StudentId} {student.Name}");
-
                 student.IsApproved = true;
                 student.IsSelected = false; // 승인한 학생은 더 고를 수 없으므로 체크도 푼다
                 student.Status = "시험 종료";
                 approved++;
             }
 
-            return new ApproveResult(approved, offline);
-        }
-
-        // 학생 PC 에 종료 명령을 보낸다. 접속이 끊겨 보내지 못했으면 false.
-        private static bool ShutdownStudentPc(StudentStatusViewModel student)
-        {
-            if (!student.IsConnected || string.IsNullOrEmpty(student.SessionId)) return false;
-
-            NetworkService.Instance.SendToSession(
-                student.SessionId, PacketType.ShutdownPC, Array.Empty<byte>());
-            return true;
+            return approved;
         }
 
         // ── 새 시험 준비 ──

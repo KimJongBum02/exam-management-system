@@ -49,7 +49,12 @@ namespace StudentUI.ViewModel
             public bool IsNotificationOpen
             {
                 get => _isNotificationOpen;
-                set { _isNotificationOpen = value; OnPropertyChanged(); }
+                set
+                {
+                    _isNotificationOpen = value;
+                    OnPropertyChanged();
+                    if (value) UnreadCheatWarningCount = 0; // 알림창을 열면 쌓인 경고를 본 것이다
+                }
             }
 
             private bool _isChatOpen;
@@ -185,6 +190,21 @@ namespace StudentUI.ViewModel
             public bool HasCheatWarnings => CheatWarnings.Count > 0;
             public int CheatWarningCount => CheatWarnings.Count;
 
+            // 상단 [알림] 배지. 알림창을 열어 보기 전까지 쌓인 경고 수다.
+            // 전체 수(CheatWarningCount)는 KPI 카드가 계속 보여 준다.
+            private int _unreadCheatWarningCount;
+            public int UnreadCheatWarningCount
+            {
+                get => _unreadCheatWarningCount;
+                private set
+                {
+                    _unreadCheatWarningCount = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(HasUnreadCheatWarnings));
+                }
+            }
+            public bool HasUnreadCheatWarnings => _unreadCheatWarningCount > 0;
+
             // 교수 PC 시험 흐름 연결 전까지, 대기/시작 화면을 오가며 테스트하기 위한 임시 전환
             public ICommand GoToWaitingCommand { get; }
             public ICommand LogoutCommand { get; }
@@ -230,7 +250,8 @@ namespace StudentUI.ViewModel
                 _navigationStore = navigationStore;
                 Student = student;
 
-                SubmitAnswerCommand = new RelayCommand(SubmitAnswer, () => !IsSubmitting);
+                // 문제 폴더가 풀리기 전(앱만 켠 상태)에는 낼 답안이 없으므로 누를 수 없다.
+                SubmitAnswerCommand = new RelayCommand(SubmitAnswer, () => !IsSubmitting && ExamFile.IsExtracted);
 
                 // 시험은 이미 끝났으므로 '시험을 끝냅니다' 확인은 묻지 않는다.
                 // 결과는 StateChanged 로 올라와 종료 화면의 상태 줄과 결과 창에 나온다.
@@ -288,6 +309,11 @@ namespace StudentUI.ViewModel
                     OnPropertyChanged(nameof(IsStep4Active));
                     OnPropertyChanged(nameof(DisplayFolderPath));
                     RefreshStatusItems();
+
+                    // 압축이 풀리면 [답안 제출 및 시험 종료]를 바로 다시 따진다.
+                    // 그대로 두면 마우스를 움직이기 전까지 회색으로 남는다.
+                    if (e.PropertyName == nameof(ExamFile.IsExtracted))
+                        Application.Current?.Dispatcher.BeginInvoke(() => CommandManager.InvalidateRequerySuggested());
                 };
 
                 ExamTime.PropertyChanged += (s, e) =>
@@ -390,25 +416,27 @@ namespace StudentUI.ViewModel
                         Name = DisplayFolderPath,
                         Status = folderStatus,
                         StatusLevel = isExtracted ? "Success" : (fileReceived ? "Info" : "Normal"),
-                        Description = isExtracted ? $"폴더 내 문제 파일({ExamFile.ExtractedFiles.Count}개)을 열어 코드를 작성하세요." : "시험이 시작되면 문제 파일이 자동 압축 해제됩니다.",
+                        Description = isExtracted ? $"폴더 내 문제 파일({ExamFile.ExtractedFiles.Count}개)을 열어 시험을 진행하세요." :"시험이 시작되면 문제 파일이 자동 압축 해제됩니다.",
                         TimeOrNote = isExtracted ? "작업 가능" : "시작 대기"
                     });
 
                     // 3. 답안 제출 파일
                     // 상태 칸에는 짧은 말만 둔다. 긴 안내를 넣으면 칸이 늘어나 설명 칸이 한두 글자 폭으로 눌린다.
                     // 실패 이유 같은 긴 안내는 설명 줄에 보인다.
+                    // 문제 폴더가 풀리기 전에는 쓸 답안이 없으므로 '작성 중'이 아니라 대기로 둔다.
                     var submitState = AnswerSubmitService.Instance.State;
                     string submitText = submitState switch
                     {
                         AnswerSubmitState.Succeeded => "제출 완료",
                         AnswerSubmitState.Failed    => "제출 실패",
-                        AnswerSubmitState.Idle      => "작성 중",
+                        AnswerSubmitState.Idle      => isExtracted ? "작성 중" : "대기 중",
                         _                           => "제출 중",
                     };
                     string submitLevel = submitState switch
                     {
                         AnswerSubmitState.Succeeded => "Success",
                         AnswerSubmitState.Failed    => "Warning",
+                        AnswerSubmitState.Idle when !isExtracted => "Normal",
                         _                           => "Info",
                     };
                     // 교수 PC 에 저장되는 이름과 같게 적는다 — "학번 이름" (교수 AnswerCollectService.BuildFolderName).
@@ -427,16 +455,27 @@ namespace StudentUI.ViewModel
                     });
 
                     // 4. 보안 감시 정책
-                    bool isSecure = IsConnected;
+                    // 프로그램 감시는 네트워크 차단과 같은 때(시험 시작 처리) 켜지므로, 차단이 아직이면 감시도 시작 전이다.
+                    // 답안을 내면 감시를 멈추고 차단도 푼다(ExamMonitorService.OnSubmitStateChanged).
+                    bool monitorStarted = ExamMonitorService.Instance.NetworkState != NetworkBlockState.NotApplied;
+                    var (policyStatus, policyLevel, policyDescription, policyNote) =
+                        !monitorStarted ? ("시험 시작 시 적용", "Normal",
+                                           "시험이 시작되면 비인가 프로그램 및 생성형 AI 사이트 접근이 실시간 감시/차단됩니다.", "-")
+                        : submitState == AnswerSubmitState.Succeeded ? ("해제됨", "Success",
+                                           "답안 제출이 끝나 프로그램 감시와 차단이 풀렸습니다.", "답안 제출 완료")
+                        : IsConnected ? ("적용 중", "Success",
+                                           "비인가 프로그램 및 생성형 AI 사이트 접근이 실시간 감시/차단됩니다.", "정상")
+                        : ("서버 미연결", "Warning",
+                                           "비인가 프로그램 및 생성형 AI 사이트 접근이 실시간 감시/차단됩니다.", "점검 필요");
                     StatusItems.Add(new ExamFileStatusItem
                     {
                         Icon = "🛡️",
                         Category = "보안 정책",
                         Name = "실시간 프로그램 & 웹 차단",
-                        Status = isSecure ? "정상 감독 중" : "서버 미연결",
-                        StatusLevel = isSecure ? "Success" : "Warning",
-                        Description = "비인가 프로그램 및 생성형 AI 사이트 접근이 실시간 감시/차단됩니다.",
-                        TimeOrNote = isSecure ? "정상" : "점검 필요"
+                        Status = policyStatus,
+                        StatusLevel = policyLevel,
+                        Description = policyDescription,
+                        TimeOrNote = policyNote
                     });
 
                     // 5. 인터넷 차단
@@ -614,11 +653,9 @@ namespace StudentUI.ViewModel
                     });
                     OnPropertyChanged(nameof(HasCheatWarnings));
                     OnPropertyChanged(nameof(CheatWarningCount));
+                    // 알림창은 저절로 열지 않고 상단 [알림] 배지 숫자로 알린다. 열어 보면 배지가 사라진다.
+                    if (!IsNotificationOpen) UnreadCheatWarningCount++;
                     RefreshStatusItems();
-
-                    // 알림창이 닫혀 있으면 열어 준다. 왜 프로그램이 꺼졌는지 바로 보이게 한다.
-                    IsNotificationOpen = true;
-                    IsChatOpen = false;
 
                     // 금지 프로그램 창에 가려 있어도 시험 화면이 알림을 띄웠음을 알 수 있게 한다.
                     ExamManager.Shared.UiSignal.FlashTaskbar();

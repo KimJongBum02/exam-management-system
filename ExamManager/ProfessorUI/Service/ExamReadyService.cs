@@ -21,7 +21,7 @@ namespace ProfessorUI.Service
         public static string PackageFolder { get; } = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "시험 파일");
 
-        // 이번 실행에서 암호화·압축을 마친 묶음들. 같은 내용을 다시 압축하려 하면 경고하는 데 쓴다.
+        // 이번 실행에서 압축·암호화를 마친 묶음들. 같은 내용을 다시 압축하려 하면 경고하는 데 쓴다.
         // 파일로 남기지 않는다 — 암호는 메모리에만 있어서, 앱을 다시 켜면 이전 묶음은 배포에 쓸 수 없고
         // 어차피 새로 만들어야 한다.
         private readonly List<PackagedRecord> _packaged = new();
@@ -89,7 +89,7 @@ namespace ProfessorUI.Service
             string? password;
             try
             {
-                // 선택 파일들을 스테이징 폴더로 묶어 7za로 압축+암호화 (백그라운드 실행)
+                // 선택 파일들을 스테이징 폴더로 묶어 7za로 압축·암호화 (백그라운드 실행)
                 password = await Task.Run(() => ZipService.Package(items, output));
             }
             catch (Exception ex)
@@ -97,11 +97,11 @@ namespace ProfessorUI.Service
                 // 배포가 진행 중이면 이전 아카이브가 잠겨 바꿔 놓지 못하는 등으로 실패할 수 있다.
                 // 이때 이전 아카이브와 배포 정보는 그대로 남는다(ZipService).
                 return new PackageResult(false, output,
-                    $"압축/암호화 실패: {ex.Message}\n배포가 진행 중이면 끝난 뒤 다시 시도해 주세요.");
+                    $"압축·암호화 실패: {ex.Message}\n배포가 진행 중이면 끝난 뒤 다시 시도해 주세요.");
             }
 
             if (password == null)
-                return new PackageResult(false, output, "압축/암호화 실패. 7za.exe와 입력을 확인하세요.");
+                return new PackageResult(false, output, "압축·암호화 실패. 7za.exe와 입력을 확인하세요.");
 
             // 번호가 옮겨 갔으면(예: 더 작은 번호가 비어서) 보낸 적 없는 옛 묶음은 지운다.
             // 남겨 두면 폴더에 배포하지 않을 파일이 쌓이고, 다음 번호 계산도 어긋난다.

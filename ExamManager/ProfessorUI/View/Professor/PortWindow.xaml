@@ -21,10 +21,10 @@
                    Text="기본값은 9000입니다. 바꾸면 서버를 다시 열기 때문에 접속 중인 학생은 모두 끊어집니다. 앱을 끄면 다시 9000으로 돌아옵니다."/>
 
         <TextBlock Text="포트 번호" Style="{StaticResource FieldLabel}"/>
-        <TextBox x:Name="PortBox" FontSize="13" Height="38" Padding="12,0" VerticalContentAlignment="Center"
+        <TextBox x:Name="PortBox" FontSize="{StaticResource FontBody}" Height="38" Padding="12,0" VerticalContentAlignment="Center"
                  Foreground="{StaticResource TextPrimary}" Background="White"
                  BorderBrush="{StaticResource BorderStrong}" BorderThickness="1" Margin="0,0,0,6"/>
-        <TextBlock x:Name="ErrorText" FontSize="11" Foreground="{StaticResource AlertRed}" Margin="2,0,0,0"/>
+        <TextBlock x:Name="ErrorText" FontSize="{StaticResource FontMini}" Foreground="{StaticResource AlertRed}" Margin="2,0,0,0"/>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
             <Button x:Name="CancelButton" Content="취소" Style="{StaticResource SecondaryButton}"

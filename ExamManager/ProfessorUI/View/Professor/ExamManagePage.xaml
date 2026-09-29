@@ -25,8 +25,7 @@
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                 <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,16,0"
-                           TextWrapping="Wrap" MaxWidth="430"
-                           Text="시험을 끝내고 접속 중인 학생의 답안을 바로 걷습니다. 먼저 제출한 학생은 시험 종료·답안 수집 화면에서 승인합니다."/>
+                           Text="학생이 미리 보낸 답안은 시험 종료·답안 수집에서 확인 가능합니다."/>
                 <Button Content="시험 종료 및 답안 수집" Style="{StaticResource PrimaryButton}" Click="EndExam_Click"/>
             </StackPanel>
         </Grid>
@@ -115,17 +114,16 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <Grid Margin="0,0,0,10">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="재배포 대상" Style="{StaticResource SectionTitle}" Margin="0"/>
-                        <TextBlock Style="{StaticResource Caption}" Margin="14,0,0,0" VerticalAlignment="Center"
-                                   Text="시험을 시작하지 못한 학생"/>
-                    </StackPanel>
+                <!-- 버튼 자리를 먼저 잡고 설명 글은 남는 폭 안에서 줄인다. 창이 좁을 때 둘이 겹치지 않게 한다 -->
+                <DockPanel Margin="0,0,0,10">
                     <!-- 예전 [선택 학생 재배포]는 시험 준비 화면의 배포 목록(전원 선택이 기본)을 그대로 써서
                          시험 중인 학생에게까지 파일을 다시 보냈다. 이 목록의 학생에게만 보낸다 -->
-                    <Button Content="접속 중인 학생 모두 재배포" Style="{StaticResource SecondaryButton}"
-                            HorizontalAlignment="Right" Click="RedeployAll_Click"/>
-                </Grid>
+                    <Button DockPanel.Dock="Right" Content="접속 중인 학생 모두 재배포" Style="{StaticResource SecondaryButton}"
+                            Click="RedeployAll_Click"/>
+                    <TextBlock Text="재배포 대상" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center"/>
+                    <TextBlock Style="{StaticResource Caption}" Margin="14,0,10,0" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" Text="시험을 시작하지 못한 학생"/>
+                </DockPanel>
 
                 <!-- 검색 · 필터 -->
                 <Grid Grid.Row="1" Margin="0,0,0,12">

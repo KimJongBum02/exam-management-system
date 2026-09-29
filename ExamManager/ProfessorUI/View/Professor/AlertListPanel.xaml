@@ -31,12 +31,12 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="{Binding Time}" Style="{StaticResource Caption}"
                                                VerticalAlignment="Center"/>
-                                    <TextBlock Grid.Column="1" x:Name="State" Text="{Binding StateText}" FontSize="12"
+                                    <TextBlock Grid.Column="1" x:Name="State" Text="{Binding StateText}" FontSize="{StaticResource FontSmall}"
                                                Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
-                                    <TextBlock Grid.Column="2" Text="{Binding Who}" FontSize="13"
+                                    <TextBlock Grid.Column="2" Text="{Binding Who}" FontSize="{StaticResource FontBody}"
                                                Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"
                                                TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Grid.Column="3" Text="{Binding Description}" FontSize="13"
+                                    <TextBlock Grid.Column="3" Text="{Binding Description}" FontSize="{StaticResource FontBody}"
                                                Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"
                                                TextTrimming="CharacterEllipsis" Margin="0,0,16,0"
                                                ToolTip="{Binding Description}"/>

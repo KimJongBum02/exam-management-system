@@ -18,22 +18,17 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 제목과 마무리 버튼을 한 줄에 둔다 (마지막 갱신·서버 상태는 상단바에 있다) -->
+        <!-- 제목과 종료 완료 현황 버튼을 한 줄에 둔다 (마지막 갱신·서버 상태는 상단바에 있다) -->
         <Grid Grid.Row="0" Margin="0,0,0,18">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <local:BackButton/>
                 <TextBlock Text="시험 종료 및 답안 수집" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
             </StackPanel>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                <Button Content="미수집 학생 다시 수집" Style="{StaticResource SecondaryButton}"
-                        Margin="0,0,10,0" Command="{Binding ExamEnd.RecollectCommand}"/>
-                <Button Content="{Binding Overview.ApproveTargetText}" Style="{StaticResource PrimaryButton}"
-                        Margin="0,0,10,0" Command="{Binding ExamEnd.ApproveSelectedCommand}"/>
-                <Button Content="종료 완료 현황 보기" Style="{StaticResource SecondaryButton}"
-                        Click="ShowSummary_Click"/>
-            </StackPanel>
+            <Button Content="종료 완료 현황 보기" Style="{StaticResource SecondaryButton}"
+                    HorizontalAlignment="Right" Click="ShowSummary_Click"/>
         </Grid>
 
         <!-- KPI 5종 -->
@@ -91,7 +86,7 @@
             </StackPanel>
         </Grid>
 
-        <ListView Grid.Row="4" x:Name="CollectTable" Style="{StaticResource FlatTable}" Height="360" Margin="0,0,0,24">
+        <ListView Grid.Row="4" x:Name="CollectTable" Style="{StaticResource FlatTable}" Height="360" Margin="0,0,0,12">
             <ListView.View>
                 <GridView ColumnHeaderContainerStyle="{StaticResource TableHeader}">
                     <GridViewColumn Header="승인 대상" Width="90">
@@ -142,12 +137,20 @@
             </ListView.View>
         </ListView>
 
+        <!-- 표에서 학생을 고른 뒤 바로 누르도록 표 아래에 둔다 -->
+        <Grid Grid.Row="5" Margin="0,0,0,24">
+            <Button Content="미수집 학생 다시 수집" Style="{StaticResource SecondaryButton}"
+                    HorizontalAlignment="Left" Command="{Binding ExamEnd.RecollectCommand}"/>
+            <Button Content="{Binding Overview.ApproveTargetText}" Style="{StaticResource PrimaryButton}"
+                    HorizontalAlignment="Right" Command="{Binding ExamEnd.ApproveSelectedCommand}"/>
+        </Grid>
+
         <!-- 승인 조건 -->
-        <Border Grid.Row="5" Style="{StaticResource Card}">
+        <Border Grid.Row="6" Style="{StaticResource Card}">
             <StackPanel>
                 <TextBlock Text="승인 조건 안내" Style="{StaticResource FieldLabel}" Margin="0,0,0,14"/>
                 <TextBlock Style="{StaticResource Body}" Margin="0,0,0,10"
-                           Text="승인은 답안 수집이 끝난 학생에게만 적용되며, 시험 중에 먼저 제출한 학생도 바로 승인할 수 있습니다. 승인하면 해당 학생 PC가 10초 뒤 꺼집니다. 시험 흔적은 학생이 답안 회신을 받은 뒤 스스로 지웁니다."/>
+                           Text="승인은 답안 수집이 끝난 학생에게만 적용되며, 시험 중에 먼저 제출한 학생도 바로 승인할 수 있습니다. 시험 흔적은 학생이 답안 회신을 받은 뒤 스스로 지웁니다."/>
                 <TextBlock Style="{StaticResource Body}"
                            Text="미수집 학생은 선택해도 승인 대상에서 제외됩니다. 이 작업은 되돌릴 수 없습니다."/>
             </StackPanel>

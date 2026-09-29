@@ -172,7 +172,7 @@
                                             Padding="14,12" Margin="0,0,0,10">
                                         <StackPanel>
                                             <Grid Margin="0,0,0,6">
-                                                <TextBlock Text="{Binding Who}" FontSize="13"
+                                                <TextBlock Text="{Binding Who}" FontSize="{StaticResource FontBody}"
                                                            Foreground="{StaticResource TextPrimary}"/>
                                                 <TextBlock Text="{Binding Time}" Style="{StaticResource Caption}"
                                                            HorizontalAlignment="Right"/>

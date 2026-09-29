@@ -25,6 +25,15 @@ namespace ProfessorUI.ViewModel
             set { if (_lockReason != value) { _lockReason = value; OnPropertyChanged(); } }
         }
 
+        // 메뉴 이름 옆 빨간 동그라미에 보일 개수(처리할 것이 쌓인 수). 0 이면 숨긴다.
+        private int _badgeCount;
+        public int BadgeCount
+        {
+            get => _badgeCount;
+            set { if (_badgeCount != value) { _badgeCount = value; OnPropertyChanged(); OnPropertyChanged(nameof(HasBadge)); } }
+        }
+        public bool HasBadge => _badgeCount > 0;
+
         public void SetGate(bool open, string reason)
         {
             Enabled = open;

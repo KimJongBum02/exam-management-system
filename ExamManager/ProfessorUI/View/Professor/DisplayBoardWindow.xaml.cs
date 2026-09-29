@@ -8,7 +8,7 @@ namespace ProfessorUI.View.Professor
     // 강의실 큰 모니터에 띄워 두는 현황판.
     //
     // 교수 화면과 같은 저장소를 보므로 학생 수는 저절로 따라 바뀐다.
-    // 조작할 것은 두지 않는다 — 학생들이 보는 화면이라 누를 것이 있으면 안 된다.
+    // 학생들이 보는 화면이라 누를 것은 IP 공개·닫기만 둔다.
     public partial class DisplayBoardWindow : Window
     {
         // 창을 여러 개 띄우면 어느 것이 최신인지 알 수 없어 하나만 둔다.
@@ -54,6 +54,14 @@ namespace ProfessorUI.View.Professor
         {
             DateText.Text = DateTime.Now.ToString("yyyy. MM. dd (ddd)");
             TimeText.Text = DateTime.Now.ToString("HH:mm:ss");
+        }
+
+        // 접속 주소는 학생이 접속할 때만 필요하다. 창을 새로 열면 다시 숨긴 상태로 시작한다.
+        private void ToggleAddress_Click(object sender, RoutedEventArgs e)
+        {
+            bool show = AddressPanel.Visibility != Visibility.Visible;
+            AddressPanel.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+            AddressButton.Content = show ? "IP 숨기기" : "IP 공개";
         }
 
         private void Close_Click(object sender, RoutedEventArgs e) => Close();
