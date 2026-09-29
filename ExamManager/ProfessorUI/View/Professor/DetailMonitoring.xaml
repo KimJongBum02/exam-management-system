@@ -5,7 +5,6 @@
         Width="920" Height="620"
         MinWidth="640" MinHeight="440"
         WindowStartupLocation="CenterOwner"
-        FontFamily="{StaticResource AppFont}"
         Background="#1A1D21">
 
     <Window.Resources>

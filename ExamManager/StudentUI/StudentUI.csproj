@@ -22,8 +22,8 @@
   </ItemGroup>
   <!-- 두 UI가 공유하는 글꼴 (ExamManager\Fonts) -->
   <ItemGroup>
-    <Resource Include="..\Fonts\NEXON Lv2 Gothic.ttf" Link="Fonts\NEXON Lv2 Gothic.ttf" />
-    <Resource Include="..\Fonts\NEXON Lv2 Gothic Bold.ttf" Link="Fonts\NEXON Lv2 Gothic Bold.ttf" />
+    <Resource Include="..\Fonts\Pretendard-Regular.ttf" Link="Fonts\Pretendard-Regular.ttf" />
+    <Resource Include="..\Fonts\Pretendard-Bold.ttf" Link="Fonts\Pretendard-Bold.ttf" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\NetworkInterop\NetworkInterop.cs" Link="NetworkInterop.cs" />
@@ -32,6 +32,8 @@
     <Compile Include="..\Shared\KnownPrograms.cs" Link="KnownPrograms.cs" />
     <!-- 시험 파일·채팅이 왔을 때 깜빡임과 작업표시줄 알림 -->
     <Compile Include="..\Shared\UiSignal.cs" Link="UiSignal.cs" />
+    <!-- 모든 창의 기본 글꼴 -->
+    <Compile Include="..\Shared\UiFont.cs" Link="UiFont.cs" />
   </ItemGroup>
   <!-- NetworkLib_Native.dll 자동 복사 (Debug/Release 구성에 맞게 자동 선택) -->
   <ItemGroup>

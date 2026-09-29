@@ -28,6 +28,9 @@ namespace StudentUI
                 return;
             }
 
+            // 모든 창의 글꼴을 App.xaml 의 AppFont 로 정한다. 창을 만들기 전에 불러야 한다.
+            ExamManager.Shared.UiFont.Apply((System.Windows.Media.FontFamily)Resources["AppFont"]);
+
             // 윈도우 전환 시 앱이 종료되지 않도록 명시적 종료 모드 설정
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
 

@@ -17,6 +17,8 @@ namespace ProfessorUI
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+            // 모든 창의 글꼴을 App.xaml 의 AppFont 로 정한다. 창을 만들기 전에 불러야 한다.
+            ExamManager.Shared.UiFont.Apply((System.Windows.Media.FontFamily)Resources["AppFont"]);
             // 키보드 포커스 점선 사각형을 앱 전체에서 끈다.
             // 알트탭처럼 키보드를 쓴 뒤 창으로 돌아오면 마지막에 누른 버튼·메뉴·스크롤 영역에 점선이 생긴다.
             // 스타일마다 막으면 빠지는 곳이 생겨, 포커스를 받기 직전에 모든 요소에서 한 번에 끈다(점선은 그 뒤에 그려진다).

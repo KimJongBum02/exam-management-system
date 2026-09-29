@@ -4,7 +4,7 @@
              xmlns:local="clr-namespace:StudentUI">
     <Application.Resources>
         <!-- 앱 전체 기본 글꼴 — 글꼴을 바꿀 때는 이 줄과 csproj의 Resource 항목만 수정하면 된다 -->
-        <FontFamily x:Key="AppFont">pack://application:,,,/Fonts/#NEXON Lv2 Gothic</FontFamily>
+        <FontFamily x:Key="AppFont">pack://application:,,,/Fonts/#Pretendard</FontFamily>
 
         <!-- 기본 버튼은 마우스를 올리면 파란 배경·테두리로 바뀌고, 키보드로 들어오면 점선 사각형이 생긴다.
              교수 화면처럼 둘 다 없애고 각 버튼이 준 배경·테두리를 그대로 그린다.

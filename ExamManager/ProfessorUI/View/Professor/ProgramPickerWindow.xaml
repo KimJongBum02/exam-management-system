@@ -5,8 +5,7 @@
         Title="프로그램 찾기" Height="700" Width="840"
         MinHeight="520" MinWidth="640"
         WindowStartupLocation="CenterOwner"
-        Background="#FFFFFF"
-        FontFamily="{StaticResource AppFont}">
+        Background="#FFFFFF">
 
     <Window.Resources>
         <ResourceDictionary>
