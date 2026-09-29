@@ -35,10 +35,10 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- 돌아가는 길. 링크로는 잘 보이지 않아 큰 버튼으로 둔다 -->
+        <!-- 돌아가는 길. 링크로는 잘 보이지 않아 버튼으로 둔다 -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,18">
             <Button Content="&#x2190; 시험 관리 창으로" Style="{StaticResource PrimaryButton}"
-                    Padding="26,13" Click="BackToManage_Click"/>
+                    Click="BackToManage_Click"/>
         </StackPanel>
 
         <!-- 부정행위만이 아니라 차단 실패·연결 끊김도 여기로 온다 -->

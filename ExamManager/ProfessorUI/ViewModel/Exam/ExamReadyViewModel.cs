@@ -67,6 +67,7 @@ namespace ProfessorUI.ViewModel
         // 압축이 끝난 뒤인지. 목록을 고쳤을 때 "다시 압축해야 한다"고 알리는 데 쓴다.
         private bool _isPackaged;
         private bool _isProcessing = false;
+        public bool IsProcessing => _isProcessing;
 
         public ICommand SelectCommand { get; }
         public ICommand RemoveItemCommand { get; }

@@ -77,7 +77,7 @@ namespace ProfessorUI.View.Professor
         }
 
         // 첫 단계에서는 이전이, 마지막 단계에서는 다음이 없다.
-        // 마지막 단계의 오른쪽 버튼은 '다음' 대신 '시험 시작 실행'이 된다.
+        // '시험 시작 실행'은 제목 줄이 아니라 3단계 안내 칸 오른쪽 아래에 있다.
         private void UpdateFooter()
         {
             PrevButton.IsEnabled = _step > 1;
@@ -88,9 +88,7 @@ namespace ProfessorUI.View.Professor
                 _ => "이전"
             };
 
-            bool last = _step == LastStep;
-            NextButton.Visibility = last ? Visibility.Collapsed : Visibility.Visible;
-            StartExamButton.Visibility = last ? Visibility.Visible : Visibility.Collapsed;
+            NextButton.Visibility = _step == LastStep ? Visibility.Collapsed : Visibility.Visible;
 
             NextButton.Content = _step == 1 ? "다음: 파일 배포 단계로 이동"
                                             : "다음: 시험 시작 단계로 이동";
@@ -143,8 +141,12 @@ namespace ProfessorUI.View.Professor
             => new ProgramListWindow("직접 추가한 금지 항목", _ctx.BlackList.AddedItems, _ctx.BlackList.RemoveCommand)
                { Owner = Window.GetWindow(this) }.ShowDialog();
 
-        private void ShowWhite_Click(object sender, RoutedEventArgs e)
-            => new ProgramListWindow("허용 프로그램 목록", _ctx.WhiteList.WhiteList, _ctx.WhiteList.RemoveCommand)
+        private void ShowWhiteDefaults_Click(object sender, RoutedEventArgs e)
+            => new ProgramListWindow("기본 허용 항목 (개발 도구)", _ctx.WhiteList.DefaultItems, _ctx.WhiteList.RemoveCommand)
+               { Owner = Window.GetWindow(this) }.ShowDialog();
+
+        private void ShowWhiteAdded_Click(object sender, RoutedEventArgs e)
+            => new ProgramListWindow("직접 추가한 허용 항목", _ctx.WhiteList.AddedItems, _ctx.WhiteList.RemoveCommand)
                { Owner = Window.GetWindow(this) }.ShowDialog();
     }
 }

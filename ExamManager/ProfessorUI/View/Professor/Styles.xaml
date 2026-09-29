@@ -67,13 +67,16 @@
         <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
     </Style>
 
-    <!-- ── 버튼 ── -->
+    <!-- ── 버튼 ──
+         모든 버튼은 크기·글자 크기·굵기가 같다. 화면마다 따로 키우거나 줄이지 않는다.
+         옆 칸(입력칸 등)이 더 높아도 늘어나지 않도록 세로는 가운데에 둔다. -->
     <Style x:Key="PrimaryButton" TargetType="Button">
         <Setter Property="Background" Value="{StaticResource BtnDark}"/>
         <Setter Property="Foreground" Value="White"/>
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="FontWeight" Value="Bold"/>
-        <Setter Property="Padding" Value="20,11"/>
+        <Setter Property="Padding" Value="16,9"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -95,13 +98,8 @@
         </Setter>
     </Style>
 
-    <!-- 보조 버튼도 검은 바탕에 흰 글씨다.
-         버튼이 눌리는 것임을 한눈에 알아보게 하는 것이 우선이라 색은 주요 버튼과 맞추고,
-         비중 차이는 크기(글자 굵기·여백)로만 준다. -->
-    <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
-        <Setter Property="FontWeight" Value="Normal"/>
-        <Setter Property="Padding" Value="16,9"/>
-    </Style>
+    <!-- 보조 버튼은 이제 주요 버튼과 모양이 같다. 여러 화면이 이 이름을 쓰고 있어 이름만 남겨 둔다. -->
+    <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}"/>
 
     <!-- 본문 안의 밑줄 링크 (브레드크럼, "전체 경고 내역 보기" 등) -->
     <Style x:Key="LinkButton" TargetType="Button">
@@ -148,6 +146,52 @@
                                        Foreground="{StaticResource TextMuted}" VerticalAlignment="Center"/>
                             <ScrollViewer Grid.Column="1" x:Name="PART_ContentHost" Margin="8,0,10,0"
                                           VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 프로그램 이름을 넣는 상자. 오른쪽 돋보기가 [찾기] 버튼 몫을 한다(프로그램 목록에서 고르기).
+         돋보기는 템플릿 안의 버튼이라 화면 코드가 직접 이름으로 못 잡는다.
+         누른 신호가 상자까지 올라오므로 상자에 Button.Click 을 걸어 받는다. -->
+    <Style x:Key="PickerBox" TargetType="TextBox" BasedOn="{StaticResource SearchBox}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border Background="White" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ScrollViewer Grid.Column="0" x:Name="PART_ContentHost" Margin="12,0,4,0"
+                                          VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" Focusable="False" Cursor="Hand" Margin="0,0,4,0"
+                                    ToolTip="프로그램 목록에서 찾기"
+                                    AutomationProperties.Name="프로그램 목록에서 찾기">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="Bd" Background="Transparent" CornerRadius="4" Width="30" Height="30">
+                                            <Grid Width="16" Height="16">
+                                                <Ellipse Width="11" Height="11" StrokeThickness="1.8"
+                                                         Stroke="{StaticResource TextPrimary}"
+                                                         HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                                                <Line X1="9.5" Y1="9.5" X2="15" Y2="15" StrokeThickness="2"
+                                                      Stroke="{StaticResource TextPrimary}"
+                                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgHeader}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
                         </Grid>
                     </Border>
                 </ControlTemplate>

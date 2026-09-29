@@ -146,6 +146,7 @@ namespace ProfessorUI
         protected override void OnExit(ExitEventArgs e)
         {
             _shuttingDown = true;
+            try { Common.UiContext.Instance.Server.StopChecking(); } catch { }
             // 퀴즈 기록은 출제·화면 이동 때만 저장하므로, 마지막 퀴즈의 답안은 여기서 남긴다.
             try { Service.QuizService.Instance.Save(); } catch { }
             try { Service.ServerService.Stop(); } catch { }

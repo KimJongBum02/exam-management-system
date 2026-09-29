@@ -57,8 +57,12 @@ namespace ProfessorUI.View.Professor
             => new ProgramListWindow("직접 추가한 금지 항목", _ctx.BlackList.AddedItems, _ctx.BlackList.RemoveCommand)
                { Owner = Window.GetWindow(this) }.ShowDialog();
 
-        private void ShowWhite_Click(object sender, RoutedEventArgs e)
-            => new ProgramListWindow("허용 프로그램 목록", _ctx.WhiteList.WhiteList, _ctx.WhiteList.RemoveCommand)
+        private void ShowWhiteDefaults_Click(object sender, RoutedEventArgs e)
+            => new ProgramListWindow("기본 허용 항목 (개발 도구)", _ctx.WhiteList.DefaultItems, _ctx.WhiteList.RemoveCommand)
+               { Owner = Window.GetWindow(this) }.ShowDialog();
+
+        private void ShowWhiteAdded_Click(object sender, RoutedEventArgs e)
+            => new ProgramListWindow("직접 추가한 허용 항목", _ctx.WhiteList.AddedItems, _ctx.WhiteList.RemoveCommand)
                { Owner = Window.GetWindow(this) }.ShowDialog();
 
     }

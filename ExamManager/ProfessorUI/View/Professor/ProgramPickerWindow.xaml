@@ -183,7 +183,7 @@
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="취소" Style="{StaticResource SecondaryButton}" IsCancel="True" Click="Cancel_Click"/>
                 <Button x:Name="ConfirmButton" Content="선택 항목 추가" Style="{StaticResource PrimaryButton}"
-                        Padding="16,8" Margin="10,0,0,0" IsDefault="True" Click="Confirm_Click"/>
+                        Margin="10,0,0,0" IsDefault="True" Click="Confirm_Click"/>
             </StackPanel>
         </Grid>
     </Grid>
