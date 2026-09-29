@@ -38,7 +38,7 @@
             <!-- 고른 항목 하나 (이름 + 빼기) -->
             <Style x:Key="ChipRemove" TargetType="Button" BasedOn="{StaticResource LinkButton}">
                 <Setter Property="Margin" Value="8,0,0,0"/>
-                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
             </Style>
         </ResourceDictionary>
     </Window.Resources>

@@ -22,17 +22,38 @@ namespace StudentUI.View.StudentExamView
         {
             InitializeComponent();
 
+            // 최대화로 시작하고, 복원하면 교수 화면과 같은 크기로 화면 가운데에 온다.
+            UiWindow.ApplyMainWindowSize(this);
+
             // 교수의 채팅·공지가 오면 채팅 버튼을 깜빡인다.
             SharedChatViewModel.Instance.MessageArrived += OnMessageArrived;
             Closed += (_, _) => SharedChatViewModel.Instance.MessageArrived -= OnMessageArrived;
 
             // 창 크기가 바뀔 때(최대화·복원·끌어서 줄이기) 알림·채팅 패널을 놓는 방식을 다시 정한다.
             SizeChanged += (_, _) => PlaceSideDrawer();
+
+            // 채팅 패널을 열면 바로 칠 수 있게 입력칸에 커서를 둔다.
+            DataContextChanged += (_, e) =>
+            {
+                if (e.OldValue is INotifyPropertyChanged oldVm) oldVm.PropertyChanged -= OnViewModelChanged;
+                if (e.NewValue is INotifyPropertyChanged newVm) newVm.PropertyChanged += OnViewModelChanged;
+            };
+            Closed += (_, _) =>
+            {
+                if (DataContext is INotifyPropertyChanged vm) vm.PropertyChanged -= OnViewModelChanged;
+            };
         }
 
-        // 알림·채팅 패널이 본문을 밀어도 본문이 이 폭은 남아야 표가 제 모양을 유지한다.
-        // 이보다 좁으면 표의 설명 칸이 눌려 줄이 세로로 길게 늘어진다.
-        private const double MinMainWidthWithDrawer = 1100;
+        // 패널이 보이게 된 뒤라야 입력칸이 포커스를 받는다.
+        private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(StudentExamViewModel.IsChatOpen) && sender is StudentExamViewModel { IsChatOpen: true })
+                Dispatcher.BeginInvoke(new Action(() => ChatInput.Focus()), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        // 알림·채팅 패널이 본문을 밀어도 본문이 이 폭은 남아야 표가 제 모양을 유지하고 세로 스크롤도 생기지 않는다.
+        // 이보다 좁으면 표의 설명 칸이 눌려 줄이 늘어나고, 1440 화면에서는 그만큼 본문이 길어져 스크롤이 생긴다.
+        private const double MinMainWidthWithDrawer = 1400;
 
         private static readonly System.Windows.Media.Effects.DropShadowEffect DrawerShadow = new()
         {
@@ -43,7 +64,9 @@ namespace StudentUI.View.StudentExamView
         // 좁으면 본문 위에 겹쳐 띄운다. 본문 폭이 그대로라 표 모양이 흐트러지지 않고, 닫으면 가린 부분이 다시 보인다.
         private void PlaceSideDrawer()
         {
-            bool overlay = ActualWidth - SideDrawer.Width < MinMainWidthWithDrawer;
+            // 창 테두리를 뺀 안쪽 폭으로 따진다
+            double inner = (Content as FrameworkElement)?.ActualWidth ?? ActualWidth;
+            bool overlay = inner - SideDrawer.Width < MinMainWidthWithDrawer;
 
             System.Windows.Controls.Grid.SetColumn(SideDrawer, overlay ? 0 : 1);
             SideDrawer.HorizontalAlignment = overlay ? HorizontalAlignment.Right : HorizontalAlignment.Stretch;

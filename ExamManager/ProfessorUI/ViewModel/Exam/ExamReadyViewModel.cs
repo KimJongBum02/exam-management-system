@@ -243,7 +243,7 @@ namespace ProfessorUI.ViewModel
             if (SelectedItems.Count == 0)
                 CurrentStatusMessage = "대기 중...";
             else if (_isPackaged)
-                CurrentStatusMessage = "목록이 바뀌었습니다. 다시 암호화·압축해야 배포에 반영됩니다.";
+                CurrentStatusMessage = "목록이 바뀌었습니다. 다시 압축·암호화해야 배포에 반영됩니다.";
             else
                 CurrentStatusMessage = "파일 선택 완료. 준비되었습니다.";
 
@@ -284,7 +284,7 @@ namespace ProfessorUI.ViewModel
                 return;
             }
 
-            CurrentStatusMessage = "압축 및 암호화 진행 중...";
+            CurrentStatusMessage = "압축·암호화 진행 중...";
             ProgressValue = 0;
             ProgressText = "0%";
 
@@ -296,7 +296,7 @@ namespace ProfessorUI.ViewModel
             {
                 ProgressValue = 100;
                 ProgressText = "100%";
-                CurrentStatusMessage = "압축 및 암호화 완료!";
+                CurrentStatusMessage = "압축·암호화 완료!";
                 PackagePathText = PackageFolderText + Path.GetFileName(result.OutputPath);
                 _isPackaged = true;
             }
@@ -312,7 +312,7 @@ namespace ProfessorUI.ViewModel
         // 같은 내용을 다시 압축할지 교수에게 묻는다. 기본 버튼은 [아니요]다.
         private static bool ConfirmRepackage(ExamReadyService.PackagedRecord previous)
             => System.Windows.MessageBox.Show(
-                   "이미 암호화·압축을 마친 파일입니다. 다시 만들 필요가 없습니다.\n\n" +
+                   "이미 압축·암호화를 마친 파일입니다. 다시 만들 필요가 없습니다.\n\n" +
                    $"위치: {previous.OutputPath}\n" +
                    $"만든 시각: {previous.PackagedAt:HH:mm:ss}\n\n" +
                    "다시 만들면 새 암호가 생기고 기존 묶음을 바꿔 놓습니다. 그래도 다시 만들까요?",

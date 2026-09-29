@@ -20,11 +20,13 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- 조작은 교수 화면에서 하고 여기는 보여 주기만 한다 -->
+        <!-- 조작은 교수 화면에서 하고 여기는 보여 주기만 한다. IP 공개·닫기만 둔다 -->
         <Grid Grid.Row="0" Margin="24,20,24,0">
-            <TextBlock Text="시험 현황" Style="{StaticResource SectionTitle}"/>
-            <Button Content="닫기" Style="{StaticResource LinkButton}"
-                    HorizontalAlignment="Right" VerticalAlignment="Center" Click="Close_Click"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="AddressButton" Content="IP 공개" Style="{StaticResource PrimaryButton}"
+                        Margin="0,0,10,0" Click="ToggleAddress_Click"/>
+                <Button Content="닫기" Style="{StaticResource PrimaryButton}" Click="Close_Click"/>
+            </StackPanel>
         </Grid>
 
         <!-- 강의실 모니터 크기가 제각각이라 창에 맞춰 통째로 늘린다 -->
@@ -54,8 +56,7 @@
 
                 <!-- 현재 시각. 강의실 어디서든 보이도록 카드 안에 가장 크게 둔다 -->
                 <Border Background="{StaticResource BgSubtle}" BorderBrush="{StaticResource BorderLight}"
-                        BorderThickness="1" CornerRadius="14" Padding="64,30" HorizontalAlignment="Center"
-                        Margin="0,0,0,44">
+                        BorderThickness="1" CornerRadius="14" Padding="64,30" HorizontalAlignment="Center">
                     <StackPanel>
                         <TextBlock x:Name="DateText" FontSize="24" HorizontalAlignment="Center"
                                    Foreground="{StaticResource TextSecondary}" Margin="0,0,0,10"/>
@@ -65,11 +66,14 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 학생이 이 화면을 보고 직접 입력한다 -->
-                <TextBlock Text="접속 주소" FontSize="40" HorizontalAlignment="Center"
-                           Foreground="{StaticResource TextSecondary}" Margin="0,0,0,6"/>
-                <TextBlock Text="{Binding Server.Address}" FontSize="112" FontWeight="Bold" HorizontalAlignment="Center"
-                           Foreground="{StaticResource TextPrimary}" FontFamily="Consolas, Menlo, monospace"/>
+                <!-- 학생이 이 화면을 보고 직접 입력한다. 평소에는 숨겨 두고 [IP 공개]를 눌렀을 때만 보인다.
+                     숨기면 내용이 짧아져 Viewbox 가 나머지를 키우므로 시각이 더 크게 보인다 -->
+                <StackPanel x:Name="AddressPanel" Visibility="Collapsed" Margin="0,44,0,0">
+                    <TextBlock Text="접속 주소" FontSize="40" HorizontalAlignment="Center"
+                               Foreground="{StaticResource TextSecondary}" Margin="0,0,0,6"/>
+                    <TextBlock Text="{Binding Server.Address}" FontSize="112" FontWeight="Bold" HorizontalAlignment="Center"
+                               Foreground="{StaticResource TextPrimary}" FontFamily="Consolas, Menlo, monospace"/>
+                </StackPanel>
             </StackPanel>
         </Viewbox>
     </Grid>

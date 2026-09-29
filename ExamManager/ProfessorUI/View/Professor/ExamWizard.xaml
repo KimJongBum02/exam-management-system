@@ -71,7 +71,7 @@
                     AutomationProperties.Name="1단계 시험 준비">
                 <StackPanel>
                     <TextBlock Text="1단계" Style="{StaticResource Caption}" HorizontalAlignment="Center" Margin="0,0,0,7"/>
-                    <TextBlock x:Name="Step1Name" Text="시험 준비" FontSize="14" HorizontalAlignment="Center"
+                    <TextBlock x:Name="Step1Name" Text="시험 준비" FontSize="{StaticResource FontStrong}" HorizontalAlignment="Center"
                                Foreground="{StaticResource TextPrimary}"/>
                 </StackPanel>
             </Button>
@@ -82,7 +82,7 @@
                     <!-- 자물쇠는 칸 오른쪽 끝에 따로 둔다. 이름과 나란히 세우면 이름이 왼쪽으로 밀려
                          위의 '2단계'와 가운데가 어긋난다 -->
                     <Grid>
-                        <TextBlock x:Name="Step2Name" Text="파일 배포" FontSize="14" HorizontalAlignment="Center"
+                        <TextBlock x:Name="Step2Name" Text="파일 배포" FontSize="{StaticResource FontStrong}" HorizontalAlignment="Center"
                                    Foreground="{StaticResource TextPrimary}"/>
                         <TextBlock x:Name="Step2Lock" Text="&#x1F512;" FontSize="16"
                                    HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed"/>
@@ -94,7 +94,7 @@
                 <StackPanel>
                     <TextBlock Text="3단계" Style="{StaticResource Caption}" HorizontalAlignment="Center" Margin="0,0,0,7"/>
                     <Grid>
-                        <TextBlock x:Name="Step3Name" Text="시험 시작" FontSize="14" HorizontalAlignment="Center"
+                        <TextBlock x:Name="Step3Name" Text="시험 시작" FontSize="{StaticResource FontStrong}" HorizontalAlignment="Center"
                                    Foreground="{StaticResource TextPrimary}"/>
                         <TextBlock x:Name="Step3Lock" Text="&#x1F512;" FontSize="16"
                                    HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed"/>
@@ -105,7 +105,7 @@
 
         <Grid Grid.Row="2">
 
-            <!-- ═══ 1단계: 시험 준비 — 파일 암호화·압축 + 허용/금지 프로그램 ═══ -->
+            <!-- ═══ 1단계: 시험 준비 — 파일 압축·암호화 + 허용/금지 프로그램 ═══ -->
             <!-- 카드 하나가 기능 하나다. 제목·입력·버튼을 모두 그 카드 안에 두고,
                  그 기능을 마무리하는 버튼은 카드 오른쪽 아래에 둔다 -->
             <!-- 내용 높이만큼만 차지한다. 안 그러면 왼쪽 카드가 창 아래 끝까지 늘어난다 -->
@@ -117,7 +117,7 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- 오른쪽 두 카드와 아래 끝을 맞춘다. 남는 높이는 실행 버튼 줄 위로 가서
-                     [암호화·압축 실행]이 오른쪽 [추가]와 같은 높이에 온다 -->
+                     [압축·암호화 실행]이 오른쪽 [추가]와 같은 높이에 온다 -->
                 <Border Grid.Column="0" Style="{StaticResource Card}" Padding="22">
                     <DockPanel>
                         <StackPanel DockPanel.Dock="Top">
@@ -148,7 +148,7 @@
                                     <StackPanel VerticalAlignment="Center">
                                         <!-- 다른 읽기 전용 칸과 같은 글자로 쓴다.
                                              Body 스타일은 줄 높이(21)가 글자보다 커서 남는 자리가 아래에 붙어 글자가 위로 뜬다 -->
-                                        <TextBlock Text="선택된 항목 없음" FontSize="13" Foreground="{StaticResource TextPrimary}">
+                                        <TextBlock Text="선택된 항목 없음" FontSize="{StaticResource FontBody}" Foreground="{StaticResource TextPrimary}">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Style.Triggers>
@@ -183,7 +183,7 @@
                                                                     <Border x:Name="Bd" Background="Transparent" CornerRadius="4"
                                                                             Width="26" Height="26">
                                                                         <TextBlock x:Name="Mark" Text="{TemplateBinding Content}"
-                                                                                   FontSize="13" Foreground="{StaticResource TextSecondary}"
+                                                                                   FontSize="{StaticResource FontBody}" Foreground="{StaticResource TextSecondary}"
                                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                     </Border>
                                                                     <ControlTemplate.Triggers>
@@ -225,14 +225,14 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="암호화·압축 상태" Style="{StaticResource Body}"
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="압축·암호화 상태" Style="{StaticResource Body}"
                                        Margin="0,0,14,6"/>
                             <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding FileReady.CurrentStatusMessage}"
                                        Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,1,12,6"/>
                             <TextBlock Grid.Row="1" Grid.Column="0" Text="진행률" Style="{StaticResource Body}"/>
                             <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding FileReady.ProgressText}"
                                        Style="{StaticResource Caption}" Margin="0,1,12,0"/>
-                            <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="2" Content="암호화·압축 실행"
+                            <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="2" Content="압축·암호화 실행"
                                     Style="{StaticResource PrimaryButton}" VerticalAlignment="Bottom"
                                     Command="{Binding FileReady.StartProcessCommand}"/>
                         </Grid>
@@ -365,7 +365,7 @@
                         </StackPanel>
 
                         <!-- 앞 단계를 끝내지 않아 잠긴 이유를 그 자리에서 알려 준다 -->
-                        <TextBlock Text="&#x1F512; 1단계에서 시험 파일 암호화·압축을 끝내야 배포할 수 있습니다.">
+                        <TextBlock Text="&#x1F512; 1단계에서 시험 파일 압축·암호화를 끝내야 배포할 수 있습니다.">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock" BasedOn="{StaticResource LockNote}">
                                     <Setter Property="Visibility" Value="Visible"/>
@@ -468,7 +468,7 @@
                     <StackPanel>
                         <TextBlock Text="최종 점검" Style="{StaticResource SectionTitle}" Margin="0,0,0,18"/>
                         <Grid Margin="0,0,0,4">
-                            <TextBlock Text="● 시험 파일 암호화·압축" Style="{StaticResource Body}"/>
+                            <TextBlock Text="● 시험 파일 압축·암호화" Style="{StaticResource Body}"/>
                             <TextBlock Text="{Binding FileReady.CurrentStatusMessage}" Style="{StaticResource Caption}"
                                        HorizontalAlignment="Right"/>
                         </Grid>

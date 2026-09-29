@@ -117,6 +117,9 @@ namespace ProfessorUI.View.Professor
             NoticePanel.Visibility = Visibility.Collapsed;
             ConversationPanel.Visibility = Visibility.Visible;
             ScrollConversationToEnd();
+
+            // 대화를 열면 바로 답장을 칠 수 있게 입력칸에 커서를 둔다. 보이게 된 뒤라야 포커스를 받는다.
+            Dispatcher.BeginInvoke(new Action(() => MessageBox.Focus()), DispatcherPriority.Loaded);
         }
 
         private void CloseConversation_Click(object sender, RoutedEventArgs e) => CloseConversation();

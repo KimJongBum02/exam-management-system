@@ -35,7 +35,6 @@ namespace NetworkLib
         ExamSubmitRequest       = 34,
         ProcessListUpdate       = 40,
         ForceProcessKill        = 41,
-        ShutdownPC              = 42,
         MonitorStatusReport     = 43,   // 학생 → 교수. 감시가 실제로 켜졌는지
         InstalledProgramsReport = 44,   // 학생 → 교수. 학생 PC 에 설치된 프로그램 목록
         QuizQuestion            = 50,

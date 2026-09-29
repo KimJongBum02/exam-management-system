@@ -171,14 +171,13 @@ namespace ProfessorUI.ViewModel
         public string CleanupText => IsCleanupFailed ? "오류"
                                    : IsCleanupDone ? "완료"
                                    : IsAnswerSubmitted ? "확인 필요" : "미실행";
-        public string ShutdownText => IsApproved ? "완료" : "미실행";
 
         public bool IsSelected { get => _isSelected; set { _isSelected = value; OnPropertyChanged(); } }
         public bool IsFileReceived { get => _isFileReceived; set { _isFileReceived = value; OnPropertyChanged(); } }
         public bool IsApproved
         {
             get => _isApproved;
-            set { _isApproved = value; OnPropertyChanged(); OnPropertyChanged(nameof(ShutdownText)); OnPropertyChanged(nameof(CanApprove)); }
+            set { _isApproved = value; OnPropertyChanged(); OnPropertyChanged(nameof(CanApprove)); }
         }
 
         // 종료 화면에서 고를 수 있는 학생인지. 답안을 걷었고 아직 승인하지 않은 학생만 승인 대상이다.
@@ -210,6 +209,7 @@ namespace ProfessorUI.ViewModel
         }
 
         // 제출 시각과, 시험 종료 뒤에 냈다면 종료로부터 얼마 뒤였는지.
+        // 시험 중에 먼저 낸 학생은 '조기 제출'로 적는다.
         // 종료 뒤에는 학생 PC 감시가 꺼지므로 답안을 고칠 수 있다. 늦게 들어온 답안은 교수가 알아볼 수 있어야 한다.
         // 자동 수집도 압축·전송에 시간이 걸려 몇 초~몇 분 뒤로 찍힌다. 얼마부터 이상한지는 교수가 판단한다.
         public string SubmitTimeText
@@ -219,7 +219,7 @@ namespace ProfessorUI.ViewModel
                 if (_submittedAt is not DateTime at) return "-";
 
                 string time = at.ToString("HH:mm:ss");
-                if (Service.ExamState.EndedAt is not DateTime ended || at <= ended) return $"{time} (시험 중)";
+                if (Service.ExamState.EndedAt is not DateTime ended || at <= ended) return $"{time} (조기 제출)";
 
                 TimeSpan after = at - ended;
                 string elapsed = after.TotalMinutes >= 1

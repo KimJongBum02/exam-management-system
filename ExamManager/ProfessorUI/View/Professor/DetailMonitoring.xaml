@@ -25,9 +25,9 @@
         <!-- ── 헤더 ── -->
         <Grid Grid.Row="0" Margin="0,0,0,14">
             <StackPanel>
-                <TextBlock x:Name="NameText" FontSize="18" FontWeight="Bold"
+                <TextBlock x:Name="NameText" FontSize="{StaticResource FontXLarge}" FontWeight="Bold"
                            Foreground="White"/>
-                <TextBlock x:Name="UpdatedText" FontSize="12"
+                <TextBlock x:Name="UpdatedText" FontSize="{StaticResource FontSmall}"
                            Foreground="#B4BBC4" Margin="0,4,0,0"/>
             </StackPanel>
             <Button Content="✕  닫기" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Right"
@@ -43,14 +43,14 @@
 
                 <!-- 수신 전 안내 -->
                 <TextBlock x:Name="WaitingText" Text="화면 수신 대기 중…"
-                           Foreground="#A8B0BA" FontSize="16"
+                           Foreground="#A8B0BA" FontSize="{StaticResource FontLarge}"
                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Grid>
         </Border>
 
         <!-- ── 하단 바 ── -->
         <TextBlock Grid.Row="2" x:Name="ResolutionText"
-                   Text="1280 × 720 · JPEG" Foreground="#A8B0BA" FontSize="11"
+                   Text="1280 × 720 · JPEG" Foreground="#A8B0BA" FontSize="{StaticResource FontMini}"
                    HorizontalAlignment="Right" Margin="0,8,0,0"/>
     </Grid>
 </Window>

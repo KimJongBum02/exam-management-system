@@ -39,6 +39,8 @@ namespace ProfessorUI.View.Professor
 
             DataContext = _ctx;
             ResultGrid.ItemsSource = _rows;
+            // 퀴즈를 내기 전에도 다른 표처럼 머리글이 보이게 칸을 먼저 만든다
+            BuildColumns(null);
 
             _ctx.Quiz.Edited += UpdateAskState;
             _session.Rounds.CollectionChanged += OnRoundsChanged;
@@ -226,7 +228,7 @@ namespace ProfessorUI.View.Professor
         {
             var text = new FrameworkElementFactory(typeof(TextBlock));
             text.SetBinding(TextBlock.TextProperty, new Binding(path));
-            text.SetValue(TextBlock.FontSizeProperty, 13.0);
+            text.SetResourceReference(TextBlock.FontSizeProperty, "FontBody");
             text.SetValue(HorizontalAlignmentProperty, HorizontalAlignment.Center);
             text.SetValue(VerticalAlignmentProperty, VerticalAlignment.Center);
 
@@ -256,7 +258,7 @@ namespace ProfessorUI.View.Professor
             border.SetBinding(ToolTipProperty, new Binding($"{cell}.{nameof(QuizResultCell.Tip)}"));
             var mark = new FrameworkElementFactory(typeof(TextBlock));
             mark.SetBinding(TextBlock.TextProperty, new Binding($"{cell}.{nameof(QuizResultCell.Mark)}"));
-            mark.SetValue(TextBlock.FontSizeProperty, 15.0);
+            mark.SetResourceReference(TextBlock.FontSizeProperty, "FontSection");
             mark.SetValue(TextBlock.FontWeightProperty, FontWeights.Bold);
             mark.SetValue(HorizontalAlignmentProperty, HorizontalAlignment.Center);
             mark.SetValue(VerticalAlignmentProperty, VerticalAlignment.Center);
@@ -301,15 +303,15 @@ namespace ProfessorUI.View.Professor
 
             var confirm = MessageBox.Show(
                 $"지금까지 낸 퀴즈 {_session.Rounds.Count}번의 답안 기록을 화면에서 비웁니다.\n" +
-                $"퀴즈마다 저장된 엑셀 파일은 지워지지 않습니다.\n\n{QuizService.SessionFolder}",
-                "기록 비우기", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                "퀴즈마다 저장된 엑셀 파일은 지워지지 않습니다.",
+                "퀴즈 기록 비우기", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (confirm != MessageBoxResult.Yes) return;
 
             if (!_session.ClearSession())
             {
                 MessageBox.Show("기록을 파일로 저장하지 못해 비우지 않았습니다.\n" +
                                 $"바탕화면의 기록 폴더에 쓸 수 있는지 확인해 주세요.\n\n{QuizService.SessionFolder}",
-                                "기록 비우기", MessageBoxButton.OK, MessageBoxImage.Warning);
+                                "퀴즈 기록 비우기", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             RefreshResults();

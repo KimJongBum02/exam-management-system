@@ -98,7 +98,7 @@
                                 <Border Background="{StaticResource AlertSoft}" CornerRadius="4"
                                         Padding="10,6" Margin="6,4" HorizontalAlignment="Stretch"
                                         Visibility="{Binding HasCheated, Converter={StaticResource BoolToVisibility}}">
-                                    <TextBlock Text="{Binding CheatDetail}" FontSize="12.5"
+                                    <TextBlock Text="{Binding CheatDetail}" FontSize="{StaticResource FontSmall}"
                                                Foreground="{StaticResource TextPrimary}" TextWrapping="Wrap"/>
                                 </Border>
                             </DataTemplate>

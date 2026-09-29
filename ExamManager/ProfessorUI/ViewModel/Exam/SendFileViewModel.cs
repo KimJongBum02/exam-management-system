@@ -145,7 +145,7 @@ namespace ProfessorUI.ViewModel
 
         private void ExecuteStartDeploy(object? obj)
         {
-            // 1. 압축/암호화가 끝났는지 확인
+            // 1. 압축·암호화가 끝났는지 확인
             string? problem = _deploy.PackageProblem();
             if (problem != null)
             {
@@ -228,6 +228,14 @@ namespace ProfessorUI.ViewModel
         // 못 보낸 학생은 이유와 함께 한 창에 모아 알린다.
         public void RedeployMany(IEnumerable<StudentStatusViewModel> students)
         {
+            // 묶음이 없으면 누구에게도 보낼 수 없다. 학생마다 같은 이유를 늘어놓지 않고 한 줄로 알린다.
+            string? notReady = _deploy.PackageProblem();
+            if (notReady != null)
+            {
+                MessageBox.Show(notReady, "재배포", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             int sent = 0;
             var failed = new List<string>();
             foreach (var student in students)

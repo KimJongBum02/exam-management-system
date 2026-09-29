@@ -74,7 +74,7 @@
                                                         Visibility="{Binding HasScreen, Converter={StaticResource BoolToVis}}">
                                             </StackPanel>
                                             <TextBlock Text="대기 중…" Foreground="#B4BBC4"
-                                                       FontSize="12" HorizontalAlignment="Center"
+                                                       FontSize="{StaticResource FontSmall}" HorizontalAlignment="Center"
                                                        VerticalAlignment="Center">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
@@ -99,11 +99,11 @@
                                                 </Border.Background>
                                                 <Grid>
                                                     <TextBlock Text="{Binding DisplayName}"
-                                                               Foreground="White" FontSize="12"
+                                                               Foreground="White" FontSize="{StaticResource FontSmall}"
                                                                FontWeight="SemiBold"
                                                                TextTrimming="CharacterEllipsis"/>
                                                     <TextBlock Text="{Binding LastUpdated}"
-                                                               Foreground="#CCCCCC" FontSize="10"
+                                                               Foreground="#CCCCCC" FontSize="{StaticResource FontTiny}"
                                                                HorizontalAlignment="Right"
                                                                VerticalAlignment="Bottom"/>
                                                 </Grid>

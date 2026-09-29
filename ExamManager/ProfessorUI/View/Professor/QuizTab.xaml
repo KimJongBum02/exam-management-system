@@ -17,7 +17,7 @@
                         <ControlTemplate TargetType="RadioButton">
                             <Border x:Name="Bd" Background="Transparent" BorderBrush="Transparent"
                                     BorderThickness="0,0,0,3" Padding="2,0,2,9">
-                                <TextBlock x:Name="Txt" Text="{TemplateBinding Content}" FontSize="15"
+                                <TextBlock x:Name="Txt" Text="{TemplateBinding Content}" FontSize="{StaticResource FontSection}"
                                            Foreground="{StaticResource TextMuted}"/>
                             </Border>
                             <ControlTemplate.Triggers>

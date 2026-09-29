@@ -57,11 +57,8 @@ namespace ProfessorUI.View.Professor
         {
             InitializeComponent();
 
-            // 처음부터 최대화로 뜨는 창에는 CenterScreen 이 먹지 않아, 복원하면 화면 왼쪽 위로 간다.
-            // 복원했을 때 화면 가운데에 오도록 자리를 직접 잡아 둔다.
-            var area = SystemParameters.WorkArea;
-            Left = area.Left + (area.Width - Width) / 2;
-            Top = area.Top + (area.Height - Height) / 2;
+            // 최대화로 시작하고, 복원하면 학생 시험 창과 같은 크기로 화면 가운데에 온다.
+            UiWindow.ApplyMainWindowSize(this);
 
             MenuList.ItemsSource = new List<MenuEntryViewModel>
             {
@@ -84,6 +81,16 @@ namespace ProfessorUI.View.Professor
 
             ExamState.StateChanged += ApplyPhaseGates;
             Closed += (_, _) => ExamState.StateChanged -= ApplyPhaseGates;
+
+            // 작업표시줄 깜빡임은 한 번 지나가면 끝이라, 무엇이 쌓였는지 메뉴 옆 빨간 동그라미로 남겨 둔다.
+            _ctx.Overview.PropertyChanged += OnBadgeSourceChanged;
+            _ctx.Chat.PropertyChanged += OnBadgeSourceChanged;
+            Closed += (_, _) =>
+            {
+                _ctx.Overview.PropertyChanged -= OnBadgeSourceChanged;
+                _ctx.Chat.PropertyChanged -= OnBadgeSourceChanged;
+            };
+            UpdateBadges();
 
             // 스크롤할 것이 없는 목록·입력칸 위에서 굴린 휠이 삼켜져도 전체 화면은 내려가게 한다.
             // 이미 처리된 휠까지 받아야 하므로 handledEventsToo 로 단다.
@@ -131,14 +138,24 @@ namespace ProfessorUI.View.Professor
         // 시험 단계에 맞지 않는 메뉴를 잠그고, 잠긴 이유를 툴팁으로 남긴다.
         private void ApplyPhaseGates()
         {
-            bool started = ExamState.IsExamStarted;                                  // 시험 시작 이후
+            bool started = true;                                  // 시험 시작 이후
 
             // 시험을 끝내면 다음 시험을 준비할 수 있도록 준비 화면이 다시 열린다.
             _prep.SetGate(!ExamState.IsExamRunning, "시험이 진행 중입니다. 지각생 파일 전송은 시험 관리 창의 파일 재배포를 쓰십시오.");
             _manage.SetGate(started, "시험을 시작하면 열립니다. 시험 준비 마법사 3단계에서 [시험 시작 실행]을 누르십시오.");
-            // 먼저 답안을 낸 학생을 시험 중에 승인·종료해야 하므로 시험 종료를 기다리지 않고 연다.
+            // 먼저 답안을 낸 학생을 시험 중에 승인해야 하므로 시험 종료를 기다리지 않고 연다.
             // 시험 종료·답안 수집 버튼은 ExamEndViewModel 이 시험 단계에 따라 따로 막는다.
             _settle.SetGate(started, "시험을 시작하면 열립니다. 먼저 답안을 낸 학생은 시험 중에도 여기서 승인합니다.");
+        }
+
+        private void OnBadgeSourceChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => UpdateBadges();
+
+        // 알림·채팅: 안 읽은 학생 메시지 + 확인하지 않은 보안 경고.
+        // 시험 종료·답안 수집: 답안을 걷었고 아직 승인하지 않은 학생(시험 중에 먼저 낸 학생 포함).
+        private void UpdateBadges()
+        {
+            _chat.BadgeCount = _ctx.Chat.UnreadCount + _ctx.Overview.UnreadAlertCount;
+            _settle.BadgeCount = _ctx.Overview.ApprovalWaitingCount;
         }
 
         // 포트는 9000 을 그대로 쓰는 것이 기본이다. 그 자리를 다른 프로그램이 쓰고 있을 때만 여기서 바꾼다.
@@ -152,7 +169,7 @@ namespace ProfessorUI.View.Professor
         {
             if (_ctx.FileReady.IsProcessing)
             {
-                MessageBox.Show("시험 파일 암호화·압축이 진행 중입니다.\n끝난 뒤에 종료해 주세요.",
+                MessageBox.Show("시험 파일 압축·암호화가 진행 중입니다.\n끝난 뒤에 종료해 주세요.",
                                 "종료", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }

@@ -66,12 +66,6 @@ namespace StudentUI
             // 교수 프로그램이 꺼졌다 다시 켜지면 스스로 다시 붙는다. 로그인한 뒤부터 동작한다.
             Service.ReconnectService.Start();
 
-            // 교수가 답안을 승인하면 PC 를 끈다. 먼저 제출한 학생은 시험 중에도 승인된다.
-            // Service.NetworkService.Instance.PacketReceived += (type, _, _) =>
-            // {
-            //     if (type == PacketType.ShutdownPC) ShutdownPc();
-            // };
-
             // 진행 중이던 시험이 있으면 되살린다. 교수가 이미 끝낸 시험이면 종료 화면에서 답안 제출을 기다린다.
             // 시험 폴더·암호·남은 시간은 바로, 감시와 차단은 같은 학번으로 다시 로그인한 뒤에 건다(LoginViewModel).
             if (examSession != null)
@@ -139,24 +133,6 @@ namespace StudentUI
             _classQuizWindow.Closed += (_, _) => _classQuizWindow = null;
             _classQuizWindow.Show();
             _classQuizWindow.Activate();
-        }
-
-        // 교수가 답안을 승인하면 PC 를 끈다.
-        // 10초를 두어 학생이 윈도우의 종료 안내를 볼 수 있게 한다. 시간을 주면 /f 가 따라붙어
-        // 저장하지 않은 창이 종료를 막지 못한다. 차단·감시는 SessionEnding 에서 풀린다.
-        // 네이티브 수신 스레드에서 불리므로 예외가 새면 앱이 죽는다. 그래서 여기서 삼킨다.
-        private static void ShutdownPc()
-        {
-            try
-            {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
-                    "shutdown", "/s /t 10 /c \"답안 제출이 승인되었습니다. 10초 뒤 PC가 종료됩니다.\"")
-                { UseShellExecute = false, CreateNoWindow = true });
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"PC 종료 명령을 실행하지 못했습니다: {ex.Message}");
-            }
         }
 
         // 정상 흐름에서는 쓰고 바로 지우지만, 도중에 앱이 꺼지면 %TEMP% 에 남는 것들.

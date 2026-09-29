@@ -44,7 +44,7 @@ namespace ProfessorUI.Service
         // 보낼 준비가 됐는지. 안 됐으면 이유, 됐으면 null.
         public string? PackageProblem()
             => !SendFileState.IsFilePrepared || string.IsNullOrEmpty(SendFileState.PackagePath)
-               ? "먼저 시험 파일을 암호화·압축해 주세요." : null;
+               ? "압축·암호화 후 다시 시도하세요." : null;
 
         // 보내지 못한 이유. 화면은 이 값으로 표의 칸 문구를 정한다.
         public enum SendProblem
