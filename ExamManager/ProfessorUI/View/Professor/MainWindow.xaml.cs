@@ -138,7 +138,7 @@ namespace ProfessorUI.View.Professor
         // 시험 단계에 맞지 않는 메뉴를 잠그고, 잠긴 이유를 툴팁으로 남긴다.
         private void ApplyPhaseGates()
         {
-            bool started = true;                                  // 시험 시작 이후
+            bool started = ExamState.IsExamStarted;                                  // 시험 시작 이후
 
             // 시험을 끝내면 다음 시험을 준비할 수 있도록 준비 화면이 다시 열린다.
             _prep.SetGate(!ExamState.IsExamRunning, "시험이 진행 중입니다. 지각생 파일 전송은 시험 관리 창의 파일 재배포를 쓰십시오.");
