@@ -5,8 +5,7 @@
         Title="목록" Height="520" Width="520"
         MinHeight="320" MinWidth="380"
         WindowStartupLocation="CenterOwner"
-        Background="#FFFFFF"
-        FontFamily="{StaticResource AppFont}">
+        Background="#FFFFFF">
 
     <Window.Resources>
         <ResourceDictionary>

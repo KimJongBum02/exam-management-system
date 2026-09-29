@@ -4,7 +4,6 @@
         Title="교수 PC 연결"
         Height="330"
         Width="380"
-        FontFamily="{StaticResource AppFont}"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         WindowStyle="None"

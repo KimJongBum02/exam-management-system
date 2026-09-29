@@ -4,7 +4,6 @@
         Title="시험 운영" Height="720" Width="1180"
         WindowState="Maximized" MinHeight="720" MinWidth="1180"
         Background="#FFFFFF"
-        FontFamily="{StaticResource AppFont}"
         WindowStartupLocation="Manual">
 
     <Window.Resources>

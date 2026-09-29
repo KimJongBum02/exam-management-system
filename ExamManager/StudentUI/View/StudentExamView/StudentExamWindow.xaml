@@ -6,7 +6,6 @@
         xmlns:local="clr-namespace:StudentUI.View.StudentExamView"
         mc:Ignorable="d" 
         Background="White"
-        FontFamily="{StaticResource AppFont}"
         Title="시험 운영 - 학생용" Height="820" Width="1380"
         WindowState="Maximized"
         WindowStartupLocation="CenterScreen"
