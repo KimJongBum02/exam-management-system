@@ -19,7 +19,7 @@ namespace ProfessorUI.Service
         // 위의 두 줄에 문제별 정답과 정답률을 적고, 문제 내용은 "문제" 시트에 따로 둔다.
         public static void SaveQuizRound(QuizRound round, string path)
         {
-            using var book = new XLWorkbook();
+            using var book = NewBook();
             var stats = round.BuildQuestionStats();
             int questionCount = round.Questions.Count;
             int scoreColumn = 3 + questionCount;
@@ -96,7 +96,7 @@ namespace ProfessorUI.Service
         // 학생 한 명이 한 줄이다. 부정행위를 한 학생만 마지막 칸에 내역이 적힌다.
         public static void SaveExamLog(IEnumerable<ExamLogRow> rows, string path)
         {
-            using var book = new XLWorkbook();
+            using var book = NewBook();
             var sheet = book.AddWorksheet("시험 로그");
             WriteHeader(sheet, "학번", "이름", "출석 여부", "부정행위 횟수", "부정행위 내용");
 
@@ -119,6 +119,16 @@ namespace ProfessorUI.Service
             SaveTo(book, path);
         }
 
+        // 열 너비는 셀 글꼴로 잰다. 기본 글꼴(Calibri)에는 한글이 없어 한글 칸이 좁게 잡혀
+        // 이름·'미제출'·'제출 시각' 같은 글자가 잘렸다. 한글이 있는 맑은 고딕(한국어 엑셀의 기본 글꼴)을 기본으로 둔다.
+        // 글꼴 이름은 영문으로 적어야 한다 — 한글 이름("맑은 고딕")으로는 너비를 재는 쪽이 글꼴을 찾지 못한다.
+        private static XLWorkbook NewBook()
+        {
+            var book = new XLWorkbook();
+            book.Style.Font.FontName = "Malgun Gothic";
+            return book;
+        }
+
         private static void WriteHeader(IXLWorksheet sheet, params string[] titles)
         {
             for (int i = 0; i < titles.Length; i++)
@@ -130,10 +140,18 @@ namespace ProfessorUI.Service
             sheet.SheetView.FreezeRows(1);   // 학생이 많아도 머리글이 따라온다
         }
 
+        // 내용 폭에 딱 맞추면 글자가 칸 끝에 붙어 잘려 보인다. 양옆에 이만큼 여유를 더 준다(글자 두 개쯤).
+        private const double ColumnPadding = 2;
+
         private static void Finish(IXLWorksheet sheet, bool autoFitLastColumn = true)
         {
-            if (autoFitLastColumn) sheet.Columns().AdjustToContents();
-            else sheet.Columns(1, Math.Max(1, sheet.LastColumnUsed()?.ColumnNumber() - 1 ?? 1)).AdjustToContents();
+            int last = sheet.LastColumnUsed()?.ColumnNumber() ?? 1;
+            int fitTo = autoFitLastColumn ? last : Math.Max(1, last - 1);
+            foreach (var column in sheet.Columns(1, fitTo))
+            {
+                column.AdjustToContents();
+                column.Width += ColumnPadding;
+            }
         }
 
         // 저장할 폴더가 아직 없을 수 있다 (첫 저장).
