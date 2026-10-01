@@ -149,7 +149,7 @@ namespace ProfessorUI
         {
             _shuttingDown = true;
             try { Common.UiContext.Instance.Server.StopChecking(); } catch { }
-            // 퀴즈 기록은 출제·화면 이동 때만 저장하므로, 마지막 퀴즈의 답안은 여기서 남긴다.
+            // 답안은 마지막 답안이 들어오고 2초 뒤에 저장된다. 그 사이에 꺼져도 남도록 여기서 한 번 더 저장한다.
             try { Service.QuizService.Instance.Save(); } catch { }
             try { Service.ServerService.Stop(); } catch { }
             try { Service.NetworkService.Instance.Dispose(); } catch { }

@@ -24,6 +24,10 @@ namespace ProfessorUI.Service
 
         private bool _started;
 
+        // 답안이 들어오면 잠깐 기다렸다가 그 퀴즈 파일만 다시 쓴다(Save 참고).
+        private readonly HashSet<QuizRound> _unsavedRounds = new();
+        private System.Windows.Threading.DispatcherTimer? _saveTimer;
+
         private QuizService() { }
 
         // 최근에 낸 퀴즈가 앞에 온다.
@@ -41,6 +45,10 @@ namespace ProfessorUI.Service
             _started = true;
 
             NetworkService.Instance.PacketReceived += OnPacketReceived;
+
+            // 화면 스레드에서 만들어야 저장도 화면 스레드에서 돈다. 답안 기록을 바꾸는 쪽과 같은 스레드라 겹치지 않는다.
+            _saveTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            _saveTimer.Tick += (_, _) => SaveUnsaved();
         }
 
         // 퀴즈를 낸다. 출제 시점에 접속해 있는 학생만 대상이 된다.
@@ -146,7 +154,19 @@ namespace ProfessorUI.Service
                 submission.Submit(answers, round.Questions);
 
                 SubmissionReceived?.Invoke(student);
+
+                // 마지막 답안이 들어오고 2초가 지나면 쓴다. 다음 답안이 오면 다시 2초를 기다린다.
+                _unsavedRounds.Add(round);
+                _saveTimer?.Stop();
+                _saveTimer?.Start();
             }
+        }
+
+        private void SaveUnsaved()
+        {
+            _saveTimer?.Stop();
+            foreach (var round in _unsavedRounds) SaveRound(round);
+            _unsavedRounds.Clear();
         }
 
         private static void PostToUi(Action action)
@@ -156,27 +176,38 @@ namespace ProfessorUI.Service
             dispatcher.BeginInvoke(action);
         }
 
-        // 퀴즈마다 자기 파일에 다시 쓴다 — 퀴즈를 낼 때, 기록을 비울 때, 퀴즈 화면·프로그램을 닫을 때.
-        // xlsx 는 한 줄만 덧붙일 수 없는 형식이라 파일 전체를 다시 쓴다. 응답마다 쓰면 학생 수십 명이
-        // 한꺼번에 낼 때 화면이 끊겨 응답 중에는 쓰지 않는다.
+        // 퀴즈마다 자기 파일에 다시 쓴다 — 퀴즈를 낼 때, 기록을 비울 때, 퀴즈 화면·프로그램을 닫을 때는 모든 퀴즈를,
+        // 답안이 들어왔을 때는 그 퀴즈만(마지막 답안 뒤 2초).
+        // xlsx 는 한 줄만 덧붙일 수 없는 형식이라 파일 전체를 다시 쓴다. 답안마다 바로 쓰면 학생 수십 명이
+        // 한꺼번에 낼 때 화면이 끊기므로, 몰려 들어오는 동안은 기다렸다가 한 번에 쓴다.
         //
         // 교수가 파일을 엑셀로 열어 두면 그 파일에는 쓸 수 없다. 그때는 "0928_퀴즈3_사본" 으로 저장하고
         // 그 퀴즈는 이후로도 사본에 쓴다. 모두 저장했으면 true.
         public bool Save()
         {
+            _saveTimer?.Stop();
+            _unsavedRounds.Clear();
+
             bool saved = true;
             foreach (var round in Rounds)
-            {
-                if (round.FilePath.Length == 0)
-                    round.FilePath = Path.Combine(SessionFolder, round.Title + ".xlsx");
-
-                if (TrySave(round, round.FilePath)) continue;
-
-                string copy = Path.Combine(SessionFolder, round.Title + "_사본.xlsx");
-                if (copy != round.FilePath && TrySave(round, copy)) round.FilePath = copy;
-                else saved = false;
-            }
+                if (!SaveRound(round)) saved = false;
             return saved;
+        }
+
+        private bool SaveRound(QuizRound round)
+        {
+            if (round.FilePath.Length == 0)
+                round.FilePath = Path.Combine(SessionFolder, round.Title + ".xlsx");
+
+            if (TrySave(round, round.FilePath)) return true;
+
+            string copy = Path.Combine(SessionFolder, round.Title + "_사본.xlsx");
+            if (copy != round.FilePath && TrySave(round, copy))
+            {
+                round.FilePath = copy;
+                return true;
+            }
+            return false;
         }
 
         // 기록 저장에 실패해도 수업은 계속돼야 하므로 예외를 밖으로 내지 않는다.
