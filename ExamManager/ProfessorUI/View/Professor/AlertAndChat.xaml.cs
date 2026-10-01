@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -14,7 +15,8 @@ namespace ProfessorUI.View.Professor
     // 알림·채팅 화면. 학생 채팅은 학생별로 한 줄씩 묶고, 전체 공지는 누가 받았는지까지 보여 준다.
     //
     // 시간순으로 한 줄씩 쌓으면 학생 여럿이 동시에 말을 걸 때 누가 몇 번 불렀는지 알 수 없다.
-    // 그래서 학생마다 한 줄을 두고, 안 읽은 대화가 있는 학생을 위로 올린다.
+    // 그래서 들어온 학생마다 한 줄을 두고(말이 오가기 전이라도 골라서 먼저 말을 건다),
+    // 안 읽은 대화가 있는 학생 → 최근에 말이 오간 학생 → 나머지는 학번순으로 놓는다.
     public partial class AlertAndChat : UserControl
     {
         private readonly UiContext _ctx = UiContext.Instance;
@@ -37,6 +39,7 @@ namespace ProfessorUI.View.Professor
             _conversations.SortDescriptions.Clear();
             _conversations.SortDescriptions.Add(new SortDescription(nameof(ChatTabViewModel.HasUnread), ListSortDirection.Descending));
             _conversations.SortDescriptions.Add(new SortDescription(nameof(ChatTabViewModel.LastTimestamp), ListSortDirection.Descending));
+            _conversations.SortDescriptions.Add(new SortDescription(nameof(ChatTabViewModel.StudentId), ListSortDirection.Ascending));
 
             // 새 메시지가 오거나 읽음 상태가 바뀌면 줄 순서와 필터를 바로 다시 맞춘다.
             _conversations.IsLiveSorting = true;
@@ -46,7 +49,7 @@ namespace ProfessorUI.View.Professor
             _conversations.IsLiveFiltering = true;
             _conversations.LiveFilteringProperties.Clear();
             _conversations.LiveFilteringProperties.Add(nameof(ChatTabViewModel.HasUnread));
-            _conversations.LiveFilteringProperties.Add(nameof(ChatTabViewModel.LastTimestamp));
+            _conversations.LiveFilteringProperties.Add(nameof(ChatTabViewModel.HasMessages));
 
             ConversationList.ItemsSource = _conversations;
             ((INotifyCollectionChanged)_conversations).CollectionChanged += OnConversationsChanged;
@@ -60,12 +63,11 @@ namespace ProfessorUI.View.Professor
             // 전체 공지 탭(SessionId 없음)은 학생 대화가 아니다.
             if (item is not ChatTabViewModel tab || tab.SessionId == null) return false;
 
-            // 말이 한 번이라도 오간 학생만 보인다. 교수가 먼저 말을 걸 때는 대시보드의 말풍선으로 대화를 연다.
-            if (tab.Messages.Count == 0) return false;
-
+            // '읽음'은 말이 오갔고 다 읽은 대화다. 아직 말이 오간 적 없는 학생은 '전체'에만 보인다.
             if (FilterUnread?.IsChecked == true && !tab.HasUnread) return false;
-            if (FilterRead?.IsChecked == true && tab.HasUnread) return false;
+            if (FilterRead?.IsChecked == true && (tab.HasUnread || !tab.HasMessages)) return false;
 
+            // 이름으로 찾는다. 학번 일부로도 찾힌다.
             string keyword = SearchBox?.Text?.Trim() ?? string.Empty;
             if (keyword.Length > 0 &&
                 !tab.StudentName.Contains(keyword) &&
@@ -88,6 +90,9 @@ namespace ProfessorUI.View.Professor
         {
             if (_conversations == null || ConversationEmpty == null) return;
             ConversationEmpty.Visibility = _conversations.IsEmpty ? Visibility.Visible : Visibility.Collapsed;
+            ConversationEmpty.Text = _ctx.Chat.Tabs.Any(t => t.SessionId != null)
+                ? "조건에 맞는 학생이 없습니다."
+                : "아직 들어온 학생이 없습니다. 학생이 접속하면 여기에 학번순으로 한 줄씩 생깁니다.";
         }
 
         // ── 1:1 대화 ──

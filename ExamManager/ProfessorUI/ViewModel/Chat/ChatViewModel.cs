@@ -91,6 +91,21 @@ namespace ProfessorUI.ViewModel
             _chat.MessageReceived += OnMessageReceived;
             _chat.NoticeAcknowledged += OnNoticeAcknowledged;
             _chat.ChatRead += OnChatRead;
+
+            // 들어온 학생마다 대화 줄을 미리 만든다. 알림·채팅 화면에서 말이 오가기 전이라도 학생을 골라 먼저 말을 건다.
+            foreach (var student in StudentStore.Instance.Students) AddTabFor(student);
+            StudentStore.Instance.Students.CollectionChanged += (_, e) =>
+            {
+                if (e.NewItems == null) return;
+                foreach (StudentStatusViewModel student in e.NewItems) AddTabFor(student);
+            };
+        }
+
+        // 로그인을 거절한 접속은 학번이 비어 있다 — 학생이 아니므로 줄을 만들지 않는다.
+        private void AddTabFor(StudentStatusViewModel student)
+        {
+            if (string.IsNullOrEmpty(student.StudentId)) return;
+            GetOrCreateTab(student.StudentId, student.Name, student.SessionId);
         }
 
         private void SendMessage()
@@ -160,6 +175,10 @@ namespace ProfessorUI.ViewModel
         // 알림·채팅 화면에서 한 학생과의 대화를 연다. 그 학생 몫의 안 읽음은 상단 배지에서도 뺀다.
         public void OpenConversation(ChatTabViewModel tab)
         {
+            // 다시 접속하면 세션이 바뀐다. 목록에서 미리 만든 줄을 고를 때도 지금 세션으로 맞춰야 메시지가 간다.
+            var student = StudentStore.Instance.Students.FirstOrDefault(s => s.StudentId == tab.StudentId);
+            if (!string.IsNullOrEmpty(student?.SessionId)) tab.SessionId = student.SessionId;
+
             UnreadCount = Math.Max(0, UnreadCount - tab.UnreadCount);
             SelectedTab = tab;
         }
