@@ -65,7 +65,9 @@ namespace ProfessorUI.ViewModel
 
         // ── 대화 목록 한 줄에 보일 값 ── 메시지가 올 때마다 다시 읽힌다.
         public string Initial => StudentName.Length > 0 ? StudentName.Substring(0, 1) : "?";
-        public string ReadStateText => HasUnread ? $"미읽음 {_unreadCount}" : "읽음";
+        // 아직 말이 오간 적 없는 학생은 읽음·미읽음을 적지 않는다.
+        public bool HasMessages => _messages.Count > 0;
+        public string ReadStateText => HasUnread ? $"미읽음 {_unreadCount}" : HasMessages ? "읽음" : string.Empty;
         public string LastMessageText => _messages.Count > 0 ? _messages[^1].Message : string.Empty;
         public string LastTimeText => _messages.Count > 0 ? _messages[^1].DisplayTime : string.Empty;
         // 목록 정렬용. 최근에 말이 오간 학생이 위로 온다.
@@ -76,6 +78,8 @@ namespace ProfessorUI.ViewModel
             OnPropertyChanged(nameof(LastMessageText));
             OnPropertyChanged(nameof(LastTimeText));
             OnPropertyChanged(nameof(LastTimestamp));
+            OnPropertyChanged(nameof(HasMessages));
+            OnPropertyChanged(nameof(ReadStateText));
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

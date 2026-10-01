@@ -68,8 +68,8 @@
             </Grid.ColumnDefinitions>
 
             <!-- ── 학생 대화 목록 ──
-                 학생 한 명이 한 줄이다. 새 메시지가 와도 줄이 늘지 않고 그 학생 줄이 위로 올라온다.
-                 안 읽은 대화가 있는 학생이 먼저, 그다음 최근에 말이 오간 순서다. -->
+                 들어온 학생 한 명이 한 줄이다. 새 메시지가 와도 줄이 늘지 않고 그 학생 줄이 위로 올라온다.
+                 안 읽은 대화가 있는 학생이 먼저, 그다음 최근에 말이 오간 순서, 말이 오간 적 없는 학생은 학번순이다. -->
             <StackPanel Grid.Column="0">
                 <TextBlock Text="학생 대화 목록" Style="{StaticResource SectionTitle}"/>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
@@ -83,56 +83,60 @@
                 <TextBox x:Name="SearchBox" Style="{StaticResource SearchBox}" Margin="0,0,0,14"
                          TextChanged="Filter_Changed"/>
 
-                <ItemsControl x:Name="ConversationList">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border x:Name="Row" Style="{StaticResource Card}" Padding="14,12" Margin="0,0,0,10"
-                                    Cursor="Hand" MouseLeftButtonUp="ConversationRow_Click">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
+                <!-- 학생이 많으면 목록 안에서 넘긴다. 화면 전체가 길어지면 아래 학생을 눌렀을 때
+                     위쪽에 열리는 대화가 보이지 않는다. 높이는 오른쪽 대화 칸과 맞춘다 -->
+                <ScrollViewer MaxHeight="530" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl x:Name="ConversationList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border x:Name="Row" Style="{StaticResource Card}" Padding="14,12" Margin="0,0,0,10"
+                                        Cursor="Hand" MouseLeftButtonUp="ConversationRow_Click">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
 
-                                    <Border Width="36" Height="36" CornerRadius="18" VerticalAlignment="Center"
-                                            Background="{StaticResource BgSubtle}">
-                                        <TextBlock Text="{Binding Initial}" FontSize="{StaticResource FontBody}" FontWeight="Bold"
-                                                   Foreground="{StaticResource TextSecondary}"
-                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
+                                        <Border Width="36" Height="36" CornerRadius="18" VerticalAlignment="Center"
+                                                Background="{StaticResource BgSubtle}">
+                                            <TextBlock Text="{Binding Initial}" FontSize="{StaticResource FontBody}" FontWeight="Bold"
+                                                       Foreground="{StaticResource TextSecondary}"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
 
-                                    <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                            <TextBlock Text="{Binding StudentName}" FontSize="{StaticResource FontBody}"
-                                                       Foreground="{StaticResource TextPrimary}"/>
-                                            <TextBlock Text="{Binding StudentId}" Style="{StaticResource Caption}" Margin="8,0,0,0"/>
-                                            <TextBlock x:Name="ReadState" Text="{Binding ReadStateText}" FontSize="{StaticResource FontSmall}"
-                                                       Foreground="{StaticResource TextMuted}" Margin="14,0,0,0"/>
-                                            <TextBlock Text="{Binding LastTimeText}" Style="{StaticResource Caption}" Margin="10,0,0,0"/>
+                                        <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                <TextBlock Text="{Binding StudentName}" FontSize="{StaticResource FontBody}"
+                                                           Foreground="{StaticResource TextPrimary}"/>
+                                                <TextBlock Text="{Binding StudentId}" Style="{StaticResource Caption}" Margin="8,0,0,0"/>
+                                                <TextBlock x:Name="ReadState" Text="{Binding ReadStateText}" FontSize="{StaticResource FontSmall}"
+                                                           Foreground="{StaticResource TextMuted}" Margin="14,0,0,0"/>
+                                                <TextBlock Text="{Binding LastTimeText}" Style="{StaticResource Caption}" Margin="10,0,0,0"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding LastMessageText}" FontSize="{StaticResource FontSmall}"
+                                                       Foreground="{StaticResource TextSecondary}" TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
-                                        <TextBlock Text="{Binding LastMessageText}" FontSize="{StaticResource FontSmall}"
-                                                   Foreground="{StaticResource TextSecondary}" TextTrimming="CharacterEllipsis"/>
-                                    </StackPanel>
 
-                                    <Button Grid.Column="2" Content="대화" Style="{StaticResource SecondaryButton}"
-                                            VerticalAlignment="Center" Click="OpenConversation_Click"/>
-                                </Grid>
-                            </Border>
-                            <DataTemplate.Triggers>
-                                <!-- 안 읽은 대화가 있는 학생 줄은 옅은 파랑으로 칠해 목록에서 바로 보이게 한다 -->
-                                <DataTrigger Binding="{Binding HasUnread}" Value="True">
-                                    <Setter TargetName="ReadState" Property="FontWeight" Value="Bold"/>
-                                    <Setter TargetName="ReadState" Property="Foreground" Value="{StaticResource TextPrimary}"/>
-                                    <Setter TargetName="Row" Property="Background" Value="#EFF6FF"/>
-                                    <Setter TargetName="Row" Property="BorderBrush" Value="#93C5FD"/>
-                                </DataTrigger>
-                            </DataTemplate.Triggers>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <TextBlock x:Name="ConversationEmpty" Style="{StaticResource Caption}" TextWrapping="Wrap"
-                           Text="표시할 대화가 없습니다. 학생이 메시지를 보내면 학생마다 한 줄씩 생깁니다."/>
+                                        <Button Grid.Column="2" Content="대화" Style="{StaticResource SecondaryButton}"
+                                                VerticalAlignment="Center" Click="OpenConversation_Click"/>
+                                    </Grid>
+                                </Border>
+                                <DataTemplate.Triggers>
+                                    <!-- 안 읽은 대화가 있는 학생 줄은 옅은 파랑으로 칠해 목록에서 바로 보이게 한다 -->
+                                    <DataTrigger Binding="{Binding HasUnread}" Value="True">
+                                        <Setter TargetName="ReadState" Property="FontWeight" Value="Bold"/>
+                                        <Setter TargetName="ReadState" Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                                        <Setter TargetName="Row" Property="Background" Value="#EFF6FF"/>
+                                        <Setter TargetName="Row" Property="BorderBrush" Value="#93C5FD"/>
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+                <!-- 문구는 상황에 따라 코드가 정한다(UpdateConversationEmpty) -->
+                <TextBlock x:Name="ConversationEmpty" Style="{StaticResource Caption}" TextWrapping="Wrap"/>
             </StackPanel>
 
             <!-- ── 오른쪽: 공지 내역 / 1:1 대화 ── 대화를 열면 공지 내역 자리를 대화가 차지한다 -->
