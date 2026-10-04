@@ -71,17 +71,17 @@
                     </GridViewColumn>
                     <GridViewColumn Header="답안 수집" Width="150">
                         <GridViewColumn.CellTemplate>
-                            <DataTemplate><TextBlock Text="{Binding CollectText}" Style="{StaticResource Cell}"/></DataTemplate>
+                            <DataTemplate><TextBlock Text="{Binding CollectText}" Style="{StaticResource CellStatus}"/></DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
                     <GridViewColumn Header="흔적 삭제" Width="150">
                         <GridViewColumn.CellTemplate>
-                            <DataTemplate><TextBlock Text="{Binding CleanupText}" Style="{StaticResource Cell}"/></DataTemplate>
+                            <DataTemplate><TextBlock Text="{Binding CleanupText}" Style="{StaticResource CellStatus}"/></DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
                     <GridViewColumn Header="비고" Width="180">
                         <GridViewColumn.CellTemplate>
-                            <DataTemplate><TextBlock Text="{Binding Status}" Style="{StaticResource Cell}"/></DataTemplate>
+                            <DataTemplate><TextBlock Text="{Binding Status}" Style="{StaticResource CellStatus}"/></DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
                 </GridView>

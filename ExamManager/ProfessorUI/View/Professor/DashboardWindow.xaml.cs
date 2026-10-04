@@ -111,6 +111,11 @@ namespace ProfessorUI.View.Professor
             MainWindow.From(this)?.Navigate(new AlertAndChat(tab), 4);
         }
 
+        // 학생이 언제 들어오고 다시 들어왔는지 쌓아 둔 기록을 띄운다.
+        // 현황 화면을 보면서 같이 띄워 둘 수 있게 따로 뜨는 창이다.
+        private void OpenConnectionLog_Click(object sender, RoutedEventArgs e)
+            => ConnectionLogWindow.ShowSingle(Window.GetWindow(this));
+
         // 강의실 큰 모니터에 올려 둘 현황판을 띄운다.
         // 교수 창과 별개로 떠서 다른 모니터로 옮길 수 있다.
         private void OpenMonitorBoard_Click(object sender, RoutedEventArgs e)

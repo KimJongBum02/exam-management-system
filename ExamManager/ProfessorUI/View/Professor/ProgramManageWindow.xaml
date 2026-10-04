@@ -81,7 +81,7 @@
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                                 <Button Content="기본값 복원" Style="{StaticResource LinkButton}"
                                         Margin="0,0,12,0" Command="{Binding BlackList.RestoreDefaultsCommand}"/>
-                                <Button Content="전체 삭제" Style="{StaticResource LinkButton}"
+                                <Button Content="전체 삭제" Style="{StaticResource DangerLink}"
                                         Command="{Binding BlackList.ClearAllCommand}"/>
                             </StackPanel>
                         </Grid>
@@ -134,7 +134,7 @@
                                 <TextBlock Text="{Binding WhiteList.WhiteList.Count}" Style="{StaticResource Caption}"
                                            VerticalAlignment="Center"/>
                             </StackPanel>
-                            <Button Content="전체 삭제" Style="{StaticResource LinkButton}"
+                            <Button Content="전체 삭제" Style="{StaticResource DangerLink}"
                                     HorizontalAlignment="Right" VerticalAlignment="Center"
                                     Command="{Binding WhiteList.ClearAllCommand}"/>
                         </Grid>

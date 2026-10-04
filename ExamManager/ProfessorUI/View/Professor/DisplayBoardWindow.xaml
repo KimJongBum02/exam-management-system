@@ -4,7 +4,8 @@
         Title="시험 현황판" Height="720" Width="1180"
         MinHeight="360" MinWidth="600"
         WindowStartupLocation="CenterScreen"
-        Background="#FFFFFF">
+        Background="#FFFFFF"
+        Style="{DynamicResource AppWindow}">
 
     <Window.Resources>
         <ResourceDictionary>

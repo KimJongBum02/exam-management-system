@@ -95,6 +95,9 @@ namespace ProfessorUI.View.Professor
             // 스크롤할 것이 없는 목록·입력칸 위에서 굴린 휠이 삼켜져도 전체 화면은 내려가게 한다.
             // 이미 처리된 휠까지 받아야 하므로 handledEventsToo 로 단다.
             PageScroll.AddHandler(MouseWheelEvent, new MouseWheelEventHandler(OnPageWheel), true);
+
+            StateChanged += (_, _) => UpdateMaxButton();
+            UpdateMaxButton();
         }
 
         // 휠 한 칸에 움직일 거리. WPF 기본값(세 줄)과 비슷하게 맞춘다.
@@ -165,6 +168,22 @@ namespace ProfessorUI.View.Professor
         }
 
         // 종료 버튼 클릭 시 예외 사항 사전에 미리 방지하고 종료
+        // 제목줄의 최대화 단추. 최대화돼 있으면 이전 크기로 되돌린다.
+        private void MaxRestore_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+            UpdateMaxButton();
+        }
+
+        // 창 모서리를 끌거나 더블클릭해도 상태가 바뀌므로 단추 모양은 창 상태를 보고 맞춘다.
+        private void UpdateMaxButton()
+        {
+            bool maximized = WindowState == WindowState.Maximized;
+            MaxButton.Content = maximized ? "" : "";
+            MaxButton.ToolTip = maximized ? "이전 크기로" : "최대화";
+            System.Windows.Automation.AutomationProperties.SetName(MaxButton, maximized ? "이전 크기로" : "최대화");
+        }
+
         private void ExitButton_Click(object sender, RoutedEventArgs e)
         {
             if (_ctx.FileReady.IsProcessing)

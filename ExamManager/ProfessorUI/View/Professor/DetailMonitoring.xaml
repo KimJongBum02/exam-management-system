@@ -5,7 +5,8 @@
         Width="920" Height="620"
         MinWidth="640" MinHeight="440"
         WindowStartupLocation="CenterOwner"
-        Background="#1A1D21">
+        Background="#1A1D21"
+        Style="{DynamicResource AppWindow}">
 
     <Window.Resources>
         <ResourceDictionary>
@@ -30,7 +31,8 @@
                 <TextBlock x:Name="UpdatedText" FontSize="{StaticResource FontSmall}"
                            Foreground="#B4BBC4" Margin="0,4,0,0"/>
             </StackPanel>
-            <Button Content="✕  닫기" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Right"
+            <!-- 이 화면은 바탕이 어두워 테두리형(보조) 버튼이 묻힌다. 채움형을 쓴다 -->
+            <Button Content="✕  닫기" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Right"
                     Click="Close_Click"/>
         </Grid>
 

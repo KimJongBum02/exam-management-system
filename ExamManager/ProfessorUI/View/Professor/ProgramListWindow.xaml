@@ -5,7 +5,8 @@
         Title="목록" Height="520" Width="520"
         MinHeight="320" MinWidth="380"
         WindowStartupLocation="CenterOwner"
-        Background="#FFFFFF">
+        Background="#FFFFFF"
+        Style="{DynamicResource AppWindow}">
 
     <Window.Resources>
         <ResourceDictionary>
@@ -39,7 +40,7 @@
                     <GridViewColumn Header="관리" Width="90">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
-                                <Button Content="삭제" Style="{StaticResource CellLink}"
+                                <Button Content="삭제" Style="{StaticResource CellDangerLink}"
                                         CommandParameter="{Binding}"
                                         Command="{Binding RemoveCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
                             </DataTemplate>
