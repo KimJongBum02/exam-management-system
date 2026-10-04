@@ -31,6 +31,14 @@ namespace ProfessorUI.ViewModel
             set { _lastUpdated = value; OnPropertyChanged(); }
         }
 
+        private bool _isKeyboardLocked;
+        /// <summary>현재 교수에 의해 키보드가 잠긴 상태인지 여부</summary>
+        public bool IsKeyboardLocked
+        {
+            get => _isKeyboardLocked;
+            set { _isKeyboardLocked = value; OnPropertyChanged(); }
+        }
+
         public StudentScreenViewModel(string sessionId, string studentId, string studentName)
         {
             SessionId   = sessionId;

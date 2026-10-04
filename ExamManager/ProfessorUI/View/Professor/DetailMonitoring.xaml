@@ -30,8 +30,20 @@
                 <TextBlock x:Name="UpdatedText" FontSize="{StaticResource FontSmall}"
                            Foreground="#B4BBC4" Margin="0,4,0,0"/>
             </StackPanel>
-            <Button Content="✕  닫기" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Right"
-                    Click="Close_Click"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Button x:Name="KeyboardLockButton" Content="🔒  키보드 잠금"
+                        Click="KeyboardLock_Click" Margin="0,0,10,0"
+                        Padding="14,6" FontSize="{StaticResource FontSmall}" FontWeight="SemiBold"
+                        Cursor="Hand" Background="#334155" Foreground="#F1F5F9" BorderThickness="0">
+                    <Button.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="6"/>
+                        </Style>
+                    </Button.Resources>
+                </Button>
+                <Button Content="✕  닫기" Style="{StaticResource SecondaryButton}"
+                        Click="Close_Click"/>
+            </StackPanel>
         </Grid>
 
         <!-- ── 화면 이미지 ── -->
