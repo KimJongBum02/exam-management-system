@@ -60,6 +60,14 @@ namespace ProfessorUI.View.Professor
             {
                 Dispatcher.Invoke(UpdateKeyboardLockButton);
             }
+            else if (e.PropertyName == nameof(StudentScreenViewModel.IsConnected))
+            {
+                // 명단 학생의 칸은 끊겨도 남아 있다가 다시 접속하면 같은 칸에 붙는다(ScreenBoardViewModel).
+                // 이 창을 열어 둔 채 다시 들어왔으면 고화질을 다시 요청한다. 새 접속은 기본 화질로 시작한다.
+                if (_item.IsConnected)
+                    NetworkService.Instance.SendToSession(_item.SessionId, PacketType.ScreenQualityMode, new byte[] { 1 });
+                Dispatcher.Invoke(UpdateKeyboardLockButton);
+            }
         }
 
         private void KeyboardLock_Click(object sender, RoutedEventArgs e)
@@ -76,6 +84,9 @@ namespace ProfessorUI.View.Professor
 
         private void UpdateKeyboardLockButton()
         {
+            // 접속이 끊긴 학생(명단 학생의 빈 칸)에게는 잠금을 보낼 곳이 없다. 눌러도 표시만 바뀌므로 막아 둔다.
+            KeyboardLockButton.IsEnabled = _item.IsConnected;
+
             if (_item.IsKeyboardLocked)
             {
                 KeyboardLockButton.Content = "🔒  키보드 잠김 (해제하려면 클릭)";

@@ -7,6 +7,7 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/ProfessorUI;component/View/Professor/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+            <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
             <!-- 학생 칸의 말풍선. 누르면 그 학생과의 1:1 대화가 바로 열린다 -->
             <Style x:Key="ChatBubble" TargetType="Button">
@@ -33,6 +34,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -45,6 +47,9 @@
                         VerticalAlignment="Center" Click="OpenConnectionLog_Click"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <!-- 학교 포털에서 받은 수강생 명단(엑셀). 불러오면 명단 순서대로 칸이 미리 깔린다 -->
+                <Button Content="명단 불러오기" Style="{StaticResource SecondaryButton}"
+                        Margin="0,0,10,0" Click="LoadRoster_Click"/>
                 <Button Content="강의실 현황판 열기" Style="{StaticResource SecondaryButton}"
                         Margin="0,0,10,0" Click="OpenMonitorBoard_Click"/>
                 <Button Content="시험 준비 화면으로 이동" Style="{StaticResource PrimaryButton}"
@@ -52,10 +57,15 @@
             </StackPanel>
         </Grid>
 
+        <!-- 명단을 불러왔을 때만 보인다. 몇 명이 빠졌고 잘못 들어온 학생이 있는지 칸을 세지 않고 본다 -->
+        <TextBlock Grid.Row="1" Text="{Binding Board.RosterSummaryText}" Style="{StaticResource Caption}"
+                   Margin="0,-6,0,16" TextWrapping="Wrap"
+                   Visibility="{Binding Board.HasRoster, Converter={StaticResource BoolToVis}}"/>
+
         <!-- 한 명이 한 칸. 강의실을 훑듯이 훑어 누가 빠졌는지 바로 찾는다.
              Top 으로 붙이지 않으면 UniformGrid 가 남는 세로 공간을 행마다 나눠 가져
              학생이 적을 때 칸이 우스꽝스럽게 길어진다. -->
-        <ItemsControl Grid.Row="1" x:Name="StudentCards" VerticalAlignment="Top">
+        <ItemsControl Grid.Row="2" x:Name="StudentCards" VerticalAlignment="Top">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
                     <UniformGrid Columns="5"/>
@@ -63,7 +73,9 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Border x:Name="CardBox" Style="{StaticResource StudentCard}">
+                    <!-- 기본은 접속한 학생의 초록 칸이다. 아래 트리거가 미접속(빨강)·명단과 다름(주황 테두리)으로 바꾼다 -->
+                    <Border x:Name="CardBox" Style="{StaticResource StudentCard}"
+                            Background="{StaticResource GoodSoft}" BorderBrush="{StaticResource GoodBorder}">
                         <Grid>
                             <StackPanel Margin="0,0,26,0">
                                 <TextBlock x:Name="IdText" Text="{Binding StudentId}" Style="{StaticResource StudentCardId}"/>
@@ -77,21 +89,33 @@
                                     <TextBlock x:Name="BadgeText" Text="{Binding ConnectionText}" FontSize="{StaticResource FontMini}"
                                                FontWeight="Bold" Foreground="White"/>
                                 </Border>
+                                <!-- 명단과 다르게 들어왔으면 상태 대신 그 이유를 적는다. 줄을 늘리면 모든 칸이 같이 길어진다 -->
                                 <TextBlock x:Name="StatusText" Text="{Binding Status}" Style="{StaticResource CaptionStatus}"
                                            TextTrimming="CharacterEllipsis"/>
                             </StackPanel>
+                            <!-- 접속한 적이 없는 명단 학생에게는 보낼 곳이 없어 숨긴다 -->
                             <Button Style="{StaticResource ChatBubble}" Click="Chat_Click"
-                                    HorizontalAlignment="Right" VerticalAlignment="Top"/>
+                                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                                    Visibility="{Binding HasStudent, Converter={StaticResource BoolToVis}}"/>
                         </Grid>
                     </Border>
 
                     <DataTemplate.Triggers>
-                        <!-- 미접속이면 칸 전체를 흐리게 해 접속한 학생 사이에서 눈에 띄게 한다 -->
+                        <!-- 미접속(명단에만 있거나 연결이 끊김)이면 빨강. 접속한 학생 사이에서 빠진 자리가 바로 보인다 -->
                         <DataTrigger Binding="{Binding IsConnected}" Value="False">
-                            <Setter TargetName="CardBox" Property="Background" Value="{StaticResource BgSubtle}"/>
-                            <Setter TargetName="NameText" Property="Foreground" Value="{StaticResource TextMuted}"/>
-                            <Setter TargetName="Badge" Property="Background" Value="{StaticResource Placeholder}"/>
-                            <Setter TargetName="BadgeText" Property="Foreground" Value="{StaticResource TextSecondary}"/>
+                            <Setter TargetName="CardBox" Property="Background" Value="{StaticResource AlertSoft}"/>
+                            <Setter TargetName="CardBox" Property="BorderBrush" Value="{StaticResource AlertBorder}"/>
+                            <Setter TargetName="Badge" Property="Background" Value="{StaticResource AlertRed}"/>
+                        </DataTrigger>
+                        <!-- 명단에 없는 학번이거나 이름이 명단과 다르면 주황 테두리와 경고 줄. 다시 로그인하게 한다.
+                             경고는 … 으로 잘리면 뜻을 잃어 좁은 창(1180)에서는 두 줄로 넘긴다 -->
+                        <DataTrigger Binding="{Binding HasWarning}" Value="True">
+                            <Setter TargetName="CardBox" Property="BorderBrush" Value="{StaticResource WarnBorder}"/>
+                            <Setter TargetName="CardBox" Property="BorderThickness" Value="2"/>
+                            <Setter TargetName="StatusText" Property="Text" Value="{Binding WarningText}"/>
+                            <Setter TargetName="StatusText" Property="Foreground" Value="{StaticResource WarnText}"/>
+                            <Setter TargetName="StatusText" Property="FontWeight" Value="Bold"/>
+                            <Setter TargetName="StatusText" Property="TextWrapping" Value="Wrap"/>
                         </DataTrigger>
                     </DataTemplate.Triggers>
                 </DataTemplate>
@@ -99,8 +123,8 @@
         </ItemsControl>
 
         <!-- 학생이 한 명도 붙지 않았을 때. 빈 화면만 두면 고장인지 대기인지 알 수 없다 -->
-        <TextBlock Grid.Row="1" x:Name="EmptyNote" Style="{StaticResource Caption}"
+        <TextBlock Grid.Row="2" x:Name="EmptyNote" Style="{StaticResource Caption}"
                    HorizontalAlignment="Center" Margin="0,60,0,0" Visibility="Collapsed"
-                   Text="아직 접속한 학생이 없습니다. 학생이 접속하면 이 자리에 한 명씩 나타납니다."/>
+                   Text="아직 접속한 학생이 없습니다. 학생이 접속하면 이 자리에 한 명씩 나타나고, [명단 불러오기]로 수강생 칸을 미리 깔 수도 있습니다."/>
     </Grid>
 </UserControl>

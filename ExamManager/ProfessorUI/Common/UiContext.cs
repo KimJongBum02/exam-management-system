@@ -33,5 +33,8 @@ namespace ProfessorUI.Common
 
         // 시험 로그 표. 학생 목록과 경고 목록을 학번으로 이어 붙여 들고 있다.
         public ExamLogViewModel ExamLog { get; } = new();
+
+        // 대시보드 학생 칸. 수강생 명단과 접속한 학생을 학번으로 이어 붙여 들고 있다.
+        public StudentBoardViewModel Board { get; } = new();
     }
 }
