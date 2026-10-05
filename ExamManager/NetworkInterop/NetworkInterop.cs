@@ -37,6 +37,7 @@ namespace NetworkLib
         ForceProcessKill        = 41,
         MonitorStatusReport     = 43,   // 학생 → 교수. 감시가 실제로 켜졌는지
         InstalledProgramsReport = 44,   // 학생 → 교수. 학생 PC 에 설치된 프로그램 목록
+        LockKeyboard            = 45,   // 교수 → 특정 학생. payload = 1 byte (1=잠금, 0=해제)
         QuizQuestion            = 50,
         QuizAnswer              = 51,
 
@@ -47,6 +48,7 @@ namespace NetworkLib
 
         // 화면 모니터링
         ScreenCapture           = 70,  // 학생 → 교수, payload = JPEG 바이너리
+        ScreenQualityMode       = 71,  // 교수 → 특정 학생, payload = 1 byte (0=기본 320x180, 1=고화질 1920x1080)
 
         CommandAck              = 100,
     }

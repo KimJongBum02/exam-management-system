@@ -19,17 +19,25 @@ namespace StudentUI.Service
         public static ScreenCaptureService Instance { get; } = new();
 
         // ── 설정 ─────────────────────────────────────────────────────────────
+        public const int NormalWidth   = 320;
+        public const int NormalHeight  = 180;
+        public const int NormalQuality = 60;
+
+        public const int HighWidth   = 1920;
+        public const int HighHeight  = 1080;
+        public const int HighQuality = 80;
+
         /// <summary>캡처 주기 (초). 기본 2초.</summary>
         public double IntervalSeconds { get; set; } = 2.0;
 
-        /// <summary>전송할 썸네일 가로 픽셀. 기본 1280.</summary>
-        public int ThumbWidth  { get; set; } = 1280;
+        /// <summary>전송할 가로 픽셀. 기본 320.</summary>
+        public int ThumbWidth  { get; set; } = NormalWidth;
 
-        /// <summary>전송할 썸네일 세로 픽셀. 기본 720.</summary>
-        public int ThumbHeight { get; set; } = 720;
+        /// <summary>전송할 세로 픽셀. 기본 180.</summary>
+        public int ThumbHeight { get; set; } = NormalHeight;
 
-        /// <summary>JPEG 품질 (1~100). 기본 80.</summary>
-        public int JpegQuality { get; set; } = 80;
+        /// <summary>JPEG 품질 (1~100). 기본 60.</summary>
+        public int JpegQuality { get; set; } = NormalQuality;
 
         // ── 내부 ─────────────────────────────────────────────────────────────
         private DispatcherTimer? _timer;
@@ -61,6 +69,8 @@ namespace StudentUI.Service
             if (_running) return;
             _running = true;
 
+            NetworkService.Instance.PacketReceived += OnPacketReceived;
+
             _timer = new DispatcherTimer
             {
                 Interval = TimeSpan.FromSeconds(IntervalSeconds)
@@ -73,8 +83,39 @@ namespace StudentUI.Service
         public void Stop()
         {
             _running = false;
+            NetworkService.Instance.PacketReceived -= OnPacketReceived;
             _timer?.Stop();
             _timer = null;
+
+            // 정지 시 기본 썸네일 해상도로 복원
+            SetQualityMode(false);
+        }
+
+        private void OnPacketReceived(PacketType type, IntPtr payload, uint payloadLen)
+        {
+            if (type == PacketType.ScreenQualityMode && payloadLen >= 1)
+            {
+                byte mode = Marshal.ReadByte(payload);
+                SetQualityMode(mode > 0);
+            }
+        }
+
+        /// <summary>교수의 상세 화면 요청 여부에 따라 해상도 및 화질을 동적으로 전환합니다.</summary>
+        public void SetQualityMode(bool highQuality)
+        {
+            if (highQuality)
+            {
+                ThumbWidth  = HighWidth;
+                ThumbHeight = HighHeight;
+                JpegQuality = HighQuality;
+                CaptureAndSend(); // 교수가 창을 열었을 때 바로 고화질 프레임 1회 즉시 전송
+            }
+            else
+            {
+                ThumbWidth  = NormalWidth;
+                ThumbHeight = NormalHeight;
+                JpegQuality = NormalQuality;
+            }
         }
 
         // ── 핵심 로직 ─────────────────────────────────────────────────────────

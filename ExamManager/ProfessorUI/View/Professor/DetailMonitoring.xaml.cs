@@ -1,5 +1,8 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Media;
+using NetworkLib;
+using ProfessorUI.Service;
 using ProfessorUI.ViewModel;
 
 namespace ProfessorUI.View.Professor
@@ -25,22 +28,66 @@ namespace ProfessorUI.View.Professor
             else
                 WaitingText.Visibility = Visibility.Collapsed;
 
-            // 새 화면이 들어올 때마다 자동 갱신
+            UpdateKeyboardLockButton();
+
+            // 1. 해당 학생에게만 고화질(1920x1080 FHD) 화면 캡처 전송 요청
+            NetworkService.Instance.SendToSession(_item.SessionId, PacketType.ScreenQualityMode, new byte[] { 1 });
+
+            // 새 화면 및 상태 변경 자동 갱신
             _item.PropertyChanged += Item_PropertyChanged;
-            Closed += (_, _) => _item.PropertyChanged -= Item_PropertyChanged;
+            Closed += (_, _) =>
+            {
+                _item.PropertyChanged -= Item_PropertyChanged;
+                // 2. 창을 닫을 때 기본 썸네일(320x180) 모드로 복귀 요청
+                NetworkService.Instance.SendToSession(_item.SessionId, PacketType.ScreenQualityMode, new byte[] { 0 });
+            };
         }
 
         private void Item_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName != nameof(StudentScreenViewModel.Screen)) return;
-            Dispatcher.Invoke(() =>
+            if (e.PropertyName == nameof(StudentScreenViewModel.Screen))
             {
-                ScreenImage.Source      = _item.Screen;
-                UpdatedText.Text        = $"마지막 수신: {_item.LastUpdated}";
-                WaitingText.Visibility  = _item.HasScreen ? Visibility.Collapsed : Visibility.Visible;
-                if (_item.Screen != null)
-                    ResolutionText.Text = $"{_item.Screen.PixelWidth} × {_item.Screen.PixelHeight} · JPEG";
-            });
+                Dispatcher.Invoke(() =>
+                {
+                    ScreenImage.Source      = _item.Screen;
+                    UpdatedText.Text        = $"마지막 수신: {_item.LastUpdated}";
+                    WaitingText.Visibility  = _item.HasScreen ? Visibility.Collapsed : Visibility.Visible;
+                    if (_item.Screen != null)
+                        ResolutionText.Text = $"{_item.Screen.PixelWidth} × {_item.Screen.PixelHeight} · JPEG";
+                });
+            }
+            else if (e.PropertyName == nameof(StudentScreenViewModel.IsKeyboardLocked))
+            {
+                Dispatcher.Invoke(UpdateKeyboardLockButton);
+            }
+        }
+
+        private void KeyboardLock_Click(object sender, RoutedEventArgs e)
+        {
+            bool newLockedState = !_item.IsKeyboardLocked;
+            _item.IsKeyboardLocked = newLockedState;
+
+            // 학생에게 키보드 잠금/해제 패킷 전송 (1: 잠금, 0: 해제)
+            byte payload = (byte)(newLockedState ? 1 : 0);
+            NetworkService.Instance.SendToSession(_item.SessionId, PacketType.LockKeyboard, new byte[] { payload });
+
+            UpdateKeyboardLockButton();
+        }
+
+        private void UpdateKeyboardLockButton()
+        {
+            if (_item.IsKeyboardLocked)
+            {
+                KeyboardLockButton.Content = "🔒  키보드 잠김 (해제하려면 클릭)";
+                KeyboardLockButton.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#DC2626"));
+                KeyboardLockButton.Foreground = Brushes.White;
+            }
+            else
+            {
+                KeyboardLockButton.Content = "🔒  키보드 잠금";
+                KeyboardLockButton.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#334155"));
+                KeyboardLockButton.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F1F5F9"));
+            }
         }
 
         private void Close_Click(object sender, RoutedEventArgs e) => Close();
