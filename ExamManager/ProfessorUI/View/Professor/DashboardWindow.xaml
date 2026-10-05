@@ -41,6 +41,8 @@
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <local:BackButton/>
                 <TextBlock Text="실시간 학생 현황" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
+                <Button Content="접속 기록" Style="{StaticResource SecondaryButton}" Margin="14,0,0,0"
+                        VerticalAlignment="Center" Click="OpenConnectionLog_Click"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                 <Button Content="강의실 현황판 열기" Style="{StaticResource SecondaryButton}"
@@ -65,13 +67,17 @@
                         <Grid>
                             <StackPanel Margin="0,0,26,0">
                                 <TextBlock x:Name="IdText" Text="{Binding StudentId}" Style="{StaticResource StudentCardId}"/>
+                                <!-- 마지막으로 접속한 시각. 재접속하면 그때로 바뀐다 -->
+                                <TextBlock x:Name="ConnectedText" Text="{Binding LastConnectedText}"
+                                           Style="{StaticResource Caption}" Margin="0,0,0,6"
+                                           TextTrimming="CharacterEllipsis"/>
                                 <TextBlock x:Name="NameText" Text="{Binding Name}" Style="{StaticResource StudentCardName}"
                                            Margin="0,0,0,10"/>
                                 <Border x:Name="Badge" Style="{StaticResource StudentCardBadge}" Margin="0,0,0,7">
                                     <TextBlock x:Name="BadgeText" Text="{Binding ConnectionText}" FontSize="{StaticResource FontMini}"
                                                FontWeight="Bold" Foreground="White"/>
                                 </Border>
-                                <TextBlock x:Name="StatusText" Text="{Binding Status}" Style="{StaticResource Caption}"
+                                <TextBlock x:Name="StatusText" Text="{Binding Status}" Style="{StaticResource CaptionStatus}"
                                            TextTrimming="CharacterEllipsis"/>
                             </StackPanel>
                             <Button Style="{StaticResource ChatBubble}" Click="Chat_Click"

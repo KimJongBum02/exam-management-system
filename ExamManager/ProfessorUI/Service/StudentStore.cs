@@ -38,6 +38,7 @@ namespace ProfessorUI.Service
                 existing.IsFileReceived = false;
                 existing.DeployStatus = "대기 중";
                 existing.DeployProgress = 0;
+                existing.LastConnectedAt = DateTime.Now;
             }
             else
             {
@@ -48,9 +49,14 @@ namespace ProfessorUI.Service
                     Name = name,
                     Ip = ip,
                     Status = "대기",
-                    IsConnected = true
+                    IsConnected = true,
+                    LastConnectedAt = DateTime.Now
                 });
             }
+
+            // 접속 기록은 따로 쌓는다. 위 목록은 한 학생에 한 줄이라
+            // 다시 접속하면 앞의 접속 시각이 덮여, 몇 번 끊겼다 들어왔는지 알 수 없다.
+            ConnectionLogStore.Instance.Record(studentId, name, ip, isFirst: existing == null);
         }
 
         // 학생 접속 종료: 답안을 냈는지에 따라 다르게 표시한다.

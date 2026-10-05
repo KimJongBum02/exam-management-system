@@ -94,6 +94,23 @@ namespace ProfessorUI.ViewModel
         // 표에 그대로 나갈 접속 상태 문구
         public string ConnectionText => _isConnected ? "접속 중" : "미접속";
 
+        // 마지막으로 접속한 시각. 다시 접속하면 그때로 바뀐다.
+        //
+        // 상태가 바뀔 때마다 찍히는 LastUpdate 와 다르다 — 그쪽은 제출·정리 같은 사건까지 포함해
+        // "언제부터 들어와 있었나"를 알 수 없다. 자리를 찾아가야 할 때 필요한 것은 이쪽이다.
+        private DateTime? _lastConnectedAt;
+        public DateTime? LastConnectedAt
+        {
+            get => _lastConnectedAt;
+            set { _lastConnectedAt = value; OnPropertyChanged(); OnPropertyChanged(nameof(LastConnectedText)); }
+        }
+
+        // 학생 칸에 그대로 나갈 문구. 날짜까지 적는다 —
+        // 시각만 적으면 앞 교시에 들어온 기록인지 방금인지 구분되지 않는다.
+        public string LastConnectedText => _lastConnectedAt is { } at
+                                         ? at.ToString("yyyy-MM-dd HH:mm:ss")
+                                         : "접속 기록 없음";
+
         // ── 학생 PC 에서 감시가 실제로 켜졌는지 ──
         // 학생이 시험 시작 직후 스스로 보고한 값이다.
         // 보고가 오기 전에는 셋 다 기본값이라 "확인 전"으로 보인다.

@@ -1,6 +1,8 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:common="clr-namespace:ProfessorUI.Common"
+                    xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+                    xmlns:conv="clr-namespace:ProfessorUI.Converter"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
     <!-- ── 색상 ── 와이어프레임의 무채색 팔레트를 그대로 옮긴 값 -->
@@ -15,11 +17,30 @@
     <SolidColorBrush x:Key="TextPrimary"   Color="#1F2328"/>
     <SolidColorBrush x:Key="TextSecondary" Color="#3F4651"/>
     <SolidColorBrush x:Key="TextMuted"     Color="#5A626D"/>
-    <SolidColorBrush x:Key="BtnDark"       Color="#2A2D31"/>
-    <SolidColorBrush x:Key="BtnDarkHover"  Color="#3D4147"/>
+    <SolidColorBrush x:Key="BtnDark"       Color="#18181B"/>
+    <SolidColorBrush x:Key="BtnDarkHover"  Color="#2E2E33"/>
+
+    <!-- 교표 청록. 지금 눌러야 할 버튼 하나에만 쓴다 — 아무 데나 칠하면 강조가 사라진다.
+         교표 원색(BrandTeal)은 흰 글씨 대비가 2.73:1 뿐이라 글씨를 얹지 못한다.
+         그래서 글씨 없는 자리(로고 옆 띠)에만 쓰고, 버튼 바탕은 같은 색조를 어둡게 내린 값을 쓴다. -->
+    <SolidColorBrush x:Key="BrandTeal"     Color="#1AB18B"/>
+
+    <!-- 학생 프로그램이 쓰는 파랑을 그대로 가져왔다. 두 화면을 나란히 놓아도 따로 놀지 않는다. -->
+    <SolidColorBrush x:Key="BtnPrimary"        Color="#1A56DB"/>   <!-- 흰 글씨 6.18:1 (AA) -->
+    <SolidColorBrush x:Key="BtnPrimaryHover"   Color="#1D4ED8"/>
+    <SolidColorBrush x:Key="BtnPrimaryPressed" Color="#1E40AF"/>
+    <!-- 끝난 일에 입히는 글씨색 (수집 완료·배포 완료·압축 완료). 학생 쪽 상태 글씨와 같은 값 -->
+    <SolidColorBrush x:Key="DoneBlue"          Color="#1D4ED8"/>   <!-- 흰 바탕 6.70:1 (AA) -->
+
+    <!-- 눌리지 않는 버튼. 예전 값(TextMuted)은 너무 진해 눌러도 되는 줄 알기 쉬웠다. -->
+    <SolidColorBrush x:Key="BtnDisabled"   Color="#C8CCD2"/>
     <SolidColorBrush x:Key="Placeholder"   Color="#E4E5E7"/>
     <!-- 보안 경고. 미확인 글씨는 AlertRed, 경고를 담는 칸은 연붉은 AlertSoft 다 -->
     <SolidColorBrush x:Key="AlertRed"      Color="#C02020"/>
+    <!-- 지우는 링크처럼 작은 글씨로 위험을 알릴 때. AlertRed 보다 진해 작게 써도 읽힌다 (7.77:1) -->
+    <SolidColorBrush x:Key="AlertStrong"   Color="#A31818"/>
+
+    <conv:DoneTextConverter x:Key="DoneText"/>
     <SolidColorBrush x:Key="AlertSoft"     Color="#FCE6E6"/>
 
     <!-- ── 글자 크기 ──
@@ -86,27 +107,32 @@
     <!-- ── 버튼 ──
          모든 버튼은 크기·글자 크기·굵기가 같다. 화면마다 따로 키우거나 줄이지 않는다.
          옆 칸(입력칸 등)이 더 높아도 늘어나지 않도록 세로는 가운데에 둔다. -->
+    <!-- 주요 버튼 — 그 화면에서 지금 해야 할 일 하나에만 쓴다.
+         글자 크기·여백·모서리는 학생 프로그램 버튼과 같은 값으로 맞췄다. -->
     <Style x:Key="PrimaryButton" TargetType="Button">
-        <Setter Property="Background" Value="{StaticResource BtnDark}"/>
+        <Setter Property="Background" Value="{StaticResource BtnPrimary}"/>
         <Setter Property="Foreground" Value="White"/>
-        <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
+        <Setter Property="FontSize" Value="13"/>
         <Setter Property="FontWeight" Value="Bold"/>
-        <Setter Property="Padding" Value="16,9"/>
+        <Setter Property="Padding" Value="18,10"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6"
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="8"
                             Padding="{TemplateBinding Padding}">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BtnDarkHover}"/>
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BtnPrimaryHover}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BtnPrimaryPressed}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource TextMuted}"/>
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BtnDisabled}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -114,8 +140,32 @@
         </Setter>
     </Style>
 
-    <!-- 보조 버튼은 이제 주요 버튼과 모양이 같다. 여러 화면이 이 이름을 쓰고 있어 이름만 남겨 둔다. -->
-    <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}"/>
+    <!-- 보조 버튼 — 거드는 동작. 학생 프로그램의 검은 버튼과 같은 모양이다.
+         주요 버튼(파랑)과는 색으로 무게를 가른다 — 파랑은 지금 해야 할 일 하나,
+         검정은 그 밖의 누를 것. 올렸을 때 옅어지는 것도 학생 쪽과 같은 방식이다. -->
+    <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+        <Setter Property="Background" Value="{StaticResource BtnDark}"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="8"
+                            Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BtnDisabled}"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 
     <!-- 본문 안의 밑줄 링크 (브레드크럼, "전체 경고 내역 보기" 등) -->
     <Style x:Key="LinkButton" TargetType="Button">
@@ -442,8 +492,44 @@
         <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
     </Style>
 
+    <!-- 지우는 링크. 되돌릴 수 없는 동작이라 보기만 하는 링크와 색으로 갈라 둔다.
+         밑줄은 그대로 둔다 — 색만으로 가르면 색을 못 가리는 사람이 알아채지 못한다.
+         강조색(청록)은 '지금 눌러야 할 버튼' 몫으로 남겨 두고, 링크에는 위험 신호만 넣는다. -->
+    <Style x:Key="DangerLink" TargetType="Button" BasedOn="{StaticResource LinkButton}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <TextBlock x:Name="Txt" Text="{TemplateBinding Content}" FontSize="{StaticResource FontBody}"
+                               Foreground="{StaticResource AlertStrong}"
+                               TextDecorations="Underline"/>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Txt" Property="Foreground" Value="{StaticResource AlertRed}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 끝난 일만 파랗게. 같은 열에 '완료'와 '미수집'이 섞이므로 글자를 보고 고른다 -->
+    <Style x:Key="CellStatus" TargetType="TextBlock" BasedOn="{StaticResource Cell}">
+        <Setter Property="Foreground"
+                Value="{Binding Text, RelativeSource={RelativeSource Self}, Converter={StaticResource DoneText}}"/>
+    </Style>
+
+    <Style x:Key="CaptionStatus" TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+        <Setter Property="Foreground"
+                Value="{Binding Text, RelativeSource={RelativeSource Self}, Converter={StaticResource DoneText}}"/>
+    </Style>
+
     <!-- 표 안의 링크(삭제 · 재배포 등) -->
     <Style x:Key="CellLink" TargetType="Button" BasedOn="{StaticResource LinkButton}">
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="CellDangerLink" TargetType="Button" BasedOn="{StaticResource DangerLink}">
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
@@ -480,6 +566,129 @@
         <Setter Property="Padding" Value="8,3"/>
         <Setter Property="HorizontalAlignment" Value="Left"/>
         <Setter Property="Background" Value="{StaticResource BtnDark}"/>
+    </Style>
+
+    <!-- ══ 창 제목줄 ══
+         윈도가 그려 주던 제목줄을 우리가 직접 그린다.
+         WindowChrome 은 그림만 넘겨받는 것이라 크기 조절·화면 가장자리에 붙이기·
+         더블클릭 최대화 같은 창 동작은 전부 그대로 남는다.
+
+         제목줄 안에 둔 누를 것에는 반드시 shell:WindowChrome.IsHitTestVisibleInChrome="True" 를 준다 —
+         없으면 그 자리가 '끌어서 창 옮기기' 영역이라 눌림이 먹히지 않는다. -->
+
+    <!-- 글리프는 윈도 기본 글꼴(Segoe MDL2 Assets)의 최소화·최대화·복원·닫기 기호다 -->
+    <Style x:Key="CaptionButton" TargetType="Button">
+        <Setter Property="Width" Value="46"/>
+        <Setter Property="Height" Value="40"/>
+        <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+        <!-- 이 기호 글꼴은 굵기가 한 가지라 FontWeight 가 먹지 않는다.
+             획을 두껍게 하려면 글자를 조금 키우는 수밖에 없다 -->
+        <Setter Property="FontSize" Value="11.5"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="Transparent">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgHeader}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 닫기만 빨갛게 반응한다. 잘못 누르면 되돌릴 수 없어 다른 둘과 구분해 둔다 -->
+    <Style x:Key="CaptionCloseButton" TargetType="Button" BasedOn="{StaticResource CaptionButton}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="Transparent">
+                        <ContentPresenter x:Name="Mark" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AlertRed}"/>
+                            <Setter Property="Foreground" Value="White"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 스스로 상단바를 가진 주 창(MainWindow)을 뺀 나머지 창이 쓴다.
+         창 쪽에서는 Style="{DynamicResource AppWindow}" 한 줄만 주면 된다.
+         (StaticResource 는 Window.Resources 보다 먼저 읽혀 찾지 못한다) -->
+    <Style x:Key="AppWindow" TargetType="Window">
+        <Setter Property="common:AppChrome.Managed" Value="True"/>
+        <Setter Property="shell:WindowChrome.WindowChrome">
+            <Setter.Value>
+                <shell:WindowChrome CaptionHeight="40" ResizeBorderThickness="6"
+                                    CornerRadius="0" GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Window">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{StaticResource BorderLight}" BorderThickness="1">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="40"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0" Background="White">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                                    <Image Source="/Assets/YUHAN.ico" Width="18" Height="18" Margin="0,0,9,0"/>
+                                    <TextBlock Text="{TemplateBinding Title}" FontSize="{StaticResource FontSmall}"
+                                               Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- 최대화한 창은 테두리 두께만큼 화면 밖으로 나가 있다.
+                                     가장자리에 딱 붙이면 그만큼 잘리므로 조금 떼어 둔다 -->
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,8,0"
+                                            shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                                    <Button x:Name="MinButton" Style="{StaticResource CaptionButton}" Content="&#xE921;"
+                                            ToolTip="최소화" AutomationProperties.Name="최소화"
+                                            Command="{x:Static SystemCommands.MinimizeWindowCommand}"/>
+                                    <Button x:Name="MaxButton" Style="{StaticResource CaptionButton}" Content="&#xE922;"
+                                            ToolTip="최대화" AutomationProperties.Name="최대화"
+                                            Command="{x:Static SystemCommands.MaximizeWindowCommand}"/>
+                                    <Button Style="{StaticResource CaptionCloseButton}" Content="&#xE8BB;"
+                                            ToolTip="닫기" AutomationProperties.Name="닫기"
+                                            Command="{x:Static SystemCommands.CloseWindowCommand}"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- 풍선 도움말·입력 오류 표시가 뜨려면 AdornerDecorator 가 있어야 한다 -->
+                            <AdornerDecorator Grid.Row="1">
+                                <ContentPresenter/>
+                            </AdornerDecorator>
+                        </Grid>
+                    </Border>
+
+                    <ControlTemplate.Triggers>
+                        <!-- 최대화된 창은 같은 버튼이 '이전 크기로'가 된다 -->
+                        <Trigger Property="WindowState" Value="Maximized">
+                            <Setter TargetName="MaxButton" Property="Content" Value="&#xE923;"/>
+                            <Setter TargetName="MaxButton" Property="ToolTip" Value="이전 크기로"/>
+                            <Setter TargetName="MaxButton" Property="AutomationProperties.Name" Value="이전 크기로"/>
+                            <Setter TargetName="MaxButton" Property="Command"
+                                    Value="{x:Static SystemCommands.RestoreWindowCommand}"/>
+                        </Trigger>
+                        <!-- 크기를 바꿀 수 없는 창에는 최대화 버튼을 두지 않는다 -->
+                        <Trigger Property="ResizeMode" Value="NoResize">
+                            <Setter TargetName="MaxButton" Property="Visibility" Value="Collapsed"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
 </ResourceDictionary>
