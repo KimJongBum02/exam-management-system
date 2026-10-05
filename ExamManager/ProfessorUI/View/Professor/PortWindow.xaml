@@ -5,7 +5,8 @@
         Background="#FFFFFF"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
-        WindowStartupLocation="CenterOwner">
+        WindowStartupLocation="CenterOwner"
+        Style="{DynamicResource AppWindow}">
 
     <Window.Resources>
         <ResourceDictionary>

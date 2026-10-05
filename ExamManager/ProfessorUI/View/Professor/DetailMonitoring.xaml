@@ -5,7 +5,8 @@
         Width="920" Height="620"
         MinWidth="640" MinHeight="440"
         WindowStartupLocation="CenterOwner"
-        Background="#1A1D21">
+        Background="#1A1D21"
+        Style="{DynamicResource AppWindow}">
 
     <Window.Resources>
         <ResourceDictionary>
@@ -30,6 +31,7 @@
                 <TextBlock x:Name="UpdatedText" FontSize="{StaticResource FontSmall}"
                            Foreground="#B4BBC4" Margin="0,4,0,0"/>
             </StackPanel>
+            <!-- 이 화면은 바탕이 어두워 테두리형(보조) 버튼이 묻힌다. 닫기는 채움형을 쓴다 -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                 <Button x:Name="KeyboardLockButton" Content="🔒  키보드 잠금"
                         Click="KeyboardLock_Click" Margin="0,0,10,0"
@@ -41,7 +43,7 @@
                         </Style>
                     </Button.Resources>
                 </Button>
-                <Button Content="✕  닫기" Style="{StaticResource SecondaryButton}"
+                <Button Content="✕  닫기" Style="{StaticResource PrimaryButton}"
                         Click="Close_Click"/>
             </StackPanel>
         </Grid>

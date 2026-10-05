@@ -253,7 +253,7 @@
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                                     <Button Content="기본값 복원" Style="{StaticResource LinkButton}"
                                             Margin="0,0,12,0" Command="{Binding BlackList.RestoreDefaultsCommand}"/>
-                                    <Button Content="전체 삭제" Style="{StaticResource LinkButton}"
+                                    <Button Content="전체 삭제" Style="{StaticResource DangerLink}"
                                             Command="{Binding BlackList.ClearAllCommand}"/>
                                 </StackPanel>
                             </Grid>
@@ -290,7 +290,7 @@
                                     <TextBlock Text="{Binding WhiteList.WhiteList.Count}" Style="{StaticResource Caption}"
                                                VerticalAlignment="Center"/>
                                 </StackPanel>
-                                <Button Content="전체 삭제" Style="{StaticResource LinkButton}"
+                                <Button Content="전체 삭제" Style="{StaticResource DangerLink}"
                                         HorizontalAlignment="Right" VerticalAlignment="Center"
                                         Command="{Binding WhiteList.ClearAllCommand}"/>
                             </Grid>
@@ -439,7 +439,7 @@
                                 </GridViewColumn>
                                 <GridViewColumn Header="전송 상태" Width="140">
                                     <GridViewColumn.CellTemplate>
-                                        <DataTemplate><TextBlock Text="{Binding DeployStatus}" Style="{StaticResource Cell}"/></DataTemplate>
+                                        <DataTemplate><TextBlock Text="{Binding DeployStatus}" Style="{StaticResource CellStatus}"/></DataTemplate>
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>
                                 <GridViewColumn Header="진행률" Width="120">

@@ -166,7 +166,7 @@
                                 </GridViewColumn>
                                 <GridViewColumn Header="시험 상태" Width="120">
                                     <GridViewColumn.CellTemplate>
-                                        <DataTemplate><TextBlock Text="{Binding Status}" Style="{StaticResource Cell}"/></DataTemplate>
+                                        <DataTemplate><TextBlock Text="{Binding Status}" Style="{StaticResource CellStatus}"/></DataTemplate>
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>
                                 <GridViewColumn Header="마지막 갱신" Width="90">
