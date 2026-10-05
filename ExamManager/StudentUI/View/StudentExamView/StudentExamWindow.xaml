@@ -4,6 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
         xmlns:local="clr-namespace:StudentUI.View.StudentExamView"
+        xmlns:shared="clr-namespace:ExamManager.Shared"
         mc:Ignorable="d" 
         Background="White"
         Title="시험 운영 - 학생용">
@@ -72,23 +73,32 @@
             <RowDefinition Height="*"/>  <!-- 2. 본문 -->
         </Grid.RowDefinitions>
 
-        <!-- 1. 상단 네비게이션 헤더 -->
+        <!-- 1. 상단 네비게이션 헤더 — 왼쪽 제목 · 가운데 중요 공지 · 오른쪽 메뉴. 공지는 창 한가운데에 놓인다(HeaderBarPanel) -->
         <Border Grid.Row="0" Background="White" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
-            <Grid Margin="24,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
+            <shared:HeaderBarPanel Margin="24,0">
                 <!-- 좌측: 로고 및 타이틀 -->
                 <!-- 연결 상태는 오른쪽 불 하나로만 보인다 -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="학생용" FontSize="16" FontWeight="Bold" Foreground="#0F172A" VerticalAlignment="Center"/>
                 </StackPanel>
 
+                <!-- 가운데: 교수가 등록한 중요 공지(답안 파일 이름 형식 등). 교수가 내릴 때까지 계속 보인다.
+                     길면 … 으로 줄이고, 마우스를 올리면 전체가 보인다. 색은 교수 앱 상단의 중요 공지와 같다 -->
+                <Border VerticalAlignment="Center" CornerRadius="17" Padding="16,6" BorderThickness="1"
+                        Background="#FFFBEB" BorderBrush="#FCD34D"
+                        ToolTip="{Binding ChatVM.ImportantNotice}"
+                        Visibility="{Binding ChatVM.HasImportantNotice, Converter={StaticResource BoolToVis}}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Left" Text="📢 중요 공지" FontSize="13" FontWeight="Bold"
+                                   Foreground="#B45309" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ChatVM.ImportantNotice}" FontSize="14" FontWeight="SemiBold"
+                                   Foreground="#78350F" Margin="10,0,0,0"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                    </DockPanel>
+                </Border>
+
                 <!-- 우측 메뉴 -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <!-- 연결 상태 -->
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
                         <Ellipse Width="7" Height="7" VerticalAlignment="Center" Margin="0,0,6,0">
@@ -154,7 +164,7 @@
                         </StackPanel>
                     </Border>
                 </StackPanel>
-            </Grid>
+            </shared:HeaderBarPanel>
         </Border>
 
         <!-- 2. 본문 -->

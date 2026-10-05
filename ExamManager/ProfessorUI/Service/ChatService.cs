@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using NetworkLib;
 
 namespace ProfessorUI.Service
@@ -54,6 +55,24 @@ namespace ProfessorUI.Service
             NetworkService.Instance.Broadcast(PacketType.ChatBroadcast, NoticePayload.Encode(id, text));
             return id;
         }
+
+        // 중요 공지. 내릴 때까지 학생·교수 앱 상단 가운데에 계속 보인다. 비어 있으면 내린 것이다.
+        // 학생이 접속할 때마다 보내야 하므로(SendImportantNoticeTo) 화면이 아니라 여기에 둔다.
+        public string ImportantNotice { get; private set; } = string.Empty;
+
+        // 중요 공지를 등록하거나 바꾼다. 빈 문구면 내린다. 접속 중인 학생 모두에게 바로 보낸다.
+        // 상단바 한 줄에 들어가야 하므로 붙여 넣은 줄바꿈은 띄어쓰기로 바꾼다. 그대로 두면 띠가 여러 줄로 커진다.
+        public void SetImportantNotice(string text)
+        {
+            ImportantNotice = Regex.Replace(text, @"\s*[\r\n]+\s*", " ").Trim();
+            NetworkService.Instance.Broadcast(PacketType.ImportantNotice, ImportantNoticePayload.Encode(ImportantNotice));
+        }
+
+        // 막 접속한 학생에게 지금의 중요 공지를 보낸다. 늦게 들어오거나 앱을 다시 켠 학생도 같은 공지를 본다.
+        // 공지가 없어도 빈 공지를 보낸다 — 지난 접속에서 받은 공지가 학생 화면에 남지 않게 한다.
+        public void SendImportantNoticeTo(string sessionId)
+            => NetworkService.Instance.SendToSession(sessionId, PacketType.ImportantNotice,
+                                                     ImportantNoticePayload.Encode(ImportantNotice));
 
         private void OnPacketReceived(string sessionId, string studentId, string studentName,
                                       PacketType type, IntPtr payload, uint payloadLen)

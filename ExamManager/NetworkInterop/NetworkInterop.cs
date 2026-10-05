@@ -45,6 +45,7 @@ namespace NetworkLib
         ChatBroadcast           = 60,  // 교수 → 전체 학생
         ChatDirect              = 61,  // 교수 → 특정 학생
         ChatFromStudent         = 62,  // 학생 → 교수
+        ImportantNotice         = 63,  // 교수 → 학생. 두 앱 상단 가운데에 계속 떠 있는 중요 공지 (ImportantNoticePayload)
 
         // 화면 모니터링
         ScreenCapture           = 70,  // 학생 → 교수, payload = JPEG 바이너리
@@ -555,6 +556,32 @@ namespace NetworkLib
         // 번호가 붙지 않은 메시지(네이티브 SendChatToSession 으로 보낸 것)면 false.
         public static bool TryReadId(IntPtr payload, uint payloadLen, out uint messageId)
             => NoticePayload.TryReadId(payload, payloadLen, out messageId);
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  ImportantNotice(63) 페이로드 — 중요 공지
+    //
+    //  전체 공지(ChatBroadcast)는 팝업으로 한 번 뜨고 닫히지만, 중요 공지는 교수가 내릴 때까지
+    //  학생·교수 앱 상단 가운데에 계속 보인다. 시험 내내 지켜야 할 것(답안 파일 이름 형식 등)을 적는다.
+    //
+    //  형식: [UTF-8 문구] — 길이는 패킷 길이로 안다. 비어 있으면 공지를 내린 것이다.
+    //  교수는 등록·수정·내릴 때 전원에게, 학생이 접속(재접속 포함)할 때마다 그 학생에게 지금 공지를 보낸다.
+    //  그래서 늦게 들어오거나 앱을 다시 켠 학생도 같은 공지를 본다.
+    //  네이티브는 이 패킷을 해석하지 않고 그대로 전달한다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class ImportantNoticePayload
+    {
+        public static byte[] Encode(string text) => Encoding.UTF8.GetBytes(text);
+
+        // 빈 패킷은 공지를 내렸다는 뜻이라 빈 문자열을 돌려준다.
+        public static string Decode(IntPtr payload, uint payloadLen)
+        {
+            if (payload == IntPtr.Zero || payloadLen == 0) return string.Empty;
+
+            byte[] buffer = new byte[payloadLen];
+            Marshal.Copy(payload, buffer, 0, (int)payloadLen);
+            return Encoding.UTF8.GetString(buffer);
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════

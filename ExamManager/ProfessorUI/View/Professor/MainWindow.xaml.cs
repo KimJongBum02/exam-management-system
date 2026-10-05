@@ -167,6 +167,12 @@ namespace ProfessorUI.View.Professor
             new PortWindow { Owner = this }.ShowDialog();
         }
 
+        // 상단바 가운데의 중요 공지 칸. 어느 화면에서든, 시험 중에도 여기서 등록·수정·내린다.
+        private void ImportantNotice_Click(object sender, RoutedEventArgs e)
+        {
+            new ImportantNoticeWindow { Owner = this }.ShowDialog();
+        }
+
         // 종료 버튼 클릭 시 예외 사항 사전에 미리 방지하고 종료
         // 제목줄의 최대화 단추. 최대화돼 있으면 이전 크기로 되돌린다.
         private void MaxRestore_Click(object sender, RoutedEventArgs e)
