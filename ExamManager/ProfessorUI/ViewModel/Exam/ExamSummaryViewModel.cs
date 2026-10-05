@@ -28,6 +28,8 @@ namespace ProfessorUI.ViewModel
 
             ExamState.StateChanged += Recount;
             SendFileState.StateChanged += Recount;
+            // 수강생 명단을 불러오면 '전체' 인원이 명단 기준으로 바뀐다
+            StudentExcelStore.Changed += Recount;
 
             Recount();
         }
@@ -99,7 +101,12 @@ namespace ProfessorUI.ViewModel
 
         private void Recount()
         {
-            TotalCount = Students.Count;
+            // 수강생 명단을 불러왔으면 명단 학생은 접속하지 않았어도 '전체'에 들어 미접속·미수집으로 센다.
+            // 명단에 없는 학번은 대시보드에 칸이 보이는 학생만 센다(StudentCardViewModel.IsActive).
+            TotalCount = StudentExcelStore.HasRoster
+                ? StudentExcelStore.Entries.Count +
+                  Students.Count(s => StudentExcelStore.Find(s.StudentId) == null && StudentCardViewModel.IsActive(s))
+                : Students.Count;
             ConnectedCount = Students.Count(s => s.IsConnected);
             NotConnectedCount = TotalCount - ConnectedCount;
             SubmittedCount = Students.Count(s => s.IsAnswerSubmitted);

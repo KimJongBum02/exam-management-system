@@ -50,10 +50,14 @@ namespace ProfessorUI.ViewModel
                                    : IsNameMismatch ? $"⚠ 입력 이름: {Student!.Name}"
                                    : string.Empty;
 
-        // 칸을 보일지. 명단이 있을 때 명단에 없는 학생은 접속해 있거나 시험을 치른 동안만 보인다.
-        // 학번을 잘못 쳤다가 다시 로그인한 학생의 빈 칸이 끝까지 남지 않게 한다.
-        public bool IsShown => Roster != null || !StudentExcelStore.HasRoster ||
-                               IsConnected || Student!.HasEverStarted || Student.IsAnswerSubmitted;
+        // 칸을 보일지. 명단이 있을 때 명단에 없는 학생은 접속해 있거나 시험을 치른 동안만 보인다(IsActive).
+        public bool IsShown => Roster != null || !StudentExcelStore.HasRoster || IsActive(Student!);
+
+        // 명단에 없는 학생을 칸에 보이고 인원수에도 넣을지. 접속해 있거나 시험을 치렀으면 넣는다.
+        // 학번을 잘못 쳤다가 다시 로그인한 학생의 흔적이 칸·인원수에 끝까지 남지 않게 한다.
+        // 대시보드 칸과 다른 화면의 '전체' 인원(ExamSummaryViewModel)이 같은 기준을 쓰도록 여기 한 곳에 둔다.
+        public static bool IsActive(StudentStatusViewModel student)
+            => student.IsConnected || student.HasEverStarted || student.IsAnswerSubmitted;
 
         // 명단 학생이 처음 접속하면 칸에 학생을 붙인다. 화면은 접속으로 받아 초록으로 깜빡인다.
         public void Attach(StudentStatusViewModel student)
