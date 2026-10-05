@@ -73,7 +73,8 @@
                                                         HorizontalAlignment="Center"
                                                         Visibility="{Binding HasScreen, Converter={StaticResource BoolToVis}}">
                                             </StackPanel>
-                                            <TextBlock Text="대기 중…" Foreground="#B4BBC4"
+                                            <!-- 명단 학생이 아직 들어오지 않았으면 '미접속', 들어왔는데 화면이 오기 전이면 '대기 중…' -->
+                                            <TextBlock Text="{Binding PlaceholderText}" Foreground="#B4BBC4"
                                                        FontSize="{StaticResource FontSmall}" HorizontalAlignment="Center"
                                                        VerticalAlignment="Center">
                                                 <TextBlock.Style>
