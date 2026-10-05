@@ -42,6 +42,11 @@
 
     <conv:DoneTextConverter x:Key="DoneText"/>
     <SolidColorBrush x:Key="AlertSoft"     Color="#FCE6E6"/>
+    <!-- 중요 공지(상단바 가운데). 학생 앱 상단의 중요 공지와 같은 색이다 -->
+    <SolidColorBrush x:Key="NoticeSoft"    Color="#FFFBEB"/>
+    <SolidColorBrush x:Key="NoticeBorder"  Color="#FCD34D"/>
+    <SolidColorBrush x:Key="NoticeLabel"   Color="#B45309"/>
+    <SolidColorBrush x:Key="NoticeText"    Color="#78350F"/>
 
     <!-- ── 글자 크기 ──
          큰 제목(PageTitle)과 아이콘을 뺀 교수 화면의 모든 글자가 이 값을 쓴다.

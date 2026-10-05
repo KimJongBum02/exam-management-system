@@ -82,6 +82,21 @@ namespace StudentUI.ViewModel
         // 교수가 보낸 전체 공지. 화면 스레드에서 알리며, 받는 쪽(App)이 팝업을 띄운다.
         public event Action<string>? NoticeArrived;
 
+        // 교수가 등록한 중요 공지. 시험 화면 상단 가운데에 교수가 내릴 때까지 계속 보인다. 비어 있으면 없는 것이다.
+        private string _importantNotice = string.Empty;
+        public string ImportantNotice
+        {
+            get => _importantNotice;
+            private set
+            {
+                _importantNotice = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasImportantNotice));
+            }
+        }
+
+        public bool HasImportantNotice => _importantNotice.Length > 0;
+
         private SharedChatViewModel()
         {
             _messages = new ObservableCollection<ChatMessageModel>();
@@ -106,6 +121,7 @@ namespace StudentUI.ViewModel
             _unreadChatIds.Clear();
             LastSender = string.Empty;
             LastMessage = string.Empty;
+            ImportantNotice = string.Empty;
         }
 
         private void SendMessage()
@@ -131,6 +147,13 @@ namespace StudentUI.ViewModel
 
         private void OnPacketReceived(PacketType type, IntPtr payload, uint payloadLen)
         {
+            if (type == PacketType.ImportantNotice)
+            {
+                // 수신 버퍼는 이 콜백이 끝나면 사라지므로 화면 스레드로 넘기기 전에 읽어 둔다.
+                OnImportantNotice(ImportantNoticePayload.Decode(payload, payloadLen));
+                return;
+            }
+
             if (type != PacketType.ChatBroadcast && type != PacketType.ChatDirect) return;
 
             // 페이로드 길이로 읽기를 제한한다 (종료 문자가 없는 패킷이 와도 버퍼 밖을 읽지 않도록)
@@ -182,6 +205,23 @@ namespace StudentUI.ViewModel
                 // 창을 내려 두었거나 다른 창을 보고 있어도 알 수 있게 한다.
                 MessageArrived?.Invoke();
                 ExamManager.Shared.UiSignal.FlashTaskbar();
+            });
+        }
+
+        // 교수가 중요 공지를 올리거나 바꾸거나 내렸다. 네이티브 스레드에서 올라온다.
+        // 접속할 때마다 지금 공지가 다시 오므로 같은 공지면 그냥 넘긴다.
+        // 시험 중에는 편집기를 보고 있어 상단 문구만 바뀌면 모르고 지나가므로, 새 공지면 작업표시줄을 깜빡인다.
+        private void OnImportantNotice(string notice)
+        {
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher == null || dispatcher.HasShutdownStarted) return;
+
+            dispatcher.BeginInvoke(() =>
+            {
+                if (notice == ImportantNotice) return;
+
+                ImportantNotice = notice;
+                if (notice.Length > 0) ExamManager.Shared.UiSignal.FlashTaskbar();
             });
         }
 

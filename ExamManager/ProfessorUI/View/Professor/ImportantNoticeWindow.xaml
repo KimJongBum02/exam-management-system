@@ -1,0 +1,42 @@
+<Window x:Class="ProfessorUI.View.Professor.ImportantNoticeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="중요 공지" Width="520" SizeToContent="Height"
+        Background="#FFFFFF"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Style="{DynamicResource AppWindow}">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/ProfessorUI;component/View/Professor/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <StackPanel Margin="28,24,28,24">
+        <TextBlock Text="중요 공지" Style="{StaticResource SectionTitle}" Margin="0,0,0,6"/>
+        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,18"
+                   Text="학생 앱과 교수 앱 상단 가운데에 내릴 때까지 계속 보입니다. 나중에 접속한 학생에게도 자동으로 보냅니다."/>
+
+        <TextBlock Text="공지 내용" Style="{StaticResource FieldLabel}"/>
+        <!-- 상단바 한 줄에 들어갈 문구라 짧게 받는다. 길면 상단바에서 … 으로 줄어든다 -->
+        <TextBox x:Name="NoticeBox" MaxLength="100" FontSize="{StaticResource FontBody}" Height="38" Padding="12,0"
+                 VerticalContentAlignment="Center"
+                 Foreground="{StaticResource TextPrimary}" Background="White"
+                 BorderBrush="{StaticResource BorderStrong}" BorderThickness="1" Margin="0,0,0,6"/>
+        <TextBlock x:Name="ErrorText" FontSize="{StaticResource FontMini}" Foreground="{StaticResource AlertRed}" Margin="2,0,0,0"/>
+
+        <!-- 마무리 버튼 [등록]은 오른쪽 아래. 올린 공지가 있을 때만 왼쪽에 [내리기]가 보인다 -->
+        <Grid Margin="0,18,0,0">
+            <Button x:Name="ClearButton" Content="내리기" Style="{StaticResource SecondaryButton}"
+                    HorizontalAlignment="Left"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="취소" Style="{StaticResource SecondaryButton}" IsCancel="True" Margin="0,0,8,0"/>
+                <Button x:Name="ApplyButton" Content="등록" Style="{StaticResource PrimaryButton}" IsDefault="True"/>
+            </StackPanel>
+        </Grid>
+    </StackPanel>
+</Window>

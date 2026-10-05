@@ -40,6 +40,8 @@ namespace ProfessorUI
                 {
                     report.StudentConnected(sid, studentId, name, ip);
                     ViewModel.ScreenBoardViewModel.Instance.AddStudent(sid, studentId, name, ip);
+                    // 늦게 들어오거나 다시 접속한 학생도 상단에 같은 중요 공지를 보게 한다.
+                    Service.ChatService.Instance.SendImportantNoticeTo(sid);
                 });
 
             network.StudentDisconnected += (sid, studentId, name, reason) =>

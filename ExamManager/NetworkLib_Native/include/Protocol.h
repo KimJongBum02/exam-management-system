@@ -26,6 +26,8 @@ enum class PacketType : uint32_t
     ChatBroadcast            = 60,  // 교수 → 전체 학생
     ChatDirect               = 61,  // 교수 → 특정 학생
     ChatFromStudent          = 62,  // 학생 → 교수
+    ImportantNotice          = 63,  // 교수 → 학생. 앱 상단에 계속 떠 있는 중요 공지 (가변 길이, 비면 내림)
+                                    // 형식은 NetworkInterop.cs 의 ImportantNoticePayload, 네이티브는 그대로 전달한다
     // 시험 제어 (20~29)
     ExamPhaseChange          = 20,
     ExamStatusUpdate         = 21,

@@ -64,6 +64,18 @@ namespace ProfessorUI.ViewModel
         public ObservableCollection<NoticeViewModel> Notices { get; } = new();
         public NoticeViewModel? LatestNotice => Notices.FirstOrDefault();
 
+        // 중요 공지. 상단바 가운데에 보이고, 누르면 등록·수정·내리기 창이 뜬다(ImportantNoticeWindow).
+        public string ImportantNotice => _chat.ImportantNotice;
+        public bool HasImportantNotice => ImportantNotice.Length > 0;
+
+        // 빈 문구면 내린다. 학생에게 보내는 것은 ChatService 가 한다.
+        public void SetImportantNotice(string text)
+        {
+            _chat.SetImportantNotice(text);
+            OnPropertyChanged(nameof(ImportantNotice));
+            OnPropertyChanged(nameof(HasImportantNotice));
+        }
+
         // 탭과 무관하게 모아 둔 학생 수신 메시지.
         // 셸은 여기에 새 메시지가 들어오는 것만 보고 작업표시줄을 깜빡인다.
         public ObservableCollection<ChatMessageModel> RecentMessages { get; } = new();
