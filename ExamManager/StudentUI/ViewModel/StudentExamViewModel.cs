@@ -9,6 +9,7 @@ using System.Windows.Input;
 using NetworkLib;
 using StudentUI.Model;
 using StudentUI.Service;
+using StudentUI.View.Shared;
 
 namespace StudentUI.ViewModel
 {
@@ -607,12 +608,22 @@ namespace StudentUI.ViewModel
             // 시험 20분 뒤부터 답안을 다 쓴 학생이 먼저 나갈 수 있다. 그때 누르는 버튼이다.
             private void SubmitAnswer()
             {
-                // 되돌릴 수 없는 동작이라 한 번 더 묻는다.
-                var answer = MessageBox.Show(
-                    "답안을 제출하고 시험을 끝냅니다.\n제출 후에는 답안을 수정할 수 없습니다.\n\n계속하시겠습니까?",
-                    "답안 제출", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                // 전송받은 시험 폴더명 및 경로 정보 구성
+                string folderName = !string.IsNullOrEmpty(ExamFile.ArchiveName)
+                    ? ExamFile.ArchiveName
+                    : (!string.IsNullOrEmpty(ExamFile.FileName) ? System.IO.Path.GetFileNameWithoutExtension(ExamFile.FileName) : "시험 파일");
+                string folderPath = ExamFile.ExtractedRoot;
+                string studentInfo = $"{Student.StudentNumber} {Student.StudentName}".Trim();
 
-                if (answer != MessageBoxResult.Yes) return;
+                // 시험 폴더 이름과 답안 이름 형식 작성 확인 팝업창 표시
+                var dialog = new ExamSubmitConfirmDialog(folderName, folderPath, studentInfo);
+                if (Application.Current?.MainWindow != null && Application.Current.MainWindow.IsVisible)
+                {
+                    dialog.Owner = Application.Current.MainWindow;
+                }
+
+                bool? result = dialog.ShowDialog();
+                if (result != true) return;
 
                 // 압축·전송은 시간이 걸리므로 화면을 붙잡지 않는다.
                 // 결과는 StateChanged로 올라와 SubmitStatus에 표시된다.

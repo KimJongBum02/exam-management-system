@@ -1,0 +1,201 @@
+<Window x:Class="StudentUI.View.Shared.ExamSubmitConfirmDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="시험 종료 확인"
+        Width="500"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        WindowStartupLocation="CenterScreen"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        SizeToContent="Height"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+
+    <Window.Resources>
+        <!-- 취소/아니오 버튼 스타일 -->
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#F1F5F9"/>
+            <Setter Property="Foreground" Value="#475569"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#E2E8F0"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#94A3B8"/>
+                                <Setter Property="Foreground" Value="#1E293B"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#CBD5E1"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 확인/예 (종료) 버튼 스타일 -->
+        <Style x:Key="DangerButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#EF4444"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}"
+                                CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#DC2626"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#B91C1C"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border Background="White" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="16" Margin="14">
+        <Border.Effect>
+            <DropShadowEffect Color="#0F172A" Opacity="0.18" ShadowDepth="6" BlurRadius="20"/>
+        </Border.Effect>
+
+        <Grid Margin="24,20,24,24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- 상단 헤더 -->
+                <RowDefinition Height="Auto"/> <!-- 시험 폴더 정보 카드 -->
+                <RowDefinition Height="Auto"/> <!-- 확인 질문 안내 박스 -->
+                <RowDefinition Height="Auto"/> <!-- 주의 안내 -->
+                <RowDefinition Height="Auto"/> <!-- 버튼 영역 -->
+            </Grid.RowDefinitions>
+
+            <!-- 1. 상단 헤더 -->
+            <Grid Grid.Row="0" Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 아이콘 -->
+                <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" Background="#FEE2E2" Margin="0,0,12,0">
+                    <TextBlock Text="⚠️" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+
+                <!-- 제목 및 서브타이틀 -->
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="시험 종료 및 답안 제출 확인" FontSize="17" FontWeight="Bold" Foreground="#1E293B"/>
+                    <TextBlock Text="제출 전 답안 작성 상태를 확인해 주세요." FontSize="12" Foreground="#64748B" Margin="0,2,0,0"/>
+                </StackPanel>
+
+                <!-- 닫기 버튼 -->
+                <Button Grid.Column="2" Content="✕" Width="28" Height="28" Background="Transparent"
+                        BorderThickness="0" Foreground="#94A3B8" FontSize="14" Cursor="Hand"
+                        VerticalAlignment="Top" Click="NoButton_Click"/>
+            </Grid>
+
+            <!-- 2. 전송받은 시험 폴더 정보 카드 -->
+            <Border Grid.Row="1" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1"
+                    CornerRadius="10" Padding="14,12" Margin="0,0,0,14">
+                <StackPanel>
+                    <TextBlock Text="전송받은 시험 정보" FontSize="11" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,8"/>
+
+                    <!-- 시험 폴더명 -->
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="85"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="시험 폴더명" FontSize="12" Foreground="#64748B"/>
+                        <TextBlock Grid.Column="1" x:Name="ExamFolderNameText" Text="-" FontSize="13" FontWeight="Bold" Foreground="#1E293B" TextTrimming="CharacterEllipsis"/>
+                    </Grid>
+
+                    <!-- 작업 폴더 경로 -->
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="85"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="작업 경로" FontSize="12" Foreground="#64748B"/>
+                        <TextBlock Grid.Column="1" x:Name="ExamFolderPathText" Text="-" FontSize="12" Foreground="#334155" TextTrimming="CharacterEllipsis"/>
+                    </Grid>
+
+                    <!-- 제출자 -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="85"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="제출자" FontSize="12" Foreground="#64748B"/>
+                        <TextBlock Grid.Column="1" x:Name="StudentInfoText" Text="-" FontSize="12" FontWeight="SemiBold" Foreground="#2563EB"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- 3. 핵심 확인 질문 안내 박스 -->
+            <Border Grid.Row="2" Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1"
+                    CornerRadius="10" Padding="14,12" Margin="0,0,0,14">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <TextBlock Text="📋 " FontSize="14" VerticalAlignment="Center"/>
+                        <TextBlock Text="답안 이름 형식 확인" FontSize="13" FontWeight="Bold" Foreground="#1D4ED8" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="작업하신 답안 파일이 교수님이 안내하신 답안 이름 형식에 맞게 올바르게 작성되었습니까?"
+                               FontSize="13" FontWeight="Medium" Foreground="#1E3A8A" TextWrapping="Wrap" LineHeight="20" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 4. 주의 안내 -->
+            <TextBlock Grid.Row="3"
+                       Text="※ '예'를 누르면 시험이 종료되며 작업 폴더가 자동 압축 전송됩니다. 제출 후에는 수정할 수 없습니다."
+                       FontSize="11.5" Foreground="#EF4444" TextWrapping="Wrap" Margin="4,0,4,18"/>
+
+            <!-- 5. 버튼 영역 (아니오 / 예) -->
+            <Grid Grid.Row="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 아니오 (계속 작업) -->
+                <Button Grid.Column="0" Content="아니오 (계속 작업)" Height="44"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        IsCancel="True"
+                        Click="NoButton_Click"/>
+
+                <!-- 예 (시험 종료) -->
+                <Button Grid.Column="2" Content="예 (시험 종료)" Height="44"
+                        Style="{StaticResource DangerButtonStyle}"
+                        IsDefault="True"
+                        Click="YesButton_Click"/>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
