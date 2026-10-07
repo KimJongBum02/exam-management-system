@@ -20,14 +20,42 @@
         </Grid.RowDefinitions>
 
         <!-- ── 헤더 ── -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <StackPanel Orientation="Horizontal">
-                <local:BackButton/>
-                <TextBlock Text="화면 모니터링" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
+        <Grid Grid.Row="0" Margin="0,0,0,20">
+            <StackPanel VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal">
+                    <local:BackButton/>
+                    <TextBlock Text="화면 모니터링" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock Text="{Binding StudentCountText}"
+                           Style="{StaticResource Caption}" Margin="0,6,0,0"/>
             </StackPanel>
-            <TextBlock Text="{Binding StudentCountText}"
-                       Style="{StaticResource Caption}" Margin="0,6,0,0"/>
-        </StackPanel>
+
+            <!-- 전체 키보드 잠금 토글 버튼 -->
+            <Button HorizontalAlignment="Right" VerticalAlignment="Center"
+                    Click="ToggleAllKeyboardLock_Click"
+                    Padding="16,8" FontSize="{StaticResource FontSmall}" FontWeight="SemiBold"
+                    Cursor="Hand" BorderThickness="0">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Background" Value="#334155"/>
+                        <Setter Property="Foreground" Value="#F1F5F9"/>
+                        <Setter Property="Content" Value="🔒  전체 키보드 잠금"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasLockedStudents}" Value="True">
+                                <Setter Property="Background" Value="#DC2626"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                                <Setter Property="Content" Value="🔒  키보드 잠김 (전체 해제하려면 클릭)"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+                <Button.Resources>
+                    <Style TargetType="Border">
+                        <Setter Property="CornerRadius" Value="6"/>
+                    </Style>
+                </Button.Resources>
+            </Button>
+        </Grid>
 
         <!-- ── 학생 없을 때 안내 ── -->
         <Border Grid.Row="1" Style="{StaticResource Card}" Padding="40"
@@ -88,6 +116,14 @@
                                                     </Style>
                                                 </TextBlock.Style>
                                             </TextBlock>
+
+                                            <!-- 키보드 잠김 배지 (타일 우상단) -->
+                                            <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8"
+                                                    Background="#DC2626" CornerRadius="4" Padding="6,2"
+                                                    Visibility="{Binding IsKeyboardLocked, Converter={StaticResource BoolToVis}}">
+                                                <TextBlock Text="🔒 잠김" FontSize="{StaticResource FontTiny}"
+                                                           FontWeight="Bold" Foreground="White"/>
+                                            </Border>
 
                                             <!-- 하단 학생 정보 바 -->
                                             <Border VerticalAlignment="Bottom" CornerRadius="0,0,8,8"
