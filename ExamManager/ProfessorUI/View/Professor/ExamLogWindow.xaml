@@ -1,7 +1,6 @@
 <UserControl x:Class="ProfessorUI.View.Professor.ExamLogWindow"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:ProfessorUI.View.Professor">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -30,7 +29,6 @@
         <!-- 제목과 내보내기 버튼을 한 줄에 둔다 -->
         <Grid Grid.Row="0" Margin="0,0,0,18">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <local:BackButton/>
                 <TextBlock Text="시험 로그" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
             </StackPanel>
             <Button Content="엑셀로 저장" Style="{StaticResource PrimaryButton}"

@@ -5,7 +5,7 @@
         Title="StudentUI" Height="600" Width="900"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
-        Icon="/View/LoginView/Assets/yuhan.png">
+        Icon="/Icon/Student.ico">
 
     <Grid>
         <local:LoginView />

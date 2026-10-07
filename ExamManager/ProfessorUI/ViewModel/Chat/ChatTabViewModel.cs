@@ -33,7 +33,22 @@ namespace ProfessorUI.ViewModel
         }
 
         // 학생 대화일 때만 값이 있다. 알림·채팅 화면의 대화 목록이 이 값으로 한 줄을 그린다.
-        public string StudentName { get; init; } = string.Empty;
+        // 이름은 나중에 바뀔 수 있다 — 이름을 잘못 쳤다가 고쳐서 다시 로그인하는 경우가 있다.
+        // 줄은 학번으로 찾으므로 여기서 고치지 않으면 처음 적힌 이름이 끝까지 남는다
+        // (ChatViewModel.GetOrCreateTab 참고). 학번은 줄을 찾는 열쇠라 바뀌지 않는다.
+        private string _studentName = string.Empty;
+        public string StudentName
+        {
+            get => _studentName;
+            set
+            {
+                if (_studentName == value) return;
+                _studentName = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(Initial));
+            }
+        }
+
         public string StudentId { get; init; } = string.Empty;
 
         public int UnreadCount

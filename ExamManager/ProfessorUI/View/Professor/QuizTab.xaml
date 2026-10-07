@@ -1,7 +1,6 @@
 <UserControl x:Class="ProfessorUI.View.Professor.QuizTab"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:ProfessorUI.View.Professor">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -40,7 +39,6 @@
     <StackPanel>
         <!-- 제목 -->
         <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
-            <local:BackButton/>
             <TextBlock Text="퀴즈" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
         </StackPanel>
 

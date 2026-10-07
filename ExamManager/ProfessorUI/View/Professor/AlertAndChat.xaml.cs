@@ -63,6 +63,7 @@ namespace ProfessorUI.View.Professor
             // 전체 공지 탭(SessionId 없음)은 학생 대화가 아니다.
             if (item is not ChatTabViewModel tab || tab.SessionId == null) return false;
 
+
             // '읽음'은 말이 오갔고 다 읽은 대화다. 아직 말이 오간 적 없는 학생은 '전체'에만 보인다.
             if (FilterUnread?.IsChecked == true && !tab.HasUnread) return false;
             if (FilterRead?.IsChecked == true && (tab.HasUnread || !tab.HasMessages)) return false;
