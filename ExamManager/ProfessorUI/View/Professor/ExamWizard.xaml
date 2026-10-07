@@ -1,7 +1,6 @@
 <UserControl x:Class="ProfessorUI.View.Professor.ExamWizard"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:ProfessorUI.View.Professor">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -53,7 +52,6 @@
              단계를 오갈 때 버튼 자리가 바뀌지 않도록 순서는 항상 같다 -->
         <Grid Grid.Row="0" Margin="0,0,0,16">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <local:BackButton/>
                 <TextBlock Text="시험 준비 마법사" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">

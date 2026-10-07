@@ -108,8 +108,12 @@ namespace ProfessorUI.ViewModel
             foreach (var student in StudentStore.Instance.Students) AddTabFor(student);
             StudentStore.Instance.Students.CollectionChanged += (_, e) =>
             {
-                if (e.NewItems == null) return;
-                foreach (StudentStatusViewModel student in e.NewItems) AddTabFor(student);
+                // 아무것도 남기지 않은 접속은 StudentStore 가 줄째로 지운다(잘못 친 학번).
+                // 대화 줄도 같이 지워야 목록에 유령이 남지 않는다.
+                if (e.OldItems != null)
+                    foreach (StudentStatusViewModel student in e.OldItems) RemoveTabFor(student);
+                if (e.NewItems != null)
+                    foreach (StudentStatusViewModel student in e.NewItems) AddTabFor(student);
             };
         }
 
@@ -118,6 +122,32 @@ namespace ProfessorUI.ViewModel
         {
             if (string.IsNullOrEmpty(student.StudentId)) return;
             GetOrCreateTab(student.StudentId, student.Name, student.SessionId);
+
+            // 이름을 잘못 쳤다가 고쳐서 다시 로그인하면 StudentStore 가 그 줄의 이름만 바꾼다.
+            // 그때는 학생이 새로 들어온 것이 아니라 대화 줄을 다시 만들 일이 없으므로,
+            // 이름 변화를 직접 받아 줄 이름도 따라 고친다.
+            student.PropertyChanged -= OnStudentNameChanged;
+            student.PropertyChanged += OnStudentNameChanged;
+        }
+
+        private void OnStudentNameChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != nameof(StudentStatusViewModel.Name)) return;
+            if (sender is StudentStatusViewModel student && student.StudentId.Length > 0)
+                GetOrCreateTab(student.StudentId, student.Name, student.SessionId);
+        }
+
+        // 줄째로 빠진 학생의 대화를 지운다. 주고받은 말도 함께 사라지지만,
+        // 아무것도 남기지 않고 나간 접속이라 지울 것이 사실상 없다.
+        private void RemoveTabFor(StudentStatusViewModel student)
+        {
+            student.PropertyChanged -= OnStudentNameChanged;
+
+            var tab = Tabs.FirstOrDefault(t => t.SessionId != null && t.StudentId == student.StudentId);
+            if (tab == null) return;
+
+            if (SelectedTab == tab) SelectedTab = null;
+            Tabs.Remove(tab);
         }
 
         private void SendMessage()
@@ -178,8 +208,19 @@ namespace ProfessorUI.ViewModel
                 };
                 Tabs.Add(tab);
             }
-            // 답장은 지금 접속해 있는 세션으로 가야 한다
-            else if (!string.IsNullOrEmpty(sessionId)) tab.SessionId = sessionId;
+            else
+            {
+                // 답장은 지금 접속해 있는 세션으로 가야 한다
+                if (!string.IsNullOrEmpty(sessionId)) tab.SessionId = sessionId;
+
+                // 이름을 잘못 쳤다가 고쳐서 다시 로그인하면 대화 줄의 이름도 따라 고친다.
+                // 줄은 학번으로 찾으므로, 고치지 않으면 처음 친 이름이 끝까지 남는다.
+                if (studentName.Length > 0 && tab.StudentName != studentName)
+                {
+                    tab.StudentName = studentName;
+                    tab.TabName = $"{studentName}({studentId})";
+                }
+            }
 
             return tab;
         }

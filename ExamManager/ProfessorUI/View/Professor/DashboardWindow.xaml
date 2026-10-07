@@ -1,7 +1,6 @@
 <UserControl x:Class="ProfessorUI.View.Professor.DashboardWindow"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:ProfessorUI.View.Professor">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -40,13 +39,10 @@
 
         <!-- 제목과 이동 버튼을 한 줄에 둔다. 버튼을 찾으려고 화면 끝까지 내려가지 않아도 된다 -->
         <Grid Grid.Row="0" Margin="0,0,0,18">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <local:BackButton/>
-                <TextBlock Text="실시간 학생 현황" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
-                <Button Content="접속 기록" Style="{StaticResource SecondaryButton}" Margin="14,0,0,0"
-                        VerticalAlignment="Center" Click="OpenConnectionLog_Click"/>
-            </StackPanel>
+            <TextBlock Text="실시간 학생 현황" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Button Content="접속 기록" Style="{StaticResource SecondaryButton}"
+                        Margin="0,0,10,0" Click="OpenConnectionLog_Click"/>
                 <!-- 학교 포털에서 받은 수강생 명단(엑셀). 불러오면 명단 순서대로 칸이 미리 깔린다 -->
                 <Button Content="명단 불러오기" Style="{StaticResource SecondaryButton}"
                         Margin="0,0,10,0" Click="LoadRoster_Click"/>
@@ -122,9 +118,13 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <!-- 학생이 한 명도 붙지 않았을 때. 빈 화면만 두면 고장인지 대기인지 알 수 없다 -->
+        <!-- 학생이 한 명도 붙지 않았을 때. 빈 화면만 두면 고장인지 대기인지 알 수 없다.
+             첫 줄은 지금 상태, 둘째 줄은 미리 깔아 두는 방법 — &#38;#10; 으로 끊는다.
+             둘째 줄은 Pretendard 15 로 743 DIP 라 가장 작은 창(1180, 페이지 폭 847)에서도 한 줄에 들어간다.
+             그보다 좁아지면 TextWrapping 이 받아 준다 -->
         <TextBlock Grid.Row="2" x:Name="EmptyNote" Style="{StaticResource Caption}"
                    HorizontalAlignment="Center" Margin="0,60,0,0" Visibility="Collapsed"
-                   Text="아직 접속한 학생이 없습니다. 학생이 접속하면 이 자리에 한 명씩 나타나고, [명단 불러오기]로 수강생 칸을 미리 깔 수도 있습니다."/>
+                   TextWrapping="Wrap" TextAlignment="Center"
+                   Text="아직 접속한 학생이 없습니다. 학생이 접속하면 이 자리에 한 명씩 나타납니다.&#10;학교 포털에서 받은 수강생 명단 엑셀을 [명단 불러오기]로 읽어 두면, 학생이 접속하기 전에도 명단 순서대로 칸이 미리 깔립니다."/>
     </Grid>
 </UserControl>

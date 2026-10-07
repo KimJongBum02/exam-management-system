@@ -44,7 +44,6 @@
 
         <!-- 제목 ([전체 공지 작성]은 공지 내역 위로 옮겼다) -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,22">
-            <local:BackButton/>
             <TextBlock Text="알림·채팅" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
         </StackPanel>
 

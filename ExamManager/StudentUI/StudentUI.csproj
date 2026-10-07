@@ -9,21 +9,23 @@
     <Platforms>AnyCPU;x64</Platforms>
     <!-- 시험 중 방화벽 규칙을 넣어야 해서 관리자 권한이 필요하다 (app.manifest 참고) -->
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- 작업표시줄·탐색기에 보이는 아이콘. 교수용(Professor.ico)과 같은 자리에 두고 색으로 구분한다 -->
+    <ApplicationIcon>..\Icon\Student.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <None Remove="View\LoginView\Assets\loginbackground.png" />
-    <None Remove="View\LoginView\Assets\yuhan.png" />
   </ItemGroup>
 
   <ItemGroup>
     <Resource Include="View\LoginView\Assets\loginbackground.png" />
-    <Resource Include="View\LoginView\Assets\yuhan.png" />
   </ItemGroup>
   <!-- 두 UI가 공유하는 글꼴 (ExamManager\Fonts) -->
   <ItemGroup>
     <Resource Include="..\Fonts\Pretendard-Regular.ttf" Link="Fonts\Pretendard-Regular.ttf" />
     <Resource Include="..\Fonts\Pretendard-Bold.ttf" Link="Fonts\Pretendard-Bold.ttf" />
+    <!-- 창 아이콘으로도 쓰려면 리소스로 들어가 있어야 한다 -->
+    <Resource Include="..\Icon\Student.ico" Link="Icon\Student.ico" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\NetworkInterop\NetworkInterop.cs" Link="NetworkInterop.cs" />

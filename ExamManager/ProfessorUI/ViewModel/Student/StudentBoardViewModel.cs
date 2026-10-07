@@ -62,17 +62,29 @@ namespace ProfessorUI.ViewModel
             NotifySummary();
         }
 
-        // 학생 목록에는 처음 접속한 학생만 더해진다(끊겨도 줄은 남는다).
+        // 학생 목록에는 처음 접속한 학생만 더해지고, 아무것도 남기지 않은 접속은 빠진다
+        // (StudentStore.MarkDisconnected). 빠지면 그 칸도 같이 뺀다.
         private void OnStudentsChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
-            if (e.NewItems == null) return;
+            if (e.OldItems != null)
+                foreach (StudentStatusViewModel student in e.OldItems)
+                {
+                    // 명단 칸은 자리를 남겨야 한다(명단 학생은 애초에 빠지지도 않는다)
+                    var card = Cards.FirstOrDefault(c => c.Roster == null && c.Student == student);
+                    if (card == null) continue;
+                    card.Detach();
+                    card.PropertyChanged -= OnCardChanged;
+                    Cards.Remove(card);
+                }
 
-            foreach (StudentStatusViewModel student in e.NewItems)
-            {
-                var rosterCard = Cards.FirstOrDefault(c => c.Roster != null && !c.HasStudent && c.StudentId == student.StudentId);
-                if (rosterCard != null) rosterCard.Attach(student);
-                else Add(new StudentCardViewModel(null, int.MaxValue, student));
-            }
+            if (e.NewItems != null)
+                foreach (StudentStatusViewModel student in e.NewItems)
+                {
+                    var rosterCard = Cards.FirstOrDefault(c => c.Roster != null && !c.HasStudent && c.StudentId == student.StudentId);
+                    if (rosterCard != null) rosterCard.Attach(student);
+                    else Add(new StudentCardViewModel(null, int.MaxValue, student));
+                }
+
             NotifySummary();
         }
 

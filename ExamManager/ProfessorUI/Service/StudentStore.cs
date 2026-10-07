@@ -84,6 +84,15 @@ namespace ProfessorUI.Service
             // 이미 제출한 학생의 상태는 덮어쓰지 않는다 (제출완료 / 정리실패를 유지).
             if (!student.IsAnswerSubmitted)
                 student.Status = "미제출(연결 끊김)";
+
+            // 아무것도 남기지 않은 접속은 줄째로 지운다.
+            // 학번을 잘못 쳐서 들어왔다 바로 나가는 일이 있는데, 그 줄을 남겨 두면 대시보드·채팅뿐 아니라
+            // 배포 표·답안 수집·시험 결과의 미수집 인원·시험 로그에까지 끝까지 따라다닌다.
+            // 시험 파일을 받았거나 시험을 시작했거나 답안을 낸 접속은 흔적이 있으므로 남긴다(IsActive).
+            // 명단에 있는 학번도 남긴다 — 빠진 자리가 그대로 보여야 한다.
+            // 몇 번 들어왔다 나갔는지는 접속 기록(ConnectionLogStore)에 그대로 남는다.
+            if (StudentExcelStore.Find(student.StudentId) == null && !StudentCardViewModel.IsActive(student))
+                Students.Remove(student);
         }
 
         // 파일 수신 완료 응답 처리: 해당 학번 학생을 '수신완료'로 표시
