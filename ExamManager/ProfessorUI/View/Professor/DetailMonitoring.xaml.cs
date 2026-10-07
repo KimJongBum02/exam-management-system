@@ -80,6 +80,7 @@ namespace ProfessorUI.View.Professor
             NetworkService.Instance.SendToSession(_item.SessionId, PacketType.LockKeyboard, new byte[] { payload });
 
             UpdateKeyboardLockButton();
+            ScreenBoardViewModel.Instance.CheckAllLockState();
         }
 
         private void UpdateKeyboardLockButton()

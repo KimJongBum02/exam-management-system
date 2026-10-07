@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using NetworkLib;
 using ProfessorUI.Service;
 
 namespace ProfessorUI.ViewModel
@@ -29,16 +30,75 @@ namespace ProfessorUI.ViewModel
                                           (StudentExcelStore.HasRoster ? $" / 수강생 명단 {StudentExcelStore.Entries.Count}명" : "");
         public bool   HasNoStudents     => Students.Count == 0;
 
+        private bool _hasLockedStudents;
+        /// <summary>현재 1명 이상의 학생 키보드가 잠겨 있는지 여부</summary>
+        public bool HasLockedStudents
+        {
+            get => _hasLockedStudents;
+            set
+            {
+                if (_hasLockedStudents == value) return;
+                _hasLockedStudents = value;
+                OnPropertyChanged();
+            }
+        }
+
+        /// <summary>
+        /// 키보드 일괄 잠금 또는 전체 해제 토글합니다.
+        /// 잠긴 학생이 1명이라도 있으면 모두 해제하고, 아무도 잠겨 있지 않으면 모두 잠급니다.
+        /// </summary>
+        public void ToggleAllKeyboardLock()
+        {
+            bool lockToApply = !HasLockedStudents;
+
+            byte payload = (byte)(lockToApply ? 1 : 0);
+            NetworkService.Instance.Broadcast(PacketType.LockKeyboard, new byte[] { payload });
+
+            foreach (var student in Students)
+            {
+                student.IsKeyboardLocked = lockToApply;
+            }
+
+            CheckAllLockState();
+        }
+
+        /// <summary>개별 학생 잠금 상태 변경 시 전체 잠금 상태를 동기화합니다.</summary>
+        public void CheckAllLockState()
+        {
+            HasLockedStudents = Students.Any(s => s.IsConnected && s.IsKeyboardLocked);
+        }
+
         // ── 학생 추가 (StudentConnected 콜백에서 호출) ──────────────────────
         /// <summary>학생이 새로 접속했을 때 타일을 추가합니다. UI 스레드에서 호출하세요.</summary>
         public void AddStudent(string sessionId, string studentId, string studentName, string _ip)
         {
             if (Students.Any(s => s.SessionId == sessionId)) return;
 
+            // 이미 접속 중인 학생들이 모두 잠겨 있는 상태라면 새로 접속한 학생도 잠금 적용
+            var connected = Students.Where(s => s.IsConnected).ToList();
+            bool shouldLock = connected.Count > 0 && connected.All(s => s.IsKeyboardLocked);
+
             // 명단 학생이면 미리 깔아 둔 자리에 화면을 붙인다
             var seat = Students.FirstOrDefault(s => s.StudentId == studentId && !s.IsConnected);
-            if (seat != null) seat.Connect(sessionId);
-            else Students.Add(new StudentScreenViewModel(sessionId, studentId, studentName));
+            if (seat != null)
+            {
+                seat.Connect(sessionId);
+                if (shouldLock)
+                {
+                    seat.IsKeyboardLocked = true;
+                    NetworkService.Instance.SendToSession(sessionId, PacketType.LockKeyboard, new byte[] { 1 });
+                }
+            }
+            else
+            {
+                var newStudent = new StudentScreenViewModel(sessionId, studentId, studentName);
+                if (shouldLock)
+                {
+                    newStudent.IsKeyboardLocked = true;
+                    NetworkService.Instance.SendToSession(sessionId, PacketType.LockKeyboard, new byte[] { 1 });
+                }
+                Students.Add(newStudent);
+            }
             NotifyCount();
         }
 

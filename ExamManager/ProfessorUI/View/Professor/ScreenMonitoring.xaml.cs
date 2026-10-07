@@ -24,5 +24,11 @@ namespace ProfessorUI.View.Professor
                 detail.Show();
             }
         }
+
+        // 전체 키보드 잠금 토글 버튼 클릭
+        private void ToggleAllKeyboardLock_Click(object sender, RoutedEventArgs e)
+        {
+            ScreenBoardViewModel.Instance.ToggleAllKeyboardLock();
+        }
     }
 }
