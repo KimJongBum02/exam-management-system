@@ -79,7 +79,9 @@
                     <RadioButton x:Name="FilterRead" Content="읽음" GroupName="ChatFilter"
                                  Style="{StaticResource FilterChip}" Checked="Filter_Changed"/>
                 </StackPanel>
+                <!-- 학생 이름으로 찾는 칸이라 한글 자판으로 들어간다. 학번은 숫자라 그대로 쳐진다 -->
                 <TextBox x:Name="SearchBox" Style="{StaticResource SearchBox}" Margin="0,0,0,14"
+                         InputMethod.PreferredImeState="On" InputMethod.PreferredImeConversionMode="Native"
                          TextChanged="Filter_Changed"/>
 
                 <!-- 학생이 많으면 목록 안에서 넘긴다. 화면 전체가 길어지면 아래 학생을 눌렀을 때
@@ -145,7 +147,9 @@
                     <Border x:Name="ComposeCard" Style="{StaticResource Card}" Margin="0,0,0,22" Visibility="Collapsed">
                         <StackPanel>
                             <TextBlock Text="전체 학생에게 공지" Style="{StaticResource FieldLabel}"/>
+                            <!-- 채팅 칸과 같이, 들어오는 순간 한글 자판으로 바꾼다 -->
                             <TextBox x:Name="NoticeBox" Height="96" Style="{StaticResource NoteBox}"
+                                     InputMethod.PreferredImeState="On" InputMethod.PreferredImeConversionMode="Native"
                                      Text="{Binding Chat.NoticeInput, UpdateSourceTrigger=PropertyChanged}"
                                      PreviewKeyDown="NoticeBox_PreviewKeyDown"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
@@ -258,7 +262,9 @@
                             </ItemsControl>
                         </ScrollViewer>
                     </Border>
+                    <!-- 학생에게 보내는 말은 늘 한글이라 칸에 들어오는 순간 한글 자판으로 바꾼다(한영키를 먼저 누르지 않아도 되게) -->
                     <TextBox x:Name="MessageBox" Height="72" Style="{StaticResource NoteBox}" Margin="0,14,0,0"
+                             InputMethod.PreferredImeState="On" InputMethod.PreferredImeConversionMode="Native"
                              Text="{Binding Chat.InputMessage, UpdateSourceTrigger=PropertyChanged}"
                              PreviewKeyDown="MessageBox_PreviewKeyDown"/>
                     <Grid Margin="0,10,0,0">

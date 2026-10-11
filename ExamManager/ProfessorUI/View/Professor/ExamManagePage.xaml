@@ -130,7 +130,9 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
+                    <!-- 학생 이름으로 찾는 칸이라 한글 자판으로 들어간다. 학번은 숫자라 그대로 쳐진다 -->
                     <TextBox x:Name="SearchBox" Style="{StaticResource SearchBox}" VerticalAlignment="Bottom"
+                             InputMethod.PreferredImeState="On" InputMethod.PreferredImeConversionMode="Native"
                              Foreground="{StaticResource TextPrimary}" TextChanged="Filter_Changed"/>
                     <StackPanel Grid.Column="1" Margin="12,0,0,0">
                         <TextBlock Text="접속 상태" Style="{StaticResource FieldLabel}"/>

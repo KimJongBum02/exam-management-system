@@ -24,6 +24,7 @@
                 <StackPanel>
                     <TextBlock Text="문제" Style="{StaticResource FieldLabel}"/>
                     <TextBox Height="112" Style="{StaticResource NoteBox}"
+                             InputMethod.PreferredImeState="On" InputMethod.PreferredImeConversionMode="Native"
                              Text="{Binding Survey.CurrentQuestion, UpdateSourceTrigger=PropertyChanged}"/>
 
                     <!-- 출제 버튼은 문제를 다 쓴 자리 바로 아래, 오른쪽 끝에 둔다 -->

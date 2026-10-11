@@ -22,9 +22,11 @@
                    Text="학생 앱과 교수 앱 상단 가운데에 내릴 때까지 계속 보입니다. 나중에 접속한 학생에게도 자동으로 보냅니다."/>
 
         <TextBlock Text="공지 내용" Style="{StaticResource FieldLabel}"/>
-        <!-- 상단바 한 줄에 들어갈 문구라 짧게 받는다. 길면 상단바에서 … 으로 줄어든다 -->
+        <!-- 상단바 한 줄에 들어갈 문구라 짧게 받는다. 길면 상단바에서 … 으로 줄어든다.
+             공지는 늘 한글이라 칸에 들어오는 순간 한글 자판으로 바꾼다(한영키를 먼저 누르지 않아도 되게) -->
         <TextBox x:Name="NoticeBox" MaxLength="100" FontSize="{StaticResource FontBody}" Height="38" Padding="12,0"
                  VerticalContentAlignment="Center"
+                 InputMethod.PreferredImeState="On" InputMethod.PreferredImeConversionMode="Native"
                  Foreground="{StaticResource TextPrimary}" Background="White"
                  BorderBrush="{StaticResource BorderStrong}" BorderThickness="1" Margin="0,0,0,6"/>
         <TextBlock x:Name="ErrorText" FontSize="{StaticResource FontMini}" Foreground="{StaticResource AlertRed}" Margin="2,0,0,0"/>

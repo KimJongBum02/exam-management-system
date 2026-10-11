@@ -239,6 +239,7 @@
 
                                         <TextBlock Text="문제" Style="{StaticResource FieldLabel}"/>
                                         <TextBox Height="64" Style="{StaticResource NoteBox}" MaxLength="500" Margin="0,0,0,14"
+                                                 InputMethod.PreferredImeState="On" InputMethod.PreferredImeConversionMode="Native"
                                                  Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"/>
 
                                         <!-- OX: 정답만 고른다 -->
@@ -276,6 +277,7 @@
                                                                          Content="{Binding Mark}" Margin="0,0,10,0"
                                                                          IsChecked="{Binding IsCorrect}"/>
                                                             <TextBox Grid.Column="1" Style="{StaticResource OptionBox}"
+                                                                     InputMethod.PreferredImeState="On" InputMethod.PreferredImeConversionMode="Native"
                                                                      Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"/>
                                                             <Button Grid.Column="2" Content="지우기" Style="{StaticResource EditLink}"
                                                                     Margin="12,0,0,0" Click="RemoveOption_Click"
