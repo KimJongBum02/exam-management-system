@@ -141,12 +141,22 @@ namespace StudentUI.Service
                 if (!ExamFileStore.Instance.HasExamFolder)
                     return Fail("답안 제출 실패.\n시험 파일을 받은 기록이 없습니다. 교수님께 재배포를 요청하십시오.");
 
+                // 학생이 작업 폴더 이름을 바꿨으면 이름이 달라진 폴더를 찾아 이어서 제출한다.
+                // 그마저 못 찾으면(옮겼거나 지웠거나 폴더가 여럿) 무엇을 되돌려야 하는지 알려 준다.
+                // 예전에는 '압축하지 못했습니다. 다시 시도하십시오.'만 떠서 몇 번을 눌러도 같은 실패만 반복했다.
+                string answerFolder = ExamFileStore.Instance.ResolveAnswerFolder();
+                if (answerFolder.Length == 0)
+                    return Fail("답안 제출 실패.\n작업 폴더를 찾을 수 없습니다.\n\n" +
+                                $"{ExamFileStore.Instance.ExtractedRoot}\n\n" +
+                                "이 폴더의 이름을 바꾸었거나 다른 곳으로 옮겼다면 원래대로 되돌린 뒤 다시 제출하십시오.\n" +
+                                "답안 파일 이름만 바꾸면 되고, 폴더 이름은 그대로 두어야 합니다.");
+
                 if (!NetworkService.Instance.IsConnected)
                     return Fail("답안 제출 실패.\n교수 PC와 연결된 뒤 다시 시도하십시오.");
 
                 // 1. 답안 폴더를 통째로 압축·암호화한다.
                 SetState(AnswerSubmitState.Compressing, "답안을 압축하는 중입니다...");
-                (archivePath, int code) = await Task.Run(() => CompressAnswers(archivePassword));
+                (archivePath, int code) = await Task.Run(() => CompressAnswers(answerFolder, archivePassword));
                 if (archivePath == null)
                 {
                     // 7za는 못 읽은 파일이 있으면 코드 1을 주고 그 파일만 빼고 묶는다.
@@ -175,7 +185,7 @@ namespace StudentUI.Service
                 // 4. 여기서부터가 되돌릴 수 없는 구간이다.
                 //    교수가 확실히 받았다고 회신한 뒤에만 시험 파일을 지운다.
                 SetState(AnswerSubmitState.Succeeded, "답안이 정상적으로 제출되었습니다.");
-                CleanupExamFiles();
+                CleanupExamFiles(answerFolder);
                 return true;
             }
             catch (Exception ex)
@@ -205,9 +215,10 @@ namespace StudentUI.Service
         //
         // 탐색기가 폴더를 열어 두었거나 학생이 편집기를 켜 둔 채면 삭제가 실패한다.
         // 창을 강제로 닫지는 않는다 — 학생이 열어 둔 다른 창까지 잘못 닫을 수 있다.
-        private void CleanupExamFiles()
+        // examFolder 는 방금 묶어 보낸 그 폴더다. 학생이 이름을 바꿨다면 바뀐 폴더가 들어온다 —
+        // 보낸 것과 지우는 것이 어긋나면 답안이 남거나 엉뚱한 폴더가 지워진다.
+        private void CleanupExamFiles(string examFolder)
         {
-            string examFolder = ExamFileStore.Instance.ExtractedRoot;
             try
             {
                 if (Directory.Exists(examFolder))
@@ -249,10 +260,10 @@ namespace StudentUI.Service
         // 7za가 못 읽은 파일만 빼고 나머지로 묶음을 만들어 주기 때문이다.
         // 테스트로 확인함: 답안 파일이 편집기에 열려 있으면 코드 1 + 답안이 빠진 묶음이 나온다.
         // 이걸 성공으로 보면 답안 없는 파일을 제출하고 원본까지 지우게 된다.
-        private static (string? ArchivePath, int Code) CompressAnswers(string password)
+        // sourceFolder 는 부르는 쪽이 찾아 준 작업 폴더다(ExamFileStore.ResolveAnswerFolder).
+        private static (string? ArchivePath, int Code) CompressAnswers(string sourceFolder, string password)
         {
             // 배포받은 폴더만 묶는다. 지우는 범위와 같아야 걷지 않은 것이 남지 않는다.
-            string sourceFolder = ExamFileStore.Instance.ExtractedRoot;
             if (!Directory.Exists(sourceFolder)) return (null, -1);
 
             string sevenZa = Path.Combine(AppContext.BaseDirectory, "7za.exe");

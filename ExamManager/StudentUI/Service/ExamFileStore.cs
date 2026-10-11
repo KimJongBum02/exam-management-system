@@ -35,6 +35,22 @@ namespace StudentUI.Service
         // 그동안 ExtractedRoot 는 '시험 파일' 폴더 전체를 가리킨다.
         public bool HasExamFolder => _archiveName.Length > 0;
 
+        // 지금 답안이 들어 있는 폴더. 보통은 ExtractedRoot 그대로다.
+        //
+        // 학생이 작업 폴더 이름을 바꾸면(교수님의 '답안 이름 형식' 안내를 폴더 이름으로 오해하는 일이 있다)
+        // ExtractedRoot 가 없어져 제출이 통째로 실패한다. 그때 '시험 파일' 안에 폴더가 하나뿐이면
+        // 그것이 이번 시험 폴더이므로 이름이 달라도 그대로 묶어 보낸다.
+        // 폴더가 없거나 둘 이상이면 고르지 않는다 — 엉뚱한 폴더를 보내고 지우는 쪽이 더 나쁘다.
+        // 찾지 못하면 빈 문자열. 부르는 쪽이 무엇을 되돌려야 하는지 안내한다.
+        public string ResolveAnswerFolder()
+        {
+            if (Directory.Exists(ExtractedRoot)) return ExtractedRoot;
+            if (!HasExamFolder || !Directory.Exists(ExtractFolder)) return string.Empty;
+
+            string[] folders = Directory.GetDirectories(ExtractFolder);
+            return folders.Length == 1 ? folders[0] : string.Empty;
+        }
+
         private string _archivePath = string.Empty; // 수신된 .7z 경로 (보통 시험 파일 폴더, 옮기지 못했으면 %TEMP%)
         private string _password = string.Empty;    // 교수 PC가 함께 보낸 암호
 
@@ -369,7 +385,12 @@ namespace StudentUI.Service
         public void OpenExtractFolder()
         {
             // 압축을 풀었으면 그 폴더를, 아직이면 시험 파일 폴더를 연다.
-            string target = IsExtracted ? ExtractedRoot : ExtractFolder;
+            //
+            // 학생이 작업 폴더 이름을 바꿨으면 바뀐 폴더를 연다. 예전처럼 ExtractedRoot 를 그대로 쓰면
+            // 아래 CreateDirectory 가 없어진 이름으로 빈 폴더를 새로 만들고, 제출할 때 답안이 든 폴더 대신
+            // 그 빈 폴더가 묶여 나간다. 찾지 못하면 '시험 파일' 폴더를 열어 무엇이 있는지 보게 한다.
+            string target = IsExtracted ? ResolveAnswerFolder() : ExtractFolder;
+            if (target.Length == 0) target = ExtractFolder;
             try
             {
                 Directory.CreateDirectory(target);
