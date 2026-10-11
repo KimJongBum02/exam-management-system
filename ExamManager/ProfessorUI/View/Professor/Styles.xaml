@@ -2,8 +2,12 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:common="clr-namespace:ProfessorUI.Common"
                     xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
-                    xmlns:conv="clr-namespace:ProfessorUI.Converter"
-                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+                    xmlns:conv="clr-namespace:ProfessorUI.Converter">
+
+    <!-- 글자 크기는 학생 앱과 한 벌을 나눠 쓴다 (ExamManager\Shared\FontSizes.xaml) -->
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="pack://application:,,,/ProfessorUI;component/FontSizes.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
 
     <!-- ── 색상 ── 와이어프레임의 무채색 팔레트를 그대로 옮긴 값 -->
     <SolidColorBrush x:Key="BgPage"        Color="#FFFFFF"/>
@@ -47,19 +51,6 @@
     <SolidColorBrush x:Key="NoticeBorder"  Color="#FCD34D"/>
     <SolidColorBrush x:Key="NoticeLabel"   Color="#B45309"/>
     <SolidColorBrush x:Key="NoticeText"    Color="#78350F"/>
-
-    <!-- ── 글자 크기 ──
-         큰 제목(PageTitle)과 아이콘을 뺀 교수 화면의 모든 글자가 이 값을 쓴다.
-         한꺼번에 키우거나 줄일 때는 여기만 고친다. 강의실 현황판은 창에 맞춰 스스로 늘어나므로 따로 둔다. -->
-    <sys:Double x:Key="FontTiny">13</sys:Double>     <!-- 화면 모니터링 썸네일 위 작은 글자 -->
-    <sys:Double x:Key="FontMini">14</sys:Double>     <!-- 메뉴 잠김 표시·배지·한 줄 오류 -->
-    <sys:Double x:Key="FontSmall">15</sys:Double>    <!-- 라벨·캡션·표 머리글·체크박스 -->
-    <sys:Double x:Key="FontBody">16</sys:Double>     <!-- 본문·버튼·입력칸·표 칸 -->
-    <sys:Double x:Key="FontStrong">17</sys:Double>   <!-- 마법사 단계 이름·퀴즈 문제 번호 -->
-    <sys:Double x:Key="FontSection">18</sys:Double>  <!-- 구역 제목·퀴즈 탭 -->
-    <sys:Double x:Key="FontLarge">19</sys:Double>    <!-- 왼쪽 메뉴·상단 '교수용' -->
-    <sys:Double x:Key="FontXLarge">21</sys:Double>   <!-- 학생 칸 이름·OX 보기 -->
-    <sys:Double x:Key="FontKpi">30</sys:Double>      <!-- KPI 큰 숫자 -->
 
     <!-- ── 카드 ── -->
     <Style x:Key="Card" TargetType="Border">
