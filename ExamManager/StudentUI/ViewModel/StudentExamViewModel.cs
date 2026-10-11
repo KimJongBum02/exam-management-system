@@ -97,24 +97,10 @@ namespace StudentUI.ViewModel
                     _isConnected = value;
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(ConnectionStatusText));
-                    OnPropertyChanged(nameof(SecurityPolicyCheckText));
-                    OnPropertyChanged(nameof(NetworkCheckText));
-                    OnPropertyChanged(nameof(IsSecurityPolicyValid));
-                    OnPropertyChanged(nameof(IsNetworkValid));
                 }
             }
 
             public string ConnectionStatusText => IsConnected ? "실시간 연결 중" : "서버 미연결";
-
-            // 조건 점검 항목 상태 (정상 여부)
-            public bool IsSecurityPolicyValid => IsConnected;
-            public bool IsNetworkValid => IsConnected;
-            public bool IsFileReadyValid => ExamFile.IsReceived;
-
-            // 조건 점검 항목 텍스트
-            public string SecurityPolicyCheckText => IsSecurityPolicyValid ? "완료" : "미완료";
-            public string NetworkCheckText => IsNetworkValid ? "접속" : "미접속";
-            public string FileReadyCheckText => IsFileReadyValid ? "완료" : "수신 대기";
 
             // 화면에 표시할 간결한 시험 파일 경로 (전송 전: 바탕화면\시험 파일, 전송 후: 바탕화면\시험 파일\시험파일명)
             public string DisplayFolderPath
@@ -301,8 +287,6 @@ namespace StudentUI.ViewModel
                 // 시험 파일 상태 변경 감지 시 테이블/단계 갱신
                 ExamFile.PropertyChanged += (s, e) =>
                 {
-                    OnPropertyChanged(nameof(FileReadyCheckText));
-                    OnPropertyChanged(nameof(IsFileReadyValid));
                     OnPropertyChanged(nameof(CurrentStep));
                     OnPropertyChanged(nameof(IsStep1Active));
                     OnPropertyChanged(nameof(IsStep2Active));
@@ -515,36 +499,6 @@ namespace StudentUI.ViewModel
                 CurrentTime = DateTime.Now.ToString("HH:mm:ss");
             }
 
-            public string CurrentPhaseTitle
-            {
-                get
-                {
-                    return CurrentStep switch
-                    {
-                        1 => "현재 단계: 학생 접속 대기",
-                        2 => "현재 단계: 시험 준비 및 환경 점검",
-                        3 => "현재 단계: 시험 파일 수신 완료",
-                        4 => "현재 단계: 시험 진행 및 문제 풀이",
-                        _ => "현재 단계: 시험 대기 중"
-                    };
-                }
-            }
-
-            public string CurrentPhaseDescription
-            {
-                get
-                {
-                    return CurrentStep switch
-                    {
-                        1 => "학생들이 시험 운영 프로그램에 로그인하여 접속 확인이 완료될 때까지 대기합니다.\n모든 학생이 접속 완료되면 다음 단계(준비)로 이동할 수 있습니다.\n지각생이 있을 경우 일부 학생만 접속된 상태로 진행될 수 있습니다.",
-                        2 => "시험 세션과 보안 정책이 점검되었으며, 시험 문제 배포를 대기하고 있습니다.\n비인가 프로그램(웹 브라우저, 메신저 등)은 자동으로 차단됩니다.",
-                        3 => "시험 문제 파일이 성공적으로 수신되었습니다.\n교수자의 시험 시작 신호가 전달되면 즉시 압축이 해제되고 작업 폴더가 열립니다.",
-                        4 => "시험이 시작되었습니다. 지정된 내 작업 폴더에서 문제를 확인하고 풀이를 진행하세요.\n풀이가 끝나면 답안 제출 버튼을 눌러 제출을 완료하세요.",
-                        _ => "시험 안내에 따라 대기해 주시기 바랍니다."
-                    };
-                }
-            }
-
             // 화면을 떠날 때 구독을 정리한다.
             private void Unsubscribe()
             {
@@ -598,8 +552,6 @@ namespace StudentUI.ViewModel
                     OnPropertyChanged(nameof(IsStep2Active));
                     OnPropertyChanged(nameof(IsStep3Active));
                     OnPropertyChanged(nameof(IsStep4Active));
-                    OnPropertyChanged(nameof(CurrentPhaseTitle));
-                    OnPropertyChanged(nameof(CurrentPhaseDescription));
                     RefreshStatusItems();
                 });
             }
@@ -608,11 +560,15 @@ namespace StudentUI.ViewModel
             // 시험 20분 뒤부터 답안을 다 쓴 학생이 먼저 나갈 수 있다. 그때 누르는 버튼이다.
             private void SubmitAnswer()
             {
-                // 전송받은 시험 폴더명 및 경로 정보 구성
-                string folderName = !string.IsNullOrEmpty(ExamFile.ArchiveName)
-                    ? ExamFile.ArchiveName
-                    : (!string.IsNullOrEmpty(ExamFile.FileName) ? System.IO.Path.GetFileNameWithoutExtension(ExamFile.FileName) : "시험 파일");
-                string folderPath = ExamFile.ExtractedRoot;
+                // 전송받은 시험 폴더명 및 경로 정보 구성.
+                // 학생이 폴더 이름을 바꿨을 수 있으므로 실제로 묶여 나갈 폴더를 보여 준다(없으면 원래 경로).
+                string folderPath = ExamFile.ResolveAnswerFolder();
+                if (folderPath.Length == 0) folderPath = ExamFile.ExtractedRoot;
+
+                string folderName = System.IO.Path.GetFileName(folderPath);
+                if (folderName.Length == 0)
+                    folderName = !string.IsNullOrEmpty(ExamFile.FileName)
+                        ? System.IO.Path.GetFileNameWithoutExtension(ExamFile.FileName) : "시험 파일";
                 string studentInfo = $"{Student.StudentNumber} {Student.StudentName}".Trim();
 
                 // 시험 폴더 이름과 답안 이름 형식 작성 확인 팝업창 표시

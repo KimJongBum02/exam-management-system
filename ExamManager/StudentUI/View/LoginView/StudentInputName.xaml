@@ -13,7 +13,9 @@
                    Margin="0,0,0,6"/>
         <Border BorderBrush="#2A2D31" BorderThickness="1" CornerRadius="6"
                 Background="White">
+            <!-- 이름은 한글이라 칸에 들어오는 순간 한글 자판으로 바꾼다(한영키를 먼저 누르지 않아도 되게) -->
             <TextBox x:Name="StudentName"
+                     InputMethod.PreferredImeState="On" InputMethod.PreferredImeConversionMode="Native"
                      FontSize="13"
                      Foreground="#1F2328"
                      Background="Transparent"

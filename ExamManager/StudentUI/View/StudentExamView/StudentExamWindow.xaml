@@ -1,75 +1,84 @@
 ﻿<Window x:Class="StudentUI.View.StudentExamView.StudentExamWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:local="clr-namespace:StudentUI.View.StudentExamView"
         xmlns:shared="clr-namespace:ExamManager.Shared"
-        mc:Ignorable="d" 
+        mc:Ignorable="d"
         Background="White"
         Title="시험 운영 - 학생용">
 
     <Window.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <ResourceDictionary>
+            <!-- 글자 크기(FontBody 등)는 교수 앱과 한 벌을 나눠 쓴다 (ExamManager\Shared\FontSizes.xaml).
+                 한꺼번에 키우거나 줄일 때는 그 파일만 고치면 두 앱이 함께 바뀐다 -->
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/StudentUI;component/FontSizes.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
 
-        <!-- 상단 네비게이션 버튼 스타일 -->
-        <Style x:Key="TopNavButton" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#64748B"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Padding" Value="10,6"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#F1F5F9"/>
-                                <Setter Property="Foreground" Value="#1E293B"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+            <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
-        <!-- 사이드바 메뉴 버튼 스타일 -->
-        <Style x:Key="SidebarMenuButton" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#64748B"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="HorizontalContentAlignment" Value="Left"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#F8FAFC"/>
-                                <Setter Property="Foreground" Value="#1E293B"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+            <!-- 상단 네비게이션 버튼 스타일 -->
+            <Style x:Key="TopNavButton" TargetType="Button">
+                <Setter Property="Background" Value="White"/>
+                <Setter Property="Foreground" Value="#475569"/>
+                <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
+                <Setter Property="FontWeight" Value="Medium"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Padding" Value="14,8"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="8"
+                                    BorderBrush="#E2E8F0" BorderThickness="1" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="bd" Property="Background" Value="#F1F5F9"/>
+                                    <Setter Property="Foreground" Value="#1E293B"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- 사이드바 메뉴 버튼 스타일 -->
+            <Style x:Key="SidebarMenuButton" TargetType="Button">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Foreground" Value="#64748B"/>
+                <Setter Property="FontSize" Value="{StaticResource FontSmall}"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                <Setter Property="Padding" Value="16,8"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="bd" Property="Background" Value="#F8FAFC"/>
+                                    <Setter Property="Foreground" Value="#1E293B"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
     </Window.Resources>
 
     <Grid Background="White">
         <Grid.RowDefinitions>
-            <RowDefinition Height="56"/> <!-- 1. 상단 네비게이션 헤더 -->
+            <RowDefinition Height="64"/> <!-- 1. 상단 네비게이션 헤더 -->
             <RowDefinition Height="*"/>  <!-- 2. 본문 -->
         </Grid.RowDefinitions>
 
@@ -77,9 +86,8 @@
         <Border Grid.Row="0" Background="White" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
             <shared:HeaderBarPanel Margin="24,0">
                 <!-- 좌측: 로고 및 타이틀 -->
-                <!-- 연결 상태는 오른쪽 불 하나로만 보인다 -->
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="학생용" FontSize="16" FontWeight="Bold" Foreground="#0F172A" VerticalAlignment="Center"/>
+                    <TextBlock Text="학생용" FontSize="{StaticResource FontLarge}" FontWeight="Bold" Foreground="#0F172A" VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- 가운데: 교수가 등록한 중요 공지(답안 파일 이름 형식 등). 교수가 내릴 때까지 계속 보인다.
@@ -89,19 +97,22 @@
                         ToolTip="{Binding ChatVM.ImportantNotice}"
                         Visibility="{Binding ChatVM.HasImportantNotice, Converter={StaticResource BoolToVis}}">
                     <DockPanel>
-                        <TextBlock DockPanel.Dock="Left" Text="📢 중요 공지" FontSize="13" FontWeight="Bold"
+                        <TextBlock DockPanel.Dock="Left" Text="📢 중요 공지" FontSize="{StaticResource FontSmall}" FontWeight="Bold"
                                    Foreground="#B45309" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding ChatVM.ImportantNotice}" FontSize="14" FontWeight="SemiBold"
+                        <TextBlock Text="{Binding ChatVM.ImportantNotice}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold"
                                    Foreground="#78350F" Margin="10,0,0,0"
                                    VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                     </DockPanel>
                 </Border>
 
-                <!-- 우측 메뉴 -->
+                <!-- 우측 메뉴 — 본문 제목 옆에 있던 '마지막 갱신'과 연결 상태를 여기로 당겨 왔다.
+                     연결 상태는 글자로 한 번만 보인다(예전의 '연결 완료' 표시는 같은 말이라 뺐다) -->
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <!-- 연결 상태 -->
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
-                        <Ellipse Width="7" Height="7" VerticalAlignment="Center" Margin="0,0,6,0">
+                    <TextBlock Text="{Binding CurrentTime, StringFormat=마지막 갱신: {0}}"
+                               FontSize="{StaticResource FontSmall}" Foreground="#94A3B8" VerticalAlignment="Center"/>
+
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
+                        <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,6,0">
                             <Ellipse.Style>
                                 <Style TargetType="Ellipse">
                                     <Setter Property="Fill" Value="#EF4444"/>
@@ -113,13 +124,14 @@
                                 </Style>
                             </Ellipse.Style>
                         </Ellipse>
-                        <TextBlock FontSize="13" Foreground="#64748B" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding ConnectionStatusText}" FontSize="{StaticResource FontSmall}" FontWeight="SemiBold"
+                                   VerticalAlignment="Center">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
-                                    <Setter Property="Text" Value="연결 끊김"/>
+                                    <Setter Property="Foreground" Value="#EF4444"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsConnected}" Value="True">
-                                            <Setter Property="Text" Value="연결 완료"/>
+                                            <Setter Property="Foreground" Value="#15803D"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -127,14 +139,18 @@
                         </TextBlock>
                     </StackPanel>
 
+                    <!-- 글자 영역과 버튼 영역을 가르는 선 -->
+                    <Rectangle Width="1" Height="22" Fill="#E2E8F0" Margin="16,0"/>
+
                     <!-- 알림 버튼 -->
                     <Button Style="{StaticResource TopNavButton}" Command="{Binding ToggleNotificationCommand}" Margin="0,0,8,0">
                         <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🔔" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
                             <TextBlock Text="알림" VerticalAlignment="Center"/>
-                            <!-- 알림창을 열어 보면 사라진다. 전체 경고 수는 KPI 카드에 남는다 -->
-                            <Border Background="#EF4444" CornerRadius="8" Padding="5,1" Margin="6,0,0,0"
+                            <!-- 알림창을 열어 보면 사라진다. 전체 경고 수는 알림창 머리에 남는다 -->
+                            <Border Background="#EF4444" CornerRadius="9" Padding="6,1" Margin="7,0,0,0"
                                     Visibility="{Binding HasUnreadCheatWarnings, Converter={StaticResource BoolToVis}}">
-                                <TextBlock Text="{Binding UnreadCheatWarningCount}" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                                <TextBlock Text="{Binding UnreadCheatWarningCount}" FontSize="{StaticResource FontTiny}" FontWeight="Bold" Foreground="White"/>
                             </Border>
                         </StackPanel>
                     </Button>
@@ -142,25 +158,25 @@
                     <!-- 채팅 버튼 -->
                     <Button x:Name="ChatButton" Style="{StaticResource TopNavButton}" Command="{Binding ToggleChatCommand}" Margin="0,0,8,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="💬" FontSize="13" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="💬" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
                             <TextBlock Text="채팅" VerticalAlignment="Center"/>
-                            <Border Background="#2563EB" CornerRadius="8" Padding="5,1" Margin="6,0,0,0"
+                            <Border Background="#2563EB" CornerRadius="9" Padding="6,1" Margin="7,0,0,0"
                                     Visibility="{Binding ChatVM.HasUnreadMessages, Converter={StaticResource BoolToVis}}">
-                                <TextBlock Text="{Binding ChatVM.UnreadCount}" FontSize="10" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding ChatVM.UnreadCount}" FontSize="{StaticResource FontTiny}" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                             </Border>
                         </StackPanel>
                     </Button>
 
                     <!-- 프로필 -->
-                    <Border BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="18" Padding="10,4" VerticalAlignment="Center" Margin="6,0,0,0" Background="#F8FAFC">
+                    <Border BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="20" Padding="12,6" VerticalAlignment="Center" Margin="6,0,0,0" Background="#F8FAFC">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="👤" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding Student.StudentName}" FontWeight="SemiBold" FontSize="12" Foreground="#1E293B" VerticalAlignment="Center"/>
-                            <TextBlock Text=" (" FontSize="12" Foreground="#94A3B8" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding Student.StudentNumber}" FontSize="12" Foreground="#64748B" VerticalAlignment="Center"/>
-                            <TextBlock Text=")" FontSize="12" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                            <TextBlock Text="👤" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Student.StudentName}" FontWeight="SemiBold" FontSize="{StaticResource FontBody}" Foreground="#1E293B" VerticalAlignment="Center"/>
+                            <TextBlock Text=" (" FontSize="{StaticResource FontBody}" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Student.StudentNumber}" FontSize="{StaticResource FontBody}" Foreground="#64748B" VerticalAlignment="Center"/>
+                            <TextBlock Text=")" FontSize="{StaticResource FontBody}" Foreground="#94A3B8" VerticalAlignment="Center"/>
                             <Button Command="{Binding LogoutCommand}" Content="로그아웃" Background="Transparent" BorderThickness="0"
-                                     Foreground="#EF4444" FontSize="11" Cursor="Hand" Margin="8,0,0,0" FontWeight="SemiBold"/>
+                                     Foreground="#EF4444" FontSize="{StaticResource FontSmall}" Cursor="Hand" Margin="10,0,0,0" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -174,405 +190,267 @@
                 <ColumnDefinition Width="Auto"/> <!-- 우측 드로어 -->
             </Grid.ColumnDefinitions>
 
-            <!-- 메인 컨텐츠 영역 -->
+            <!-- 메인 컨텐츠 영역 — 한 줄로 세워 화면 가운데에 둔다.
+                 1920 화면에서 좌우로 너무 벌어지지 않도록 본문 폭을 MaxWidth 로 묶는다 -->
             <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <Grid Margin="32,24,32,32">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/> <!-- 타이틀 -->
-                        <RowDefinition Height="*"/>    <!-- 2열 컨텐츠 -->
-                        <RowDefinition Height="Auto"/> <!-- 액션 버튼 바 -->
-                    </Grid.RowDefinitions>
+                <StackPanel MaxWidth="1180" HorizontalAlignment="Center" Margin="32,20,32,28">
 
-                    <!-- 상단 타이틀 바 -->
-                    <StackPanel Grid.Row="0" Margin="0,0,0,20">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="시험 진행 현황" FontSize="20" FontWeight="Bold" Foreground="#0F172A"/>
-                            <TextBlock Text="{Binding CurrentTime, StringFormat=마지막 갱신: {0}}"
-                                       FontSize="12" Foreground="#94A3B8" VerticalAlignment="Bottom" Margin="16,0,0,3"/>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Margin="14,0,0,3">
-                                <Ellipse Width="6" Height="6" VerticalAlignment="Center" Margin="0,0,6,0">
-                                    <Ellipse.Style>
-                                        <Style TargetType="Ellipse">
-                                            <Setter Property="Fill" Value="#EF4444"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsConnected}" Value="True">
-                                                    <Setter Property="Fill" Value="#16A34A"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Ellipse.Style>
-                                </Ellipse>
-                                <TextBlock Text="{Binding ConnectionStatusText}" FontSize="12" Foreground="#64748B" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </StackPanel>
+                    <!-- 상단 타이틀 -->
+                    <TextBlock Text="시험 진행 현황" FontSize="22" FontWeight="Bold" Foreground="#0F172A"/>
 
-                        <!-- 답안 제출 진행 상태 배너 -->
-                        <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="8"
-                                Padding="14,10" Margin="0,12,0,0"
-                                Visibility="{Binding IsSubmitting, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="{Binding SubmitStatus}" FontSize="13" FontWeight="SemiBold" Foreground="#1D4ED8"/>
-                        </Border>
-                    </StackPanel>
+                    <!-- 답안 제출 진행 상태 배너 -->
+                    <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="8"
+                            Padding="16,12" Margin="0,12,0,0"
+                            Visibility="{Binding IsSubmitting, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{Binding SubmitStatus}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold" Foreground="#1D4ED8"/>
+                    </Border>
 
-                    <!-- 2열 메인 콘텐츠 -->
-                    <Grid Grid.Row="1">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="4.1*"/>
-                            <ColumnDefinition Width="24"/>
-                            <ColumnDefinition Width="5.9*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <!-- [좌측 열] 진행 안내 및 환경 점검 -->
-                        <StackPanel Grid.Column="0">
-                            <!-- 시험 진행 안내 -->
-                            <TextBlock Text="시험 진행 안내" FontSize="14" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,0,10"/>
-                            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="18">
-                                <StackPanel>
-                                    <TextBlock Text="{Binding CurrentPhaseTitle}" FontSize="13" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,8"/>
-                                    <TextBlock Text="{Binding CurrentPhaseDescription}" FontSize="12" Foreground="#475569" TextWrapping="Wrap" LineHeight="20"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- 응시 환경 점검 -->
-                            <TextBlock Text="응시 환경 점검" FontSize="14" FontWeight="Bold" Foreground="#0F172A" Margin="0,20,0,10"/>
-                            <Border Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="18">
-                                <StackPanel>
-                                    <!-- 보안 정책 -->
-                                    <Grid Margin="0,5">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Orientation="Horizontal">
-                                            <Ellipse Width="6" Height="6" VerticalAlignment="Center" Margin="0,0,8,0">
-                                                <Ellipse.Style>
-                                                    <Style TargetType="Ellipse">
-                                                        <Setter Property="Fill" Value="#EF4444"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsSecurityPolicyValid}" Value="True">
-                                                                <Setter Property="Fill" Value="#16A34A"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Ellipse.Style>
-                                            </Ellipse>
-                                            <TextBlock Text="보안 정책" FontSize="12" Foreground="#334155" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                        <TextBlock Grid.Column="1" Text="{Binding SecurityPolicyCheckText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="#EF4444"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsSecurityPolicyValid}" Value="True">
-                                                            <Setter Property="Foreground" Value="#16A34A"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                    </Grid>
-
-                                    <!-- 서버 연결 상태 -->
-                                    <Grid Margin="0,7">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Orientation="Horizontal">
-                                            <Ellipse Width="6" Height="6" VerticalAlignment="Center" Margin="0,0,8,0">
-                                                <Ellipse.Style>
-                                                    <Style TargetType="Ellipse">
-                                                        <Setter Property="Fill" Value="#EF4444"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsNetworkValid}" Value="True">
-                                                                <Setter Property="Fill" Value="#16A34A"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Ellipse.Style>
-                                            </Ellipse>
-                                            <TextBlock Text="서버 연결 상태" FontSize="12" Foreground="#334155" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                        <TextBlock Grid.Column="1" Text="{Binding NetworkCheckText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="#EF4444"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsNetworkValid}" Value="True">
-                                                            <Setter Property="Foreground" Value="#16A34A"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                    </Grid>
-
-                                    <!-- 시험 파일 -->
-                                    <Grid Margin="0,5">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Orientation="Horizontal">
-                                            <Ellipse Width="6" Height="6" VerticalAlignment="Center" Margin="0,0,8,0">
-                                                <Ellipse.Style>
-                                                    <Style TargetType="Ellipse">
-                                                        <Setter Property="Fill" Value="#EF4444"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsFileReadyValid}" Value="True">
-                                                                <Setter Property="Fill" Value="#16A34A"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Ellipse.Style>
-                                            </Ellipse>
-                                            <TextBlock Text="시험 파일" FontSize="12" Foreground="#334155" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                        <TextBlock Grid.Column="1" Text="{Binding FileReadyCheckText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="#EF4444"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsFileReadyValid}" Value="True">
-                                                            <Setter Property="Foreground" Value="#16A34A"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                    </Grid>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- 부정행위 적발 경고 (경고가 있을 때 나타나는 알림 박스) -->
-                            <Border Background="#FEF2F2" BorderBrush="#FECACA" BorderThickness="1" CornerRadius="10" Padding="14,12" Margin="0,16,0,0"
-                                    Visibility="{Binding HasCheatWarnings, Converter={StaticResource BoolToVis}}">
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                        <TextBlock Text="⚠️" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                        <TextBlock Text="부정행위 감시 알림" FontSize="12" FontWeight="Bold" Foreground="#B91C1C" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                    <TextBlock Text="비인가 프로그램 실행이 감지되었습니다. 상단 알림 메뉴에서 상세 내역을 확인할 수 있습니다."
-                                               FontSize="11" Foreground="#EF4444" TextWrapping="Wrap" LineHeight="16"/>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-
-                        <!-- [우측 열] 학생 접속/응시 현황 (요약 지표 + 작업 폴더 + 테이블) -->
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Text="학생 접속 현황" FontSize="14" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,0,10"/>
-
-                            <!-- 3개 지표 박스 -->
+                    <!-- 시험 시간 — 화면에서 가장 먼저 눈에 들어와야 하는 값이라 가장 크게 둔다 -->
+                    <Border Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12"
+                            Padding="24,18" Margin="0,16,0,0">
+                        <Grid>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="12"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="1"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
-                                <!-- 전체 시간 (교수 화면의 32명 스타일) -->
-                                <Border Grid.Column="0" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14,14">
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <TextBlock Text="전체 시간" FontSize="11" Foreground="#64748B" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="50" FontSize="24" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" Margin="0,2,0,0"/>
-                                        <TextBlock Text="분" FontSize="11" Foreground="#94A3B8" HorizontalAlignment="Center"/>
+                                <!-- 전체 시간 -->
+                                <StackPanel Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock Text="전체 시간" FontSize="{StaticResource FontBody}" Foreground="#64748B" HorizontalAlignment="Center"/>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,0">
+                                        <TextBlock Text="{Binding ExamTime.TotalMinutes, FallbackValue=50}" FontSize="42" FontWeight="Bold" Foreground="#0F172A"/>
+                                        <TextBlock Text="분" FontSize="{StaticResource FontSection}" Foreground="#64748B"
+                                                   VerticalAlignment="Bottom" Margin="6,0,0,7"/>
                                     </StackPanel>
-                                </Border>
+                                    <TextBlock Text="배정된 시험 시간" FontSize="{StaticResource FontSmall}" Foreground="#94A3B8" HorizontalAlignment="Center"/>
+                                </StackPanel>
 
-                                <!-- 남은 시간 (교수 화면의 27명 스타일) -->
-                                <Border Grid.Column="2" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14,14">
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <TextBlock Text="남은 시간" FontSize="11" Foreground="#64748B" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="{Binding ExamTime.RemainingText, FallbackValue=대기 중}"
-                                                   FontSize="22" FontWeight="Bold" Foreground="#1A56DB"
-                                                   FontFamily="Consolas, Segoe UI" HorizontalAlignment="Center" Margin="0,4,0,0"/>
-                                        <TextBlock Text="{Binding ExamTime.StatusText, FallbackValue=미시작}" FontSize="11" Foreground="#94A3B8" HorizontalAlignment="Center"/>
-                                    </StackPanel>
-                                </Border>
+                                <Rectangle Grid.Column="1" Fill="#E2E8F0" Margin="0,6"/>
 
-                                <!-- 경고 횟수 (교수 화면의 5명 스타일) -->
-                                <Border Grid.Column="4" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14,14">
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <TextBlock Text="부정행위 경고" FontSize="11" Foreground="#64748B" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="{Binding CheatWarningCount}" FontSize="24" FontWeight="Bold" Foreground="#EF4444" HorizontalAlignment="Center" Margin="0,2,0,0"/>
-                                        <TextBlock Text="건" FontSize="11" Foreground="#94A3B8" HorizontalAlignment="Center"/>
+                                <!-- 남은 시간 -->
+                                <StackPanel Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock Text="남은 시간" FontSize="{StaticResource FontBody}" Foreground="#64748B" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding ExamTime.RemainingText, FallbackValue=00 : 00}"
+                                               FontSize="44" FontWeight="Bold" Foreground="#1A56DB"
+                                               FontFamily="Consolas, Segoe UI" HorizontalAlignment="Center" Margin="0,4,0,2"/>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <Ellipse Width="7" Height="7" Fill="#94A3B8" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock Text="{Binding ExamTime.StatusText, FallbackValue=시험 대기 중}"
+                                                   FontSize="{StaticResource FontSmall}" Foreground="#94A3B8" VerticalAlignment="Center"/>
                                     </StackPanel>
-                                </Border>
+                                </StackPanel>
                             </Grid>
 
-                            <!-- 내 작업 폴더 및 진행 상태 배너 카드 (이전 학생 UI의 핵심 작업 편의성 완벽 지원) -->
-                            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14,12" Margin="0,14,0,0">
+                            <!-- 시험 화면을 내려놓고 실습을 해도 남은 시간이 보이도록, 작은 창으로 따로 띄운다 -->
+                            <Button x:Name="PipButton" Click="OnTogglePip"
+                                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                                    Background="White" BorderThickness="0" Padding="8" Cursor="Hand"
+                                    ToolTip="남은 시간을 항상 위에 뜨는 작은 창으로 보기">
+                                <Button.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="8"/>
+                                        <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                                        <Setter Property="BorderThickness" Value="1"/>
+                                    </Style>
+                                </Button.Resources>
+                                <Grid Width="18" Height="15">
+                                    <Rectangle Stroke="#64748B" StrokeThickness="1.4" RadiusX="2.5" RadiusY="2.5"/>
+                                    <Rectangle Fill="#64748B" Width="9" Height="7" RadiusX="1.5" RadiusY="1.5"
+                                               HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,2.5,2.5"/>
+                                </Grid>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <!-- 내 작업 폴더 -->
+                    <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="18,14" Margin="0,16,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" Width="44" Height="44" CornerRadius="10" Background="#E0E7FF" Margin="0,0,16,0">
+                                <TextBlock Text="📁" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="내 작업 폴더" FontSize="{StaticResource FontStrong}" FontWeight="Bold" Foreground="#0F172A"/>
+                                    <TextBlock Text="(문제 및 답안 저장 경로)" FontSize="{StaticResource FontSmall}" Foreground="#94A3B8"
+                                               VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                </StackPanel>
+                                <!-- 전체 경로 대신 학생이 찾아가기 쉬운 이름으로 보인다 (바탕화면\시험 파일, 받은 뒤에는 그 아래 시험 폴더까지) -->
+                                <TextBlock Text="{Binding DisplayFolderPath}"
+                                           FontSize="{StaticResource FontBody}" Foreground="#475569" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
+                                <!-- 프로그레스 바 -->
+                                <ProgressBar Height="6" Maximum="100" Value="{Binding ExamFile.Progress, Mode=OneWay}" Margin="0,8,16,0">
+                                    <ProgressBar.Style>
+                                        <Style TargetType="ProgressBar">
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="ProgressBar">
+                                                        <Border Background="#E2E8F0" CornerRadius="3">
+                                                            <Border x:Name="PART_Track">
+                                                                <Border x:Name="PART_Indicator" Background="#1A56DB" CornerRadius="3" HorizontalAlignment="Left"/>
+                                                            </Border>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </ProgressBar.Style>
+                                </ProgressBar>
+                                <!-- 막대가 다 찼을 때 무엇이 끝났는지 알 수 있게 한다 -->
+                                <TextBlock Text="✓ 시험 파일 수신 완료" FontSize="{StaticResource FontSmall}" FontWeight="SemiBold" Foreground="#15803D"
+                                           Margin="0,6,0,0"
+                                           Visibility="{Binding ExamFile.IsReceived, Converter={StaticResource BoolToVis}}"/>
+                            </StackPanel>
+
+                            <Button Grid.Column="2" Command="{Binding OpenExtractFolderCommand}"
+                                    Height="46" Padding="20,0" Cursor="Hand" VerticalAlignment="Center">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border x:Name="btnBd" Background="#1A56DB" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <TextBlock Text="📂" FontSize="15" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                                            <TextBlock Text="작업 폴더 열기" FontSize="{StaticResource FontBody}" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="btnBd" Property="Background" Value="#1D4ED8"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsPressed" Value="True">
+                                                            <Setter TargetName="btnBd" Property="Background" Value="#1E40AF"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <!-- 시험 단계별 상세 현황 및 가이드 -->
+                    <Border Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Margin="0,16,0,0">
+                        <StackPanel>
+                            <!-- 테이블/리스트 헤더 -->
+                            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="20,14" CornerRadius="10,10,0,0">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" MinWidth="160"/>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="10"/>
-                                        <ColumnDefinition Width="Auto"/>
+                                        <!-- 상태 칸은 폭을 고정한다. 글자 길이만큼 늘어나면 가운데 설명 칸이 눌려 줄이 한없이 길어진다 -->
+                                        <ColumnDefinition Width="160"/>
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                        <TextBlock Text="내 작업 폴더 (문제 및 답안 저장 경로)" FontSize="12" FontWeight="SemiBold" Foreground="#1E293B"/>
-                                        <!-- 전체 경로 대신 학생이 찾아가기 쉬운 이름으로 보인다 (바탕화면\시험 파일, 받은 뒤에는 그 아래 시험 폴더까지) -->
-                                        <TextBlock Text="{Binding DisplayFolderPath}"
-                                                   FontSize="11" Foreground="#64748B" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
-                                        <!-- 프로그레스 바 -->
-                                        <ProgressBar Height="5" Maximum="100" Value="{Binding ExamFile.Progress, Mode=OneWay}" Margin="0,6,0,0">
-                                            <ProgressBar.Style>
-                                                <Style TargetType="ProgressBar">
-                                                    <Setter Property="Template">
-                                                        <Setter.Value>
-                                                            <ControlTemplate TargetType="ProgressBar">
-                                                                <Border Background="#E2E8F0" CornerRadius="2.5">
-                                                                    <Border x:Name="PART_Track">
-                                                                        <Border x:Name="PART_Indicator" Background="#1A56DB" CornerRadius="2.5" HorizontalAlignment="Left"/>
-                                                                    </Border>
-                                                                </Border>
-                                                            </ControlTemplate>
-                                                        </Setter.Value>
-                                                    </Setter>
-                                                </Style>
-                                            </ProgressBar.Style>
-                                        </ProgressBar>
-                                        <!-- 막대가 다 찼을 때 무엇이 끝났는지 알 수 있게 한다 -->
-                                        <TextBlock Text="✓ 시험 파일 수신 완료" FontSize="11" FontWeight="SemiBold" Foreground="#15803D"
-                                                   Margin="0,5,0,0"
-                                                   Visibility="{Binding ExamFile.IsReceived, Converter={StaticResource BoolToVis}}"/>
-                                    </StackPanel>
-
-                                    <Button Grid.Column="2" Command="{Binding OpenExtractFolderCommand}"
-                                            Height="38" Padding="14,0" Cursor="Hand">
-                                        <Button.Style>
-                                            <Style TargetType="Button">
-                                                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-                                                <Setter Property="Template">
-                                                    <Setter.Value>
-                                                        <ControlTemplate TargetType="Button">
-                                                            <Border x:Name="btnBd" Background="#1A56DB" CornerRadius="8" Padding="{TemplateBinding Padding}">
-                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                                    <TextBlock Text="📂" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                                                    <TextBlock Text="작업 폴더 열기" FontSize="12" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
-                                                                </StackPanel>
-                                                            </Border>
-                                                            <ControlTemplate.Triggers>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter TargetName="btnBd" Property="Background" Value="#1D4ED8"/>
-                                                                </Trigger>
-                                                                <Trigger Property="IsPressed" Value="True">
-                                                                    <Setter TargetName="btnBd" Property="Background" Value="#1E40AF"/>
-                                                                </Trigger>
-                                                            </ControlTemplate.Triggers>
-                                                        </ControlTemplate>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Style>
-                                        </Button.Style>
-                                    </Button>
+                                    <TextBlock Grid.Column="0" Text="항목" FontSize="{StaticResource FontBody}" FontWeight="SemiBold" Foreground="#64748B"/>
+                                    <TextBlock Grid.Column="1" Text="진행 내용 및 가이드" FontSize="{StaticResource FontBody}" FontWeight="SemiBold" Foreground="#64748B"/>
+                                    <TextBlock Grid.Column="2" Text="현재 상태" FontSize="{StaticResource FontBody}" FontWeight="SemiBold" Foreground="#64748B" HorizontalAlignment="Right"/>
                                 </Grid>
                             </Border>
 
-                            <!-- 시험 단계별 상세 현황 및 가이드 (직관적인 카드 리스트) -->
-                            <Border Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Margin="0,14,0,0">
-                                <StackPanel>
-                                    <!-- 테이블/리스트 헤더 -->
-                                    <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="18,12" CornerRadius="10,10,0,0">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" MinWidth="120"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <!-- 상태 칸은 폭을 고정한다. 글자 길이만큼 늘어나면 가운데 설명 칸이 눌려 줄이 한없이 길어진다 -->
-                                                <ColumnDefinition Width="130"/>
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Text="항목" FontSize="12" FontWeight="SemiBold" Foreground="#64748B"/>
-                                            <TextBlock Grid.Column="1" Text="진행 내용 및 가이드" FontSize="12" FontWeight="SemiBold" Foreground="#64748B"/>
-                                            <TextBlock Grid.Column="2" Text="현재 상태" FontSize="12" FontWeight="SemiBold" Foreground="#64748B" HorizontalAlignment="Right"/>
-                                        </Grid>
-                                    </Border>
+                            <!-- 데이터 행 목록 -->
+                            <ItemsControl ItemsSource="{Binding StatusItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="#F1F5F9" BorderThickness="0,0,0,1" Padding="20,15">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" MinWidth="160"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="160"/>
+                                                </Grid.ColumnDefinitions>
 
-                                    <!-- 데이터 행 목록 -->
-                                    <ItemsControl ItemsSource="{Binding StatusItems}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border BorderBrush="#F1F5F9" BorderThickness="0,0,0,1" Padding="18,13">
-                                                    <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="Auto" MinWidth="120"/>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="130"/>
-                                                        </Grid.ColumnDefinitions>
+                                                <!-- 구분 및 아이콘 -->
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <Border Width="34" Height="34" Background="#F1F5F9" CornerRadius="8" Margin="0,0,12,0">
+                                                        <TextBlock Text="{Binding Icon}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <TextBlock Text="{Binding Category}" FontSize="{StaticResource FontBody}" FontWeight="Bold" Foreground="#0F172A" VerticalAlignment="Center"/>
+                                                </StackPanel>
 
-                                                        <!-- 구분 및 아이콘 -->
-                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                                            <Border Width="28" Height="28" Background="#F1F5F9" CornerRadius="6" Margin="0,0,10,0">
-                                                                <TextBlock Text="{Binding Icon}" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                            </Border>
-                                                            <TextBlock Text="{Binding Category}" FontSize="12.5" FontWeight="Bold" Foreground="#0F172A" VerticalAlignment="Center"/>
-                                                        </StackPanel>
+                                                <!-- 상세 정보 및 안내 문구 -->
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,20,0">
+                                                    <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold" Foreground="#1E293B" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding Description}" FontSize="{StaticResource FontSmall}" Foreground="#64748B" Margin="0,4,0,0" TextWrapping="Wrap" LineHeight="22"/>
+                                                </StackPanel>
 
-                                                        <!-- 상세 정보 및 안내 문구 -->
-                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0,16,0">
-                                                            <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold" Foreground="#1E293B" TextTrimming="CharacterEllipsis"/>
-                                                            <TextBlock Text="{Binding Description}" FontSize="11.5" Foreground="#64748B" Margin="0,3,0,0" TextWrapping="Wrap" LineHeight="17"/>
-                                                        </StackPanel>
-
-                                                        <!-- 상태 뱃지 (Badge) -->
-                                                        <Border Grid.Column="2" CornerRadius="12" Padding="12,5" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                                            <Border.Style>
-                                                                <Style TargetType="Border">
-                                                                    <Setter Property="Background" Value="#F1F5F9"/>
-                                                                    <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding StatusLevel}" Value="Success">
-                                                                            <Setter Property="Background" Value="#DCFCE7"/>
-                                                                        </DataTrigger>
-                                                                        <DataTrigger Binding="{Binding StatusLevel}" Value="Info">
-                                                                            <Setter Property="Background" Value="#DBEAFE"/>
-                                                                        </DataTrigger>
-                                                                        <DataTrigger Binding="{Binding StatusLevel}" Value="Warning">
-                                                                            <Setter Property="Background" Value="#FEE2E2"/>
-                                                                        </DataTrigger>
-                                                                    </Style.Triggers>
-                                                                </Style>
-                                                            </Border.Style>
-                                                            <TextBlock Text="{Binding Status}" FontSize="11.5" FontWeight="Bold"
-                                                                       TextTrimming="CharacterEllipsis" ToolTip="{Binding Status}">
-                                                                <TextBlock.Style>
-                                                                    <Style TargetType="TextBlock">
-                                                                        <Setter Property="Foreground" Value="#475569"/>
-                                                                        <Style.Triggers>
-                                                                            <DataTrigger Binding="{Binding StatusLevel}" Value="Success">
-                                                                                <Setter Property="Foreground" Value="#15803D"/>
-                                                                            </DataTrigger>
-                                                                            <DataTrigger Binding="{Binding StatusLevel}" Value="Info">
-                                                                                <Setter Property="Foreground" Value="#1D4ED8"/>
-                                                                            </DataTrigger>
-                                                                            <DataTrigger Binding="{Binding StatusLevel}" Value="Warning">
-                                                                                <Setter Property="Foreground" Value="#B91C1C"/>
-                                                                            </DataTrigger>
-                                                                        </Style.Triggers>
-                                                                    </Style>
-                                                                </TextBlock.Style>
-                                                            </TextBlock>
-                                                        </Border>
-                                                    </Grid>
+                                                <!-- 상태 뱃지 (Badge) -->
+                                                <Border Grid.Column="2" CornerRadius="14" Padding="14,6" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="#F1F5F9"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding StatusLevel}" Value="Success">
+                                                                    <Setter Property="Background" Value="#DCFCE7"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding StatusLevel}" Value="Info">
+                                                                    <Setter Property="Background" Value="#DBEAFE"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding StatusLevel}" Value="Warning">
+                                                                    <Setter Property="Background" Value="#FEE2E2"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock Text="{Binding Status}" FontSize="{StaticResource FontSmall}" FontWeight="Bold"
+                                                               TextTrimming="CharacterEllipsis" ToolTip="{Binding Status}">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Foreground" Value="#475569"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding StatusLevel}" Value="Success">
+                                                                        <Setter Property="Foreground" Value="#15803D"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding StatusLevel}" Value="Info">
+                                                                        <Setter Property="Foreground" Value="#1D4ED8"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding StatusLevel}" Value="Warning">
+                                                                        <Setter Property="Foreground" Value="#B91C1C"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
                                                 </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </Border>
-
-                            <TextBlock Text="💡 시험 진행 중에는 위 작업 폴더에서 소스 코드를 편집하고, 시험 종료 전 우측 하단의 [답안 제출] 버튼을 눌러주세요."
-                                       FontSize="11.5" Foreground="#64748B" Margin="0,12,0,4"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
-                    </Grid>
+                    </Border>
 
-                    <!-- 액션 버튼 영역 -->
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
+                    <!-- 마무리 안내와 주 버튼. 표 바로 아래에 붙인다 -->
+                    <Grid Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,20,0"
+                                   Text="💡 시험 진행 중에는 위 작업 폴더에서 소스 코드를 편집하고, 시험 종료 전 [답안 제출] 버튼을 눌러주세요."
+                                   FontSize="{StaticResource FontBody}" Foreground="#64748B"/>
+
                         <!-- 주 액션 버튼: 모던 블랙 라운드 버튼 -->
                         <!-- 문제 폴더가 풀리기 전에는 낼 답안이 없어 누를 수 없다. 교수 화면처럼 짙은 회색으로 바꿔 알린다 -->
-                        <Button Command="{Binding SubmitAnswerCommand}"
-                                Content="답안 제출 및 시험 종료"
+                        <Button Grid.Column="1" Command="{Binding SubmitAnswerCommand}"
                                 Background="#18181B" Foreground="White" BorderThickness="0"
-                                Padding="18,10" FontSize="13" FontWeight="Bold">
+                                Padding="28,15" FontSize="{StaticResource FontSection}" FontWeight="Bold">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="📤" FontSize="17" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="답안 제출 및 시험 종료" VerticalAlignment="Center"/>
+                            </StackPanel>
                             <Button.Style>
                                 <Style TargetType="Button">
                                     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -580,7 +458,7 @@
                                     <Setter Property="Template">
                                         <Setter.Value>
                                             <ControlTemplate TargetType="Button">
-                                                <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="8"
+                                                <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="10"
                                                         Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
                                                     <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                       RecognizesAccessKey="True"/>
@@ -600,12 +478,12 @@
                                 </Style>
                             </Button.Style>
                         </Button>
-                    </StackPanel>
-                </Grid>
+                    </Grid>
+                </StackPanel>
             </ScrollViewer>
 
             <!-- 우측 오버레이 드로어 (알림 / 채팅 패널) -->
-            <Border x:Name="SideDrawer" Grid.Column="1" Width="340" Background="White" BorderBrush="#E2E8F0" BorderThickness="1,0,0,0">
+            <Border x:Name="SideDrawer" Grid.Column="1" Width="380" Background="White" BorderBrush="#E2E8F0" BorderThickness="1,0,0,0">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -628,20 +506,27 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
 
-                        <Border Grid.Row="0" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="16,14" Background="#FEF2F2">
+                        <!-- 머리에 전체 경고 건수를 둔다 (시간 카드 옆에 있던 것을 옮겨 왔다) -->
+                        <Border Grid.Row="0" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="18,16" Background="#FEF2F2">
                             <Grid>
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock Text="🔔" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="부정행위 감시 알림" FontSize="13" FontWeight="Bold" Foreground="#B91C1C" VerticalAlignment="Center"/>
+                                    <TextBlock Text="🔔" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="부정행위 감시 알림" FontSize="{StaticResource FontStrong}" FontWeight="Bold" Foreground="#B91C1C" VerticalAlignment="Center"/>
+                                    <Border Background="#B91C1C" CornerRadius="11" Padding="9,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock FontSize="{StaticResource FontSmall}" FontWeight="Bold" Foreground="White">
+                                            <Run Text="{Binding CheatWarningCount, Mode=OneWay}"/><Run Text="건"/>
+                                        </TextBlock>
+                                    </Border>
                                 </StackPanel>
                                 <Button HorizontalAlignment="Right" Command="{Binding ToggleNotificationCommand}" Content="✕"
-                                        Background="Transparent" BorderThickness="0" Foreground="#64748B" Cursor="Hand" FontWeight="Bold"/>
+                                        Background="Transparent" BorderThickness="0" Foreground="#64748B" Cursor="Hand"
+                                        FontSize="{StaticResource FontBody}" FontWeight="Bold"/>
                             </Grid>
                         </Border>
 
                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                             <Grid>
-                                <TextBlock Text="새로운 알림이 없습니다." Foreground="#94A3B8"
+                                <TextBlock Text="새로운 알림이 없습니다." Foreground="#94A3B8" FontSize="{StaticResource FontBody}"
                                            HorizontalAlignment="Center" Margin="0,40">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
@@ -655,11 +540,11 @@
                                     </TextBlock.Style>
                                 </TextBlock>
 
-                                <ItemsControl ItemsSource="{Binding CheatWarnings}" Margin="12">
+                                <ItemsControl ItemsSource="{Binding CheatWarnings}" Margin="14">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Border Background="#FEF2F2" BorderBrush="#FECACA" BorderThickness="1"
-                                                    CornerRadius="8" Padding="12,10" Margin="0,0,0,8">
+                                                    CornerRadius="8" Padding="14,12" Margin="0,0,0,10">
                                                 <StackPanel>
                                                     <!-- 긴 프로그램 이름이 시각 위로 겹치지 않도록 칸을 나눈다 -->
                                                     <Grid>
@@ -667,13 +552,13 @@
                                                             <ColumnDefinition Width="*"/>
                                                             <ColumnDefinition Width="Auto"/>
                                                         </Grid.ColumnDefinitions>
-                                                        <TextBlock Text="{Binding Description}" FontSize="12" FontWeight="Bold"
+                                                        <TextBlock Text="{Binding Description}" FontSize="{StaticResource FontBody}" FontWeight="Bold"
                                                                    Foreground="#B91C1C" TextWrapping="Wrap"/>
-                                                        <TextBlock Grid.Column="1" Text="{Binding Time}" FontSize="11" Foreground="#94A3B8"
+                                                        <TextBlock Grid.Column="1" Text="{Binding Time}" FontSize="{StaticResource FontSmall}" Foreground="#94A3B8"
                                                                    VerticalAlignment="Top" Margin="8,0,0,0"/>
                                                     </Grid>
-                                                    <TextBlock Text="시험 중에는 실행할 수 없는 프로그램입니다." FontSize="11"
-                                                               Foreground="#EF4444" Margin="0,3,0,0"/>
+                                                    <TextBlock Text="시험 중에는 실행할 수 없는 프로그램입니다." FontSize="{StaticResource FontSmall}"
+                                                               Foreground="#EF4444" Margin="0,4,0,0"/>
                                                 </StackPanel>
                                             </Border>
                                         </DataTemplate>
@@ -691,74 +576,175 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <Border Grid.Row="0" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="16,14" Background="#F8FAFC">
+                        <Border Grid.Row="0" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="16,12" Background="White">
                             <Grid>
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock Text="💬" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="교수님과 대화" FontSize="13" FontWeight="Bold" Foreground="#1E293B" VerticalAlignment="Center"/>
+                                    <Border Width="38" Height="38" CornerRadius="19" Background="#EEF2FF" Margin="0,0,12,0">
+                                        <TextBlock Text="💬" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="교수님과 대화" FontSize="{StaticResource FontStrong}" FontWeight="Bold" Foreground="#0F172A"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                            <Ellipse Width="7" Height="7" VerticalAlignment="Center" Margin="0,0,5,0">
+                                                <Ellipse.Style>
+                                                    <Style TargetType="Ellipse">
+                                                        <Setter Property="Fill" Value="#CBD5E1"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                                                <Setter Property="Fill" Value="#16A34A"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Ellipse.Style>
+                                            </Ellipse>
+                                            <TextBlock FontSize="{StaticResource FontSmall}" Foreground="#64748B">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="연결 끊김"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                                                <Setter Property="Text" Value="접속 중"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </StackPanel>
                                 </StackPanel>
-                                <Button HorizontalAlignment="Right" Command="{Binding ToggleChatCommand}" Content="✕"
-                                        Background="Transparent" BorderThickness="0" Foreground="#64748B" Cursor="Hand" FontWeight="Bold"/>
+                                <Button HorizontalAlignment="Right" VerticalAlignment="Center" Command="{Binding ToggleChatCommand}" Content="✕"
+                                        Background="Transparent" BorderThickness="0" Foreground="#64748B" Cursor="Hand"
+                                        FontSize="{StaticResource FontBody}" FontWeight="Bold"/>
                             </Grid>
                         </Border>
 
-                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                            <Grid>
-                                <TextBlock Text="주고받은 대화가 없습니다." Foreground="#94A3B8"
-                                           HorizontalAlignment="Center" Margin="0,40"
-                                           Visibility="{Binding ChatVM.HasNoMessages, Converter={StaticResource BoolToVis}}"/>
+                        <!-- 말풍선 목록. 새 말이 오면 맨 아래로 따라 내려간다(코드 비하인드) -->
+                        <ScrollViewer x:Name="ChatScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" Background="#F8FAFC">
+                            <StackPanel Margin="14,16,14,16">
+                                <!-- 날짜 구분선 -->
+                                <Grid Margin="0,0,0,14">
+                                    <Rectangle Height="1" Fill="#E2E8F0" VerticalAlignment="Center"/>
+                                    <Border Background="#F8FAFC" Padding="10,0" HorizontalAlignment="Center">
+                                        <TextBlock Text="오늘" FontSize="{StaticResource FontSmall}" Foreground="#94A3B8"/>
+                                    </Border>
+                                </Grid>
 
-                                <ItemsControl ItemsSource="{Binding ChatVM.Messages}" Margin="12">
+                                <!-- 안내 말풍선. 교수에게 무엇을 물어도 되는지 알려 준다 -->
+                                <Border Background="#EEF2FF" CornerRadius="14" Padding="14,10" HorizontalAlignment="Center" Margin="0,0,0,14">
+                                    <TextBlock Text="시험 대기 중에는 교수님께 자유롭게 질문할 수 있습니다."
+                                               FontSize="{StaticResource FontSmall}" Foreground="#4338CA"
+                                               TextWrapping="Wrap" TextAlignment="Center"/>
+                                </Border>
+
+                                <ItemsControl ItemsSource="{Binding ChatVM.Messages}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <StackPanel Margin="0,4">
-                                                <TextBlock Text="{Binding SenderName}" FontSize="10" Foreground="#94A3B8" Margin="0,0,0,2"/>
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <Border x:Name="MsgBorder" Background="#F1F5F9" CornerRadius="8" Padding="10,8" MaxWidth="220" HorizontalAlignment="Left">
-                                                        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="12" Foreground="#1E293B"/>
+                                            <Grid Margin="0,3">
+                                                <!-- 교수가 보낸 말 — 왼쪽, 흰 말풍선. 같은 사람이 이어 말하면 이름과 얼굴을 다시 적지 않는다 -->
+                                                <StackPanel x:Name="Theirs" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,40,0">
+                                                    <Border Width="34" Height="34" CornerRadius="17" Background="#E0E7FF"
+                                                            VerticalAlignment="Bottom" Margin="0,0,8,0"
+                                                            Visibility="{Binding ShowSender, Converter={StaticResource BoolToVis}}">
+                                                        <TextBlock Text="교" FontSize="{StaticResource FontSmall}" FontWeight="Bold"
+                                                                   Foreground="#4338CA" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
-                                                    <TextBlock Grid.Column="1" Text="{Binding DisplayTime}" FontSize="9" Foreground="#CBD5E1" 
-                                                               VerticalAlignment="Bottom" Margin="6,0,0,0"/>
-                                                </Grid>
-                                            </StackPanel>
+                                                    <!-- 얼굴이 빠진 줄도 같은 자리에서 시작하도록 자리를 비워 둔다 -->
+                                                    <Border Width="42">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding ShowSender}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                    </Border>
+                                                    <StackPanel>
+                                                        <TextBlock Text="교수님" FontSize="{StaticResource FontSmall}" Foreground="#64748B" Margin="2,0,0,4"
+                                                                   Visibility="{Binding ShowSender, Converter={StaticResource BoolToVis}}"/>
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <Border Background="White" BorderBrush="#E2E8F0" BorderThickness="1"
+                                                                    CornerRadius="14,14,14,4" Padding="14,10" MaxWidth="230">
+                                                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap"
+                                                                           FontSize="{StaticResource FontBody}" Foreground="#1E293B" LineHeight="22"/>
+                                                            </Border>
+                                                            <TextBlock Text="{Binding DisplayTime}" FontSize="{StaticResource FontTiny}" Foreground="#94A3B8"
+                                                                       VerticalAlignment="Bottom" Margin="7,0,0,2"/>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </StackPanel>
+
+                                                <!-- 내가 보낸 말 — 오른쪽, 파란 말풍선 -->
+                                                <StackPanel x:Name="Mine" Orientation="Horizontal" HorizontalAlignment="Right"
+                                                            Margin="40,0,0,0" Visibility="Collapsed">
+                                                    <TextBlock Text="{Binding DisplayTime}" FontSize="{StaticResource FontTiny}" Foreground="#94A3B8"
+                                                               VerticalAlignment="Bottom" Margin="0,0,7,2"/>
+                                                    <Border Background="#2563EB" CornerRadius="14,14,4,14" Padding="14,10" MaxWidth="230">
+                                                        <TextBlock Text="{Binding Message}" TextWrapping="Wrap"
+                                                                   FontSize="{StaticResource FontBody}" Foreground="White" LineHeight="22"/>
+                                                    </Border>
+                                                </StackPanel>
+                                            </Grid>
                                             <DataTemplate.Triggers>
                                                 <DataTrigger Binding="{Binding IsMine}" Value="True">
-                                                    <Setter TargetName="MsgBorder" Property="Background" Value="#DBEAFE"/>
-                                                    <Setter TargetName="MsgBorder" Property="HorizontalAlignment" Value="Right"/>
+                                                    <Setter TargetName="Theirs" Property="Visibility" Value="Collapsed"/>
+                                                    <Setter TargetName="Mine" Property="Visibility" Value="Visible"/>
                                                 </DataTrigger>
                                             </DataTemplate.Triggers>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                            </Grid>
+                            </StackPanel>
                         </ScrollViewer>
 
                         <!-- 입력창 및 전송 -->
-                        <Border Grid.Row="2" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="10" Background="White">
+                        <Border Grid.Row="2" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="14,12" Background="White">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBox x:Name="ChatInput" Grid.Column="0" Text="{Binding ChatVM.InputMessage, UpdateSourceTrigger=PropertyChanged}"
-                                         Background="White" BorderBrush="#E2E8F0" BorderThickness="1"
-                                         Padding="8,6" VerticalContentAlignment="Center" FontSize="12">
-                                    <TextBox.InputBindings>
-                                        <KeyBinding Key="Enter" Command="{Binding ChatVM.SendMessageCommand}"/>
-                                    </TextBox.InputBindings>
-                                </TextBox>
-                                <Button Grid.Column="1" Content="전송" Command="{Binding ChatVM.SendMessageCommand}"
-                                        Background="#1A56DB" Foreground="White" Width="52" Height="32" Margin="6,0,0,0"
-                                        Cursor="Hand" BorderThickness="0" FontSize="12" FontWeight="SemiBold">
+
+                                <Border Grid.Column="0" Background="#F1F5F9" CornerRadius="21" Padding="16,0" Height="42">
+                                    <Grid>
+                                        <TextBlock Text="메시지를 입력하세요" FontSize="{StaticResource FontBody}" Foreground="#94A3B8"
+                                                   VerticalAlignment="Center" IsHitTestVisible="False">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Text.Length, ElementName=ChatInput}" Value="0">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBox x:Name="ChatInput" Text="{Binding ChatVM.InputMessage, UpdateSourceTrigger=PropertyChanged}"
+                                                 InputMethod.PreferredImeState="On" InputMethod.PreferredImeConversionMode="Native"
+                                                 Background="Transparent" BorderThickness="0"
+                                                 VerticalContentAlignment="Center" FontSize="{StaticResource FontBody}" Foreground="#1E293B">
+                                            <TextBox.InputBindings>
+                                                <KeyBinding Key="Enter" Command="{Binding ChatVM.SendMessageCommand}"/>
+                                            </TextBox.InputBindings>
+                                        </TextBox>
+                                    </Grid>
+                                </Border>
+
+                                <Button Grid.Column="1" Command="{Binding ChatVM.SendMessageCommand}" ToolTip="보내기"
+                                        Background="#2563EB" Width="42" Height="42" Margin="10,0,0,0"
+                                        Cursor="Hand" BorderThickness="0">
                                     <Button.Resources>
                                         <Style TargetType="Border">
-                                            <Setter Property="CornerRadius" Value="6"/>
+                                            <Setter Property="CornerRadius" Value="21"/>
                                         </Style>
                                     </Button.Resources>
+                                    <!-- 종이비행기 -->
+                                    <Path Fill="White" Margin="0,1,2,0"
+                                          Data="M0,7 L18,0 L11,18 L8,10 Z"
+                                          Stretch="Uniform" Width="17" Height="17"/>
                                 </Button>
                             </Grid>
                         </Border>
@@ -824,14 +810,14 @@
                     <!-- 안내 메시지. 제출 결과와 무관하게 늘 맞는 문구만 둔다 — 결과는 아래 상태 줄이 보여 준다 -->
                     <TextBlock Text="시험이 종료되었습니다. 더 이상 수정이 불가능합니다."
                                TextAlignment="Center" Foreground="#94A3B8"
-                               FontSize="14" LineHeight="22"
+                               FontSize="{StaticResource FontStrong}" LineHeight="24"
                                HorizontalAlignment="Center"/>
 
                     <!-- 답안 제출 상태 (제출 중 / 실패 이유 / 제출 완료) -->
                     <TextBlock Text="{Binding SubmitStatus}"
                                Visibility="{Binding HasSubmitStatus, Converter={StaticResource BoolToVis}}"
                                TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
-                               Foreground="#F1F5F9" FontSize="13" FontWeight="SemiBold"
+                               Foreground="#F1F5F9" FontSize="{StaticResource FontBody}" FontWeight="SemiBold"
                                HorizontalAlignment="Center" Margin="0,16,0,0"/>
 
                     <!-- 아직 답안을 내지 못했을 때만 보인다. 자동 수집이 실패했거나 앱을 다시 켠 경우 -->
@@ -840,7 +826,7 @@
                             Visibility="{Binding CanSubmitAfterEnd, Converter={StaticResource BoolToVis}}"
                             HorizontalAlignment="Center" Margin="0,16,0,0" Padding="24,10"
                             Background="#3B82F6" Foreground="White" BorderThickness="0"
-                            FontSize="14" FontWeight="SemiBold" Cursor="Hand">
+                            FontSize="{StaticResource FontStrong}" FontWeight="SemiBold" Cursor="Hand">
                         <Button.Resources>
                             <Style TargetType="Border">
                                 <Setter Property="CornerRadius" Value="8"/>
@@ -853,10 +839,10 @@
 
                     <!-- 시험 종료 시각 표시 -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock Text="📋  " FontSize="13" Foreground="#64748B" VerticalAlignment="Center"/>
-                        <TextBlock Text="시험 종료  " FontSize="13" Foreground="#64748B" VerticalAlignment="Center"/>
+                        <TextBlock Text="📋  " FontSize="{StaticResource FontBody}" Foreground="#64748B" VerticalAlignment="Center"/>
+                        <TextBlock Text="시험 종료  " FontSize="{StaticResource FontBody}" Foreground="#64748B" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding ExamEndedTime, StringFormat='HH:mm:ss'}"
-                                   FontSize="13" FontWeight="SemiBold"
+                                   FontSize="{StaticResource FontBody}" FontWeight="SemiBold"
                                    Foreground="#94A3B8" VerticalAlignment="Center"/>
                     </StackPanel>
 

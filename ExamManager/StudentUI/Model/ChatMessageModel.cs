@@ -37,6 +37,9 @@ namespace StudentUI.Model
             set { _isMine = value; OnPropertyChanged(); }
         }
 
+        // 같은 사람이 이어서 말하면 얼굴과 이름을 다시 그리지 않는다. 쌓을 때 한 번 정해지고 바뀌지 않는다.
+        public bool ShowSender { get; init; } = true;
+
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? name = null)
         {

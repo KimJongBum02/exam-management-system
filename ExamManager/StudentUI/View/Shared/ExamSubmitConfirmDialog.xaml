@@ -168,6 +168,9 @@
                     </StackPanel>
                     <TextBlock Text="작업하신 답안 파일이 교수님이 안내하신 답안 이름 형식에 맞게 올바르게 작성되었습니까?"
                                FontSize="13" FontWeight="Medium" Foreground="#1E3A8A" TextWrapping="Wrap" LineHeight="20" Margin="0,4,0,0"/>
+                    <!-- 폴더 이름을 바꾸면 묶을 폴더를 찾지 못해 제출이 실패한다. 바꿀 것은 폴더 안의 답안 파일 이름이다 -->
+                    <TextBlock Text="바꾸는 것은 폴더 안의 답안 파일 이름입니다. 위 시험 폴더의 이름은 그대로 두세요."
+                               FontSize="12" Foreground="#2563EB" TextWrapping="Wrap" LineHeight="18" Margin="0,8,0,0"/>
                 </StackPanel>
             </Border>
 
