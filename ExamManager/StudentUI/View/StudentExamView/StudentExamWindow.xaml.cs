@@ -1,6 +1,7 @@
 using System;
 //using System.Collections.Generic;
 //using System.Text;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Windows;
 //using System.Windows.Controls;
@@ -29,6 +30,13 @@ namespace StudentUI.View.StudentExamView
             SharedChatViewModel.Instance.MessageArrived += OnMessageArrived;
             Closed += (_, _) => SharedChatViewModel.Instance.MessageArrived -= OnMessageArrived;
 
+            // 채팅창처럼 새 말이 오면 맨 아래로 따라 내려간다.
+            SharedChatViewModel.Instance.Messages.CollectionChanged += OnChatMessagesChanged;
+            Closed += (_, _) => SharedChatViewModel.Instance.Messages.CollectionChanged -= OnChatMessagesChanged;
+
+            // 떠 있는 시간 창은 시험 화면에 딸린 것이라 같이 닫는다.
+            Closed += (_, _) => { _pip?.Close(); _pip = null; };
+
             // 창 크기가 바뀔 때(최대화·복원·끌어서 줄이기) 알림·채팅 패널을 놓는 방식을 다시 정한다.
             SizeChanged += (_, _) => PlaceSideDrawer();
 
@@ -44,6 +52,31 @@ namespace StudentUI.View.StudentExamView
             };
         }
 
+        // 새 말풍선이 쌓이면 맨 아래를 보여 준다. 줄이 그려진 뒤라야 끝까지 내려간다.
+        private void OnChatMessagesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.Action != NotifyCollectionChangedAction.Add) return;
+            Dispatcher.BeginInvoke(new Action(() => ChatScroll.ScrollToEnd()),
+                System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        // 남은 시간을 항상 위에 뜨는 작은 창으로 띄운다. 이미 떠 있으면 닫는다.
+        private ExamTimerPipWindow? _pip;
+
+        private void OnTogglePip(object sender, RoutedEventArgs e)
+        {
+            if (_pip != null)
+            {
+                _pip.Close();
+                return;
+            }
+
+            // 주인 창을 두지 않는다 — 주인을 두면 시험 화면을 내렸을 때 이 창도 같이 사라져 뜻이 없다.
+            _pip = new ExamTimerPipWindow();
+            _pip.Closed += (_, _) => _pip = null;
+            _pip.Show();
+        }
+
         // 패널이 보이게 된 뒤라야 입력칸이 포커스를 받는다.
         private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
         {
@@ -53,7 +86,8 @@ namespace StudentUI.View.StudentExamView
 
         // 알림·채팅 패널이 본문을 밀어도 본문이 이 폭은 남아야 표가 제 모양을 유지하고 세로 스크롤도 생기지 않는다.
         // 이보다 좁으면 표의 설명 칸이 눌려 줄이 늘어나고, 1440 화면에서는 그만큼 본문이 길어져 스크롤이 생긴다.
-        private const double MinMainWidthWithDrawer = 1400;
+        // 본문을 가운데 한 줄(MaxWidth 1180)로 모은 뒤의 값 — 1180 + 좌우 여백 32×2.
+        private const double MinMainWidthWithDrawer = 1244;
 
         private static readonly System.Windows.Media.Effects.DropShadowEffect DrawerShadow = new()
         {

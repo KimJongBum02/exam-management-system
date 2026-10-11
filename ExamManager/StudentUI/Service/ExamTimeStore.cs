@@ -20,8 +20,11 @@ namespace StudentUI.Service
     {
         public static ExamTimeStore Instance { get; } = new ExamTimeStore();
 
-        // 시험 시간. 바뀌면 이 값만 고치면 된다.
+        // 시험 시간. 바뀌면 이 값만 고치면 된다. 화면의 '전체 시간'과 남은 시간 표기 방식이 이 값을 따라간다.
         public static readonly TimeSpan ExamDuration = TimeSpan.FromMinutes(50);
+
+        // 화면에 '50 분'으로 적는 값. 숫자를 화면에 또 적어 두면 시험 시간을 바꿀 때 한쪽만 바뀐다.
+        public int TotalMinutes => (int)ExamDuration.TotalMinutes;
 
         private readonly DispatcherTimer _ticker;
         private DateTime _startedAt;
@@ -71,9 +74,12 @@ namespace StudentUI.Service
             }
         }
 
-        // "00 : 49 : 58" 형태. 화면의 기존 표기와 맞춘다.
+        // 한 시간이 안 되는 시험은 "49 : 58"(분:초), 한 시간 이상이면 "01 : 00 : 00"(시:분:초).
+        // 남은 시간이 아니라 '시험 시간'을 보고 정한다 — 남은 시간으로 정하면 한 시간을 지나는 순간 칸 수가 바뀐다.
         public string RemainingText =>
-            $"{(int)_remaining.TotalHours:00} : {_remaining.Minutes:00} : {_remaining.Seconds:00}";
+            ExamDuration < TimeSpan.FromHours(1)
+                ? $"{_remaining.Minutes:00} : {_remaining.Seconds:00}"
+                : $"{(int)_remaining.TotalHours:00} : {_remaining.Minutes:00} : {_remaining.Seconds:00}";
 
         // 시간이 다 됐는지. 다 돼도 답안을 자동 제출하지는 않는다 —
         // 학생이 마지막으로 저장하는 중일 수 있고, 교수가 시간을 더 주는 경우도 있다.

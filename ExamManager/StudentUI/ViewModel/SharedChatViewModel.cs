@@ -124,6 +124,10 @@ namespace StudentUI.ViewModel
             ImportantNotice = string.Empty;
         }
 
+        // 말하는 사람이 바뀌었는지. 바뀐 첫 줄에만 얼굴과 이름을 그린다.
+        private bool StartsNewTurn(bool isMine)
+            => Messages.Count == 0 || Messages[^1].IsMine != isMine;
+
         private void SendMessage()
         {
             if (string.IsNullOrWhiteSpace(InputMessage)) return;
@@ -137,7 +141,8 @@ namespace StudentUI.ViewModel
                 SenderName = "나",
                 Message = msgToSend,
                 Timestamp = DateTime.Now,
-                IsMine = true
+                IsMine = true,
+                ShowSender = StartsNewTurn(true)
             };
             Messages.Add(myMsg);
 
@@ -192,7 +197,8 @@ namespace StudentUI.ViewModel
                     SenderName = "[교수님]",
                     Message = message,
                     Timestamp = DateTime.Now,
-                    IsMine = false
+                    IsMine = false,
+                    ShowSender = StartsNewTurn(false)
                 });
 
                 LastSender = "[교수님]";
