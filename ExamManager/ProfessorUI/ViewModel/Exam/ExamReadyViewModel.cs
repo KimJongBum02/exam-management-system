@@ -288,9 +288,18 @@ namespace ProfessorUI.ViewModel
             ProgressValue = 0;
             ProgressText = "0%";
 
+            // 파일을 모으고 묶는 동안 진행률이 조금씩 오른다(ZipService).
+            // Progress<T> 가 화면 스레드로 넘겨 주므로 여기서 그대로 값만 담는다.
+            var progress = new Progress<(int Percent, string Phase)>(step =>
+            {
+                ProgressValue = step.Percent;
+                ProgressText = $"{step.Percent}%";
+                CurrentStatusMessage = step.Phase;
+            });
+
             // 이 메서드는 async void 라서 서비스에서 예외가 새면 앱이 그대로 종료된다.
             // 서비스는 실패를 예외 대신 결과로 돌려준다.
-            ExamReadyService.PackageResult result = await _package.CreateAsync(items, plan.Fingerprint);
+            ExamReadyService.PackageResult result = await _package.CreateAsync(items, plan.Fingerprint, progress);
 
             if (result.Ok)
             {

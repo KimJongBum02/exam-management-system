@@ -1,4 +1,5 @@
 using NetworkLib;
+using ExamManager.Shared;
 using System;
 using System.IO;
 using System.Threading;
@@ -35,8 +36,12 @@ namespace StudentUI.Service
         private static readonly TimeSpan StallTimeout = TimeSpan.FromSeconds(60);
 
         // 전송이 100%에 닿은 뒤 교수의 확인 회신을 기다리는 시간.
-        // 교수 PC는 SHA-256 검증만 하면 되므로 이 정도면 넉넉하다.
-        private static readonly TimeSpan AckTimeout = TimeSpan.FromSeconds(30);
+        //
+        // 교수 PC는 받은 묶음을 저장하고 압축까지 풀어 본 뒤에 회신한다(AnswerCollectService).
+        // 30명이 한꺼번에 내면 그 작업이 학생 수만큼 동시에 돌아 30초를 넘기는 학생이 생기는데,
+        // 그때 실패로 처리하면 **교수 PC 에는 답안이 저장됐는데 학생은 '제출 실패'를 보고 다시 내게** 된다.
+        // 그래서 넉넉히 기다리되, 연결이 끊기면 기다리지 않고 바로 실패로 끝낸다(WaitForAckAsync).
+        private static readonly TimeSpan AckTimeout = TimeSpan.FromMinutes(3);
 
         // 7za 종료 코드 1 = "일부 파일을 읽지 못해 빼고 묶었음". 실패로 다룬다.
         private const int SevenZipSomeFilesSkipped = 1;
@@ -150,6 +155,14 @@ namespace StudentUI.Service
                                 $"{ExamFileStore.Instance.ExtractedRoot}\n\n" +
                                 "이 폴더의 이름을 바꾸었거나 다른 곳으로 옮겼다면 원래대로 되돌린 뒤 다시 제출하십시오.\n" +
                                 "답안 파일 이름만 바꾸면 되고, 폴더 이름은 그대로 두어야 합니다.");
+
+                // 작업 폴더가 비어 있으면 7za 는 빈 묶음(142바이트)을 만들고 성공(코드 0)으로 끝낸다.
+                // 그대로 보내면 학생은 '정상적으로 제출되었습니다'를 보고 나가는데 교수에게는 빈 폴더가 남는다.
+                // 답안을 실수로 지운 학생이 그 사실을 모른 채 시험을 끝내는 길이라 여기서 막는다.
+                if (!Directory.EnumerateFiles(answerFolder, "*", SearchOption.AllDirectories).Any())
+                    return Fail("답안 제출 실패.\n작업 폴더에 제출할 파일이 하나도 없습니다.\n\n" +
+                                $"{answerFolder}\n\n" +
+                                "답안 파일을 이 폴더에 저장한 뒤 다시 제출하십시오.");
 
                 if (!NetworkService.Instance.IsConnected)
                     return Fail("답안 제출 실패.\n교수 PC와 연결된 뒤 다시 시도하십시오.");
@@ -266,8 +279,6 @@ namespace StudentUI.Service
             // 배포받은 폴더만 묶는다. 지우는 범위와 같아야 걷지 않은 것이 남지 않는다.
             if (!Directory.Exists(sourceFolder)) return (null, -1);
 
-            string sevenZa = Path.Combine(AppContext.BaseDirectory, "7za.exe");
-
             // 파일명을 '학번_이름.7z' 형식으로 만든다. 교수가 수신 파일을 보고 학생을 바로 알 수 있게 한다.
             // 학생 정보가 없는 예외 상황에는 임시 이름을 쓴다.
             string studentNumber = ExamMonitorService.Instance.StudentNumber;
@@ -277,7 +288,7 @@ namespace StudentUI.Service
                 : $"answer_{Guid.NewGuid():N}";
             string archivePath = Path.Combine(Path.GetTempPath(), $"{baseName}.7z");
 
-            int code = FileControlService.FC_CompressEncrypt(sevenZa, sourceFolder, archivePath, password);
+            int code = FileSystem.CompressEncrypt(sourceFolder, archivePath, password);
             if (code != 0 || !File.Exists(archivePath))
             {
                 TryDeleteFile(archivePath);
@@ -319,8 +330,17 @@ namespace StudentUI.Service
             TaskCompletionSource<bool>? waiter = _ackWaiter;
             if (waiter == null) return false;
 
-            Task finished = await Task.WhenAny(waiter.Task, Task.Delay(AckTimeout));
-            return finished == waiter.Task && waiter.Task.Result;
+            // 오래 기다리는 동안 교수 PC 가 꺼질 수 있다. 그때까지 3분을 채울 이유가 없으므로
+            // 연결 상태를 함께 보며 기다린다. 끊겼으면 바로 실패로 끝내고 학생이 다시 낼 수 있게 한다.
+            DateTime deadline = DateTime.UtcNow + AckTimeout;
+            while (DateTime.UtcNow < deadline)
+            {
+                Task finished = await Task.WhenAny(waiter.Task, Task.Delay(TimeSpan.FromSeconds(1)));
+                if (finished == waiter.Task) return waiter.Task.Result;
+                if (!NetworkService.Instance.IsConnected) return false;
+            }
+
+            return false;
         }
 
         private bool Fail(string message)

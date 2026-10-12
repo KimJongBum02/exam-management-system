@@ -73,7 +73,9 @@ namespace ProfessorUI.Service
 
         // 묶음을 만든다. 성공하면 배포 단계가 읽을 준비 상태(SendFileState)까지 채운다.
         // fingerprint 는 PlanAsync 가 돌려준 값을 그대로 넘긴다 — 파일을 두 번 훑지 않기 위함이다.
-        public async Task<PackageResult> CreateAsync(IReadOnlyList<string> items, string fingerprint)
+        // progress 는 화면이 진행률 막대와 상태 문구를 그리는 데 쓴다(퍼센트, 지금 하는 일).
+        public async Task<PackageResult> CreateAsync(IReadOnlyList<string> items, string fingerprint,
+                                                     IProgress<(int Percent, string Phase)>? progress = null)
         {
             string output;
             try
@@ -90,7 +92,7 @@ namespace ProfessorUI.Service
             try
             {
                 // 선택 파일들을 스테이징 폴더로 묶어 7za로 압축·암호화 (백그라운드 실행)
-                password = await Task.Run(() => ZipService.Package(items, output));
+                password = await Task.Run(() => ZipService.Package(items, output, progress));
             }
             catch (Exception ex)
             {

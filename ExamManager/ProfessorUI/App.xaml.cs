@@ -104,6 +104,12 @@ namespace ProfessorUI
                     ExamManager.Shared.UiSignal.FlashTaskbar();
                 });
 
+            // 진행 중이던 시험을 되살린다(ExamSessionStore).
+            // 이게 없으면 시험 도중 교수 프로그램이 꺼졌을 때 단계가 '시험 전'으로 돌아가,
+            // 학생들은 시험을 계속 치고 있는데 시험 종료·답안 수집 메뉴가 열리지 않는다.
+            // 서버를 열기 전에 되살려, 학생이 다시 붙는 순간 교수 화면이 이미 시험 중이게 한다.
+            Service.ExamSessionStore.Start();
+
             // 서버는 앱을 켜는 순간 열어 둔다.
             // 교수가 따로 열어 줄 것이 없어야 학생이 접속하지 못하는 사고가 생기지 않는다.
             // 여닫는 일은 Service.ServerService 이 맡는다.
