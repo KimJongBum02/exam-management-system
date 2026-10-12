@@ -1,4 +1,5 @@
 using System;
+using ExamManager.Shared;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -49,12 +50,12 @@ namespace StudentUI.Service
             }
         }
 
+        // 교수가 잠그라고 하면 부른다. 네이티브 수신 스레드에서 올라오므로 화면 일은 UiThread 로 넘긴다.
+        // 기다리는 Invoke 를 쓰면, 화면 스레드가 수신 스레드가 끝나길 기다리는 순간(로그아웃·연결 끊김)
+        // 서로 상대를 기다려 앱이 통째로 굳는다.
         public void Lock()
         {
-            var app = Application.Current;
-            if (app == null) return;
-
-            app.Dispatcher.Invoke(() =>
+            UiThread.Post(() =>
             {
                 if (_isLocked) return;
                 _isLocked = true;
@@ -90,12 +91,12 @@ namespace StudentUI.Service
             });
         }
 
+        // 잠금을 푼다. 교수의 해제 명령과 연결 끊김(종료 포함)에서 불린다 — Lock 과 같은 이유로 기다리지 않는다.
+        // 앱이 끝나는 중이면 UiThread 가 넘기지 않아 훅을 떼는 줄이 돌지 않는데, 훅은 프로세스에 딸린 것이라
+        // 프로세스가 사라지면 윈도우가 거둬 간다. 키보드가 잠긴 채 남지는 않는다.
         public void Unlock()
         {
-            var app = Application.Current;
-            if (app == null) return;
-
-            app.Dispatcher.Invoke(() =>
+            UiThread.Post(() =>
             {
                 if (!_isLocked && _hookId == IntPtr.Zero) return;
                 _isLocked = false;

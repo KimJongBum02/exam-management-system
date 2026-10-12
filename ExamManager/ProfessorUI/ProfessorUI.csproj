@@ -26,6 +26,8 @@
     <Compile Include="..\Shared\UiWindow.cs" Link="UiWindow.cs" />
     <!-- 상단바 배치(왼쪽 제목 · 가운데 중요 공지 · 오른쪽 메뉴) -->
     <Compile Include="..\Shared\HeaderBarPanel.cs" Link="HeaderBarPanel.cs" />
+    <!-- 네이티브·배경 스레드에서 화면으로 넘길 때 거치는 한 곳 -->
+    <Compile Include="..\Shared\UiThread.cs" Link="UiThread.cs" />
     <!-- 글자 크기 한 벌 (Styles.xaml 이 합쳐 쓴다) -->
     <Page Include="..\Shared\FontSizes.xaml" Link="FontSizes.xaml">
       <Generator>MSBuild:Compile</Generator>

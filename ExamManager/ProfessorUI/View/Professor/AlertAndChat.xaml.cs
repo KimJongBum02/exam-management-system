@@ -125,6 +125,7 @@ namespace ProfessorUI.View.Professor
             ScrollConversationToEnd();
 
             // 대화를 열면 바로 답장을 칠 수 있게 입력칸에 커서를 둔다. 보이게 된 뒤라야 포커스를 받는다.
+            // (Loaded 우선순위라 UiThread.Post 로 바꾸면 안 된다 — 그리기 전에 실행돼 포커스가 가지 않는다)
             Dispatcher.BeginInvoke(new Action(() => MessageBox.Focus()), DispatcherPriority.Loaded);
         }
 
@@ -147,7 +148,7 @@ namespace ProfessorUI.View.Professor
 
         private void OnOpenMessagesChanged(object? sender, NotifyCollectionChangedEventArgs e) => ScrollConversationToEnd();
 
-        // 새 메시지가 붙고 배치가 끝난 뒤라야 끝까지 내려갈 수 있다.
+        // 새 메시지가 붙고 배치가 끝난 뒤라야 끝까지 내려갈 수 있다. (Loaded 우선순위 — UiThread.Post 로 바꾸면 안 된다)
         private void ScrollConversationToEnd()
             => Dispatcher.BeginInvoke(new Action(() => ConversationScroll.ScrollToEnd()), DispatcherPriority.Loaded);
 

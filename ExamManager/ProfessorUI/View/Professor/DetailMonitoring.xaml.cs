@@ -43,6 +43,9 @@ namespace ProfessorUI.View.Professor
             };
         }
 
+        // 아래 Dispatcher.Invoke 셋은 일부러 UiThread.Post 로 바꾸지 않았다.
+        // 이 알림은 이미 화면 스레드에서 올라오므로(화면 목록이 올려 주는 PropertyChanged) Invoke 가 그 자리에서 바로 실행된다.
+        // 넘기는 방식으로 바꾸면 '바로 끝났다'를 전제로 이어지는 뒷줄과 순서가 어긋난다.
         private void Item_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(StudentScreenViewModel.Screen))

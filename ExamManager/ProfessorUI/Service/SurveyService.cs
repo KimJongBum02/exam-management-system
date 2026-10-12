@@ -1,4 +1,5 @@
 using System;
+using ExamManager.Shared;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -118,7 +119,7 @@ namespace ProfessorUI.Service
             string who = !string.IsNullOrEmpty(studentId) ? studentId : payloadStudentId;
             if (string.IsNullOrEmpty(who)) return;
 
-            PostToUi(() => Record(quizId, who));
+            UiThread.Post(() => Record(quizId, who));
             return;
 
             void Record(string id, string student)
@@ -137,13 +138,6 @@ namespace ProfessorUI.Service
 
                 ResponseReceived?.Invoke(student);
             }
-        }
-
-        private static void PostToUi(Action action)
-        {
-            var dispatcher = Application.Current?.Dispatcher;
-            if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-            dispatcher.BeginInvoke(action);
         }
     }
 }

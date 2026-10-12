@@ -1,4 +1,5 @@
 using NetworkLib;
+using ExamManager.Shared;
 using StudentUI.Model;
 using StudentUI.Service;
 using System;
@@ -179,10 +180,7 @@ namespace StudentUI.ViewModel
 
             // 콜백은 네이티브 스레드에서 올라오므로 UI 스레드로 넘겨 처리한다.
             // 동기 Invoke는 종료 중 수신 스레드를 붙잡아 앱이 멈추므로 BeginInvoke를 쓴다.
-            var dispatcher = Application.Current?.Dispatcher;
-            if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-
-            dispatcher.BeginInvoke(() =>
+            UiThread.Post(() =>
             {
                 // 전체 공지는 채팅에 쌓지 않고 팝업으로 띄운다 — 채팅창을 열어 보지 않아도 읽게 된다.
                 if (isNotice)
@@ -219,10 +217,7 @@ namespace StudentUI.ViewModel
         // 시험 중에는 편집기를 보고 있어 상단 문구만 바뀌면 모르고 지나가므로, 새 공지면 작업표시줄을 깜빡인다.
         private void OnImportantNotice(string notice)
         {
-            var dispatcher = Application.Current?.Dispatcher;
-            if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-
-            dispatcher.BeginInvoke(() =>
+            UiThread.Post(() =>
             {
                 if (notice == ImportantNotice) return;
 

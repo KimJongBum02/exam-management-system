@@ -1,4 +1,5 @@
 using System;
+using ExamManager.Shared;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -243,10 +244,7 @@ namespace ProfessorUI.ViewModel
         // 동기 Invoke는 종료 중 수신 스레드를 붙잡아 앱이 멈추므로 BeginInvoke를 쓴다.
         private void OnMessageReceived(string sessionId, string studentId, string studentName, string message)
         {
-            var dispatcher = Application.Current?.Dispatcher;
-            if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-
-            dispatcher.BeginInvoke(() =>
+            UiThread.Post(() =>
             {
                 // 학생 한 명에 대화 한 줄. 다시 접속해 세션이 바뀌어도 같은 줄을 이어 쓴다.
                 var tab = GetOrCreateTab(studentId, studentName, sessionId);
@@ -281,10 +279,7 @@ namespace ProfessorUI.ViewModel
         // 학생이 공지를 받았다는 회신. 그 공지의 '수신 N명'을 올린다.
         private void OnNoticeAcknowledged(uint noticeId, string studentId)
         {
-            var dispatcher = Application.Current?.Dispatcher;
-            if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-
-            dispatcher.BeginInvoke(() => Notices.FirstOrDefault(n => n.Id == noticeId)?.MarkReceived(studentId));
+            UiThread.Post(() => Notices.FirstOrDefault(n => n.Id == noticeId)?.MarkReceived(studentId));
         }
 
         // 학생이 1:1 메시지를 읽었다는 회신. 그 말풍선을 '읽음'으로 바꾼다.
@@ -293,10 +288,7 @@ namespace ProfessorUI.ViewModel
         // 접속이 끊긴 채 보낸 메시지는 회신이 오지 않아 '안 읽음'으로 남는다 — 실제로 못 본 것이 맞다.
         private void OnChatRead(uint messageId, string studentId)
         {
-            var dispatcher = Application.Current?.Dispatcher;
-            if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-
-            dispatcher.BeginInvoke(() =>
+            UiThread.Post(() =>
             {
                 var tab = Tabs.FirstOrDefault(t => t.SessionId != null && t.StudentId == studentId);
                 var message = tab?.Messages.FirstOrDefault(m => m.MessageId == messageId);

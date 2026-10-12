@@ -1,4 +1,5 @@
 using NetworkLib;
+using ExamManager.Shared;
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -47,9 +48,7 @@ namespace StudentUI.Service
                 if (state != AnswerSubmitState.Succeeded) return;
 
                 // 제출은 배경 작업에서 끝난다. 타이머는 화면 스레드에서만 다룰 수 있다.
-                var dispatcher = Application.Current?.Dispatcher;
-                if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-                dispatcher.BeginInvoke(Finish);
+                UiThread.Post(Finish);
             };
         }
 
@@ -106,10 +105,7 @@ namespace StudentUI.Service
             if (!ExamPhasePayload.TryDecode(payload, payloadLen, out ExamPhase phase)) return;
 
             // 타이머는 UI 스레드에서만 다룰 수 있다.
-            var dispatcher = Application.Current?.Dispatcher;
-            if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-
-            dispatcher.BeginInvoke(() =>
+            UiThread.Post(() =>
             {
                 if (phase == ExamPhase.InProgress) Begin();
                 else if (phase >= ExamPhase.SubmitRequested) Finish();

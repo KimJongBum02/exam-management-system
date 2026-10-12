@@ -1,4 +1,5 @@
 using System;
+using ExamManager.Shared;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -137,7 +138,7 @@ namespace ProfessorUI.Service
             string who = !string.IsNullOrEmpty(studentId) ? studentId : payloadStudentId;
             if (string.IsNullOrEmpty(who)) return;
 
-            PostToUi(() => Record(quizId, who));
+            UiThread.Post(() => Record(quizId, who));
             return;
 
             void Record(string id, string student)
@@ -167,13 +168,6 @@ namespace ProfessorUI.Service
             _saveTimer?.Stop();
             foreach (var round in _unsavedRounds) SaveRound(round);
             _unsavedRounds.Clear();
-        }
-
-        private static void PostToUi(Action action)
-        {
-            var dispatcher = Application.Current?.Dispatcher;
-            if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-            dispatcher.BeginInvoke(action);
         }
 
         // 퀴즈마다 자기 파일에 다시 쓴다 — 퀴즈를 낼 때, 기록을 비울 때, 퀴즈 화면·프로그램을 닫을 때는 모든 퀴즈를,
