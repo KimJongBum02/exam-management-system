@@ -375,18 +375,32 @@ namespace StudentUI.ViewModel
                     StatusItems.Clear();
 
                     // 1. 시험 문제지 수신 상태
+                    // 파일이 사라졌거나 전송이 실패한 것은 학생이 바로 알아야 교수님께 재배포를 요청할 수 있다.
+                    // 교수 화면에도 같은 상태가 올라가 그 학생이 재배포 대상이 된다(ExamFileStore 의 5초 점검).
                     bool fileReceived = ExamFile.IsReceived;
                     string fileName = string.IsNullOrEmpty(ExamFile.FileName) ? "배포 대기 중" : ExamFile.FileName;
-                    string fileStatus = fileReceived ? "수신 완료" : (string.IsNullOrEmpty(ExamFile.StatusText) ? "배포 대기" : ExamFile.StatusText);
+
+                    var (fileStatus, fileLevel, fileDescription, fileNote) =
+                        ExamFile.IsMissing
+                            ? ("파일 삭제됨", "Warning",
+                               "받은 시험 파일이 이 PC 에서 보이지 않습니다. 교수님께 재배포를 요청하세요.", "재배포 필요")
+                        : ExamFile.TransferFailed
+                            ? ("전송 실패", "Warning",
+                               $"{ExamFile.StatusText} 교수님께 재배포를 요청하세요.", "재배포 필요")
+                        : fileReceived
+                            ? ("수신 완료", "Success", "문제 압축 파일이 안전하게 수신되었습니다.", "수신 완료")
+                        : (string.IsNullOrEmpty(ExamFile.StatusText) ? "배포 대기" : ExamFile.StatusText, "Normal",
+                           "교수님이 시험 문제를 배포하면 자동으로 수신됩니다.", "대기 중");
+
                     StatusItems.Add(new ExamFileStatusItem
                     {
                         Icon = "📦",
                         Category = "시험 파일",
                         Name = fileName,
                         Status = fileStatus,
-                        StatusLevel = fileReceived ? "Success" : "Normal",
-                        Description = fileReceived ? "문제 압축 파일이 안전하게 수신되었습니다." : "교수님이 시험 문제를 배포하면 자동으로 수신됩니다.",
-                        TimeOrNote = fileReceived ? "수신 완료" : "대기 중"
+                        StatusLevel = fileLevel,
+                        Description = fileDescription,
+                        TimeOrNote = fileNote
                     });
 
                     // 2. 작업 폴더 (문제 풀이 및 소스코드 저장 위치)

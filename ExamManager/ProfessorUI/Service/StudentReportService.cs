@@ -52,6 +52,12 @@ namespace ProfessorUI.Service
                     StudentStore.Instance.MarkFileReceived(studentId);
                     break;
 
+                // 받았던 시험 파일이 학생 PC 에서 사라졌다는 보고(학생이 지움).
+                // '미수신'으로 되돌려야 재배포 대상 목록에 다시 올라온다.
+                case StudentStatus.FileMissing:
+                    StudentStore.Instance.MarkFileMissing(studentId);
+                    break;
+
                 // 답안은 받았지만 학생 PC에 시험 파일이 남아 있다는 보고.
                 // 그 자리에 앉는 다음 학생이 앞사람 답안을 보게 되므로 교수가 직접 확인해야 한다.
                 case StudentStatus.CleanupFailed:

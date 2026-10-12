@@ -43,8 +43,19 @@ namespace ProfessorUI.Service
 
         // 보낼 준비가 됐는지. 안 됐으면 이유, 됐으면 null.
         public string? PackageProblem()
-            => !SendFileState.IsFilePrepared || string.IsNullOrEmpty(SendFileState.PackagePath)
-               ? "압축·암호화 후 다시 시도하세요." : null;
+        {
+            if (!SendFileState.IsFilePrepared || string.IsNullOrEmpty(SendFileState.PackagePath))
+                return "압축·암호화 후 다시 시도하세요.";
+
+            // 묶음이 만들어진 뒤에 지워졌거나 옮겨졌을 수 있다.
+            // 네이티브 전송은 보내기를 시작한 뒤 파일을 열지 못해 실패하므로, 여기서 막지 않으면
+            // 교수 화면에는 이유 없는 '전송 실패'만 남는다.
+            if (!System.IO.File.Exists(SendFileState.PackagePath))
+                return $"보낼 시험 묶음이 없습니다.\n{SendFileState.PackagePath}\n\n" +
+                       "지워졌거나 옮겨졌습니다. 1단계에서 다시 압축·암호화해 주세요.";
+
+            return null;
+        }
 
         // 보내지 못한 이유. 화면은 이 값으로 표의 칸 문구를 정한다.
         public enum SendProblem

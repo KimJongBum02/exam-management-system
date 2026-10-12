@@ -209,8 +209,23 @@ namespace ProfessorUI.ViewModel
             };
             if (string.IsNullOrEmpty(studentId)) return;
 
+            // 이미 받은 학생에게 보내는 것은 막혀 있지만, 파일을 지웠다는 등 교수가 사정을 아는 경우가 있다.
+            // 무엇을 잃게 되는지 알리고 그래도 보내겠다면 보낸다.
+            bool force = false;
+            var target = Students.FirstOrDefault(s => s.StudentId == studentId);
+            if (target is { IsFileReceived: true })
+            {
+                var answer = MessageBox.Show(
+                    $"{target.Name}({studentId}) 은(는) 이미 시험 파일을 받았습니다.\n\n" +
+                    "그래도 다시 보내면 학생이 작업하던 파일 중 같은 이름인 것은 원본으로 덮어써집니다.\n" +
+                    "보내시겠습니까?",
+                    "재배포", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                if (answer != MessageBoxResult.Yes) return;
+                force = true;
+            }
+
             // 누른 뒤 표에 바로 보이는 변화가 없으므로 결과를 창으로 알린다.
-            string? problem = Redeploy(studentId);
+            string? problem = Redeploy(studentId, force);
             if (problem != null)
                 MessageBox.Show(problem, "재배포", MessageBoxButton.OK, MessageBoxImage.Warning);
             else
@@ -231,15 +246,20 @@ namespace ProfessorUI.ViewModel
             }
 
             int sent = 0;
+            int already = 0;
             var failed = new List<string>();
             foreach (var student in students)
             {
+                // 보내는 사이에 파일이 도착했을 수 있다. 목록에서 빠지기 전에 눌렀어도 받은 학생은 건너뛴다.
+                if (student.IsFileReceived) { already++; continue; }
+
                 string? problem = Redeploy(student.StudentId);
                 if (problem == null) sent++;
                 else failed.Add($"{student.StudentId} {student.Name} — {problem}");
             }
 
             string message = $"{sent}명에게 시험 파일을 다시 보냈습니다.";
+            if (already > 0) message += $"\n이미 받은 {already}명은 보내지 않았습니다.";
             if (sent > 0) message += SendFileService.StartNote;
             if (failed.Count > 0)
                 message += $"\n\n보내지 못한 학생 {failed.Count}명:\n" + string.Join("\n", failed);
@@ -249,9 +269,17 @@ namespace ProfessorUI.ViewModel
         }
 
         // 학생 한 명에게 시험 파일을 다시 보내고 표를 맞춘다. 보냈으면 null, 못 보냈으면 그 이유.
-        private string? Redeploy(string studentId)
+        // force 는 '이미 받은 학생인 줄 알면서도 보낸다'는 뜻이다. 개별 재배포에서 교수가 확인한 경우에만 true 로 온다.
+        private string? Redeploy(string studentId, bool force = false)
         {
             var row = Students.FirstOrDefault(s => s.StudentId == studentId);
+
+            // 재배포는 파일이 가지 못한 학생을 위한 것이다.
+            // 이미 받은 학생에게 보내면 학생 PC 에서 같은 이름 파일을 덮어써, 작업하던 내용이 원본으로 되돌아간다.
+            if (!force && row is { IsFileReceived: true })
+                return $"{row.Name}({studentId}) 은(는) 이미 시험 파일을 받았습니다.\n" +
+                       "재배포는 파일을 받지 못한 학생에게만 합니다.";
+
             var result = _deploy.Send(studentId, row?.SendingSessionId);
 
             if (!result.Ok)
