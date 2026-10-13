@@ -95,7 +95,7 @@ namespace StudentUI.ViewModel
             _clockTimer.Tick += (s, e) => UpdateTime();
             _clockTimer.Start();
 
-            LogoutCommand = new RelayCommand(() =>
+            LogoutCommand = new UiCommand(_ =>
             {
                 Cleanup();
                 ReconnectService.Disable(); // 스스로 나가는 것이라 다시 붙지 않는다
@@ -104,26 +104,26 @@ namespace StudentUI.ViewModel
                 _navigationStore.CurrentViewModel = new LoginViewModel(_navigationStore);
             });
 
-            TestExamCommand = new RelayCommand(() =>
+            TestExamCommand = new UiCommand(_ =>
             {
                 Cleanup();
                 _navigationStore.CurrentViewModel = new StudentExamViewModel(_navigationStore, student);
             });
 
 
-            ToggleNotificationCommand = new RelayCommand(() =>
+            ToggleNotificationCommand = new UiCommand(_ =>
             {
                 IsNotificationOpen = !IsNotificationOpen;
                 if (IsNotificationOpen) IsChatOpen = false; // 한 번에 하나만
             });
 
-            ToggleChatCommand = new RelayCommand(() =>
+            ToggleChatCommand = new UiCommand(_ =>
             {
                 IsChatOpen = !IsChatOpen;
                 if (IsChatOpen) IsNotificationOpen = false;
             });
 
-            ExitCommand = new RelayCommand(() =>
+            ExitCommand = new UiCommand(_ =>
             {
                 Cleanup();
                 Application.Current.Shutdown(); // OnExit에서 연결 해제·정리 수행

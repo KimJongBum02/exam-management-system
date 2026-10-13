@@ -1,4 +1,5 @@
 using Microsoft.Win32; // 파일 대화상자 사용을 위해 추가
+using ExamManager.Shared;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -79,10 +80,10 @@ namespace ProfessorUI.ViewModel
 
         public ExamReadyViewModel()
         {
-            SelectCommand = new RelayCommand(ExecuteSelect);
-            RemoveItemCommand = new RelayCommand(ExecuteRemoveItem);
-            ClearAllCommand = new RelayCommand(ExecuteClearAll);
-            StartProcessCommand = new RelayCommand(ExecuteStartProcess);
+            SelectCommand = new UiCommand(ExecuteSelect);
+            RemoveItemCommand = new UiCommand(ExecuteRemoveItem);
+            ClearAllCommand = new UiCommand(ExecuteClearAll);
+            StartProcessCommand = new UiCommand(ExecuteStartProcess);
         }
 
         // 선택 버튼 하나로 파일과 폴더를 모두 고른다.
