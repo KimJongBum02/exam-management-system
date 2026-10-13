@@ -2,7 +2,6 @@ using System;
 using NetworkLib;
 using StudentUI.Service;
 using StudentUI.ViewModel;
-using StudentUI.View.WaitingView;
 using System.Configuration;
 using System.Data;
 using System.Windows;
@@ -169,13 +168,6 @@ namespace StudentUI
                 nextWindow = new MainWindow()
                 {
                     DataContext = loginVM
-                };
-            }
-            else if (_navigationStore.CurrentViewModel is WaitingViewModel waitingVM)
-            {
-                nextWindow = new WaitingWindow()
-                {
-                    DataContext = waitingVM
                 };
             }
             else if (_navigationStore.CurrentViewModel is StudentExamViewModel examVM)

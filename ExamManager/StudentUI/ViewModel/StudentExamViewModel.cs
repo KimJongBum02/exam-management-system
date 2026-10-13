@@ -29,7 +29,6 @@ namespace StudentUI.ViewModel
         public string Status { get; set; } = string.Empty;
         public string StatusLevel { get; set; } = "Normal"; // Success, Info, Warning, Normal
         public string Description { get; set; } = string.Empty;
-        public string TimeOrNote { get; set; } = string.Empty;
     }
 
     public class StudentExamViewModel : INotifyPropertyChanged
@@ -134,32 +133,8 @@ namespace StudentUI.ViewModel
                 }
             }
 
-            // 단계(스텝퍼) 계산 (1: 대기, 2: 준비, 3: 파일 배포, 4: 시험 시작)
-            public int CurrentStep
-            {
-                get
-                {
-                    if (ExamTime.IsRunning) return 4;
-                    if (ExamFile.IsReceived) return 3;
-                    if (IsConnected) return 2;
-                    return 1;
-                }
-            }
-
-            public bool IsStep1Active => CurrentStep == 1;
-            public bool IsStep2Active => CurrentStep == 2;
-            public bool IsStep3Active => CurrentStep == 3;
-            public bool IsStep4Active => CurrentStep == 4;
-
             // 현황 테이블 항목들
             public ObservableCollection<ExamFileStatusItem> StatusItems { get; } = new ObservableCollection<ExamFileStatusItem>();
-
-            private int _selectedMenuIndex = 1;
-            public int SelectedMenuIndex
-            {
-                get => _selectedMenuIndex;
-                set { _selectedMenuIndex = value; OnPropertyChanged(); }
-            }
 
             public ICommand OpenExtractFolderCommand { get; }
 
@@ -208,8 +183,6 @@ namespace StudentUI.ViewModel
             }
             public bool HasUnreadCheatWarnings => _unreadCheatWarningCount > 0;
 
-            // 교수 PC 시험 흐름 연결 전까지, 대기/시작 화면을 오가며 테스트하기 위한 임시 전환
-            public ICommand GoToWaitingCommand { get; }
             public ICommand LogoutCommand { get; }
 
             // ── 실시간 시계 타이머 ──
@@ -221,32 +194,6 @@ namespace StudentUI.ViewModel
                 get => _currentTime;
                 set { _currentTime = value; OnPropertyChanged(); }
             }
-
-            // ── 채팅 토스트 알림 ──
-            private bool _isToastVisible;
-            public bool IsToastVisible
-            {
-                get => _isToastVisible;
-                set { _isToastVisible = value; OnPropertyChanged(); }
-            }
-
-            private string _toastTitle = string.Empty;
-            public string ToastTitle
-            {
-                get => _toastTitle;
-                set { _toastTitle = value; OnPropertyChanged(); }
-            }
-
-            private string _toastMessage = string.Empty;
-            public string ToastMessage
-            {
-                get => _toastMessage;
-                set { _toastMessage = value; OnPropertyChanged(); }
-            }
-
-            public ICommand OpenChatFromToastCommand { get; }
-            public ICommand CloseToastCommand { get; }
-            private readonly System.Windows.Threading.DispatcherTimer _toastTimer;
 
             public StudentExamViewModel(NavigationStore navigationStore, Student student)
             {
@@ -275,40 +222,9 @@ namespace StudentUI.ViewModel
                 // 채팅 수신 이벤트 구독
                 ChatVM.MessageArrived += OnChatMessageArrived;
 
-                // 토스트 5초 타이머
-                _toastTimer = new System.Windows.Threading.DispatcherTimer
-                {
-                    Interval = TimeSpan.FromSeconds(5)
-                };
-                _toastTimer.Tick += (s, e) =>
-                {
-                    _toastTimer.Stop();
-                    IsToastVisible = false;
-                };
-
-                OpenChatFromToastCommand = new UiCommand(_ =>
-                {
-                    _toastTimer.Stop();
-                    IsToastVisible = false;
-                    IsChatOpen = true;
-                    IsNotificationOpen = false;
-                    ChatVM.MarkAsRead();
-                });
-
-                CloseToastCommand = new UiCommand(_ =>
-                {
-                    _toastTimer.Stop();
-                    IsToastVisible = false;
-                });
-
-                // 시험 파일 상태 변경 감지 시 테이블/단계 갱신
+                // 시험 파일 상태 변경 감지 시 테이블 갱신
                 ExamFile.PropertyChanged += (s, e) =>
                 {
-                    OnPropertyChanged(nameof(CurrentStep));
-                    OnPropertyChanged(nameof(IsStep1Active));
-                    OnPropertyChanged(nameof(IsStep2Active));
-                    OnPropertyChanged(nameof(IsStep3Active));
-                    OnPropertyChanged(nameof(IsStep4Active));
                     OnPropertyChanged(nameof(DisplayFolderPath));
                     RefreshStatusItems();
 
@@ -320,11 +236,6 @@ namespace StudentUI.ViewModel
 
                 ExamTime.PropertyChanged += (s, e) =>
                 {
-                    OnPropertyChanged(nameof(CurrentStep));
-                    OnPropertyChanged(nameof(IsStep1Active));
-                    OnPropertyChanged(nameof(IsStep2Active));
-                    OnPropertyChanged(nameof(IsStep3Active));
-                    OnPropertyChanged(nameof(IsStep4Active));
                     OnPropertyChanged(nameof(IsExamEnded));
                     OnPropertyChanged(nameof(ExamEndedTime));
                     OnPropertyChanged(nameof(CanSubmitAfterEnd));
@@ -360,15 +271,7 @@ namespace StudentUI.ViewModel
                     {
                         IsNotificationOpen = false;
                         ChatVM.MarkAsRead();
-                        _toastTimer.Stop();
-                        IsToastVisible = false;
                     }
-                });
-
-                GoToWaitingCommand = new UiCommand(_ =>
-                {
-                    Unsubscribe();
-                    _navigationStore.CurrentViewModel = new WaitingViewModel(_navigationStore, Student);
                 });
 
                 LogoutCommand = new UiCommand(_ =>
@@ -396,17 +299,17 @@ namespace StudentUI.ViewModel
                     bool fileReceived = ExamFile.IsReceived;
                     string fileName = string.IsNullOrEmpty(ExamFile.FileName) ? "배포 대기 중" : ExamFile.FileName;
 
-                    var (fileStatus, fileLevel, fileDescription, fileNote) =
+                    var (fileStatus, fileLevel, fileDescription) =
                         ExamFile.IsMissing
                             ? ("파일 삭제됨", "Warning",
-                               "받은 시험 파일이 이 PC 에서 보이지 않습니다. 교수님께 재배포를 요청하세요.", "재배포 필요")
+                               "받은 시험 파일이 이 PC 에서 보이지 않습니다. 교수님께 재배포를 요청하세요.")
                         : ExamFile.TransferFailed
                             ? ("전송 실패", "Warning",
-                               $"{ExamFile.StatusText} 교수님께 재배포를 요청하세요.", "재배포 필요")
+                               $"{ExamFile.StatusText} 교수님께 재배포를 요청하세요.")
                         : fileReceived
-                            ? ("수신 완료", "Success", "문제 압축 파일이 안전하게 수신되었습니다.", "수신 완료")
+                            ? ("수신 완료", "Success", "문제 압축 파일이 안전하게 수신되었습니다.")
                         : (string.IsNullOrEmpty(ExamFile.StatusText) ? "배포 대기" : ExamFile.StatusText, "Normal",
-                           "교수님이 시험 문제를 배포하면 자동으로 수신됩니다.", "대기 중");
+                           "교수님이 시험 문제를 배포하면 자동으로 수신됩니다.");
 
                     StatusItems.Add(new ExamFileStatusItem
                     {
@@ -415,8 +318,7 @@ namespace StudentUI.ViewModel
                         Name = fileName,
                         Status = fileStatus,
                         StatusLevel = fileLevel,
-                        Description = fileDescription,
-                        TimeOrNote = fileNote
+                        Description = fileDescription
                     });
 
                     // 2. 작업 폴더 (문제 풀이 및 소스코드 저장 위치)
@@ -429,8 +331,7 @@ namespace StudentUI.ViewModel
                         Name = DisplayFolderPath,
                         Status = folderStatus,
                         StatusLevel = isExtracted ? "Success" : (fileReceived ? "Info" : "Normal"),
-                        Description = isExtracted ? $"폴더 내 문제 파일({ExamFile.ExtractedFiles.Count}개)을 열어 시험을 진행하세요." :"시험이 시작되면 문제 파일이 자동 압축 해제됩니다.",
-                        TimeOrNote = isExtracted ? "작업 가능" : "시작 대기"
+                        Description = isExtracted ? $"폴더 내 문제 파일({ExamFile.ExtractedFiles.Count}개)을 열어 시험을 진행하세요." :"시험이 시작되면 문제 파일이 자동 압축 해제됩니다."
                     });
 
                     // 3. 답안 제출 파일
@@ -463,23 +364,22 @@ namespace StudentUI.ViewModel
                         StatusLevel = submitLevel,
                         Description = string.IsNullOrEmpty(SubmitStatus)
                             ? "종료 전 '답안 제출' 버튼을 누르면 작업 폴더 전체가 자동 압축되어 전송됩니다."
-                            : SubmitStatus,
-                        TimeOrNote = submitState == AnswerSubmitState.Succeeded ? "제출 성공" : "미제출"
+                            : SubmitStatus
                     });
 
                     // 4. 보안 감시 정책
                     // 프로그램 감시는 네트워크 차단과 같은 때(시험 시작 처리) 켜지므로, 차단이 아직이면 감시도 시작 전이다.
                     // 답안을 내면 감시를 멈추고 차단도 푼다(ExamMonitorService.OnSubmitStateChanged).
                     bool monitorStarted = ExamMonitorService.Instance.NetworkState != NetworkBlockState.NotApplied;
-                    var (policyStatus, policyLevel, policyDescription, policyNote) =
+                    var (policyStatus, policyLevel, policyDescription) =
                         !monitorStarted ? ("시험 시작 시 적용", "Normal",
-                                           "시험이 시작되면 비인가 프로그램 및 생성형 AI 사이트 접근이 실시간 감시/차단됩니다.", "-")
+                                           "시험이 시작되면 비인가 프로그램 및 생성형 AI 사이트 접근이 실시간 감시/차단됩니다.")
                         : submitState == AnswerSubmitState.Succeeded ? ("해제됨", "Success",
-                                           "답안 제출이 끝나 프로그램 감시와 차단이 풀렸습니다.", "답안 제출 완료")
+                                           "답안 제출이 끝나 프로그램 감시와 차단이 풀렸습니다.")
                         : IsConnected ? ("적용 중", "Success",
-                                           "비인가 프로그램 및 생성형 AI 사이트 접근이 실시간 감시/차단됩니다.", "정상")
+                                           "비인가 프로그램 및 생성형 AI 사이트 접근이 실시간 감시/차단됩니다.")
                         : ("서버 미연결", "Warning",
-                                           "비인가 프로그램 및 생성형 AI 사이트 접근이 실시간 감시/차단됩니다.", "점검 필요");
+                                           "비인가 프로그램 및 생성형 AI 사이트 접근이 실시간 감시/차단됩니다.");
                     StatusItems.Add(new ExamFileStatusItem
                     {
                         Icon = "🛡️",
@@ -487,27 +387,22 @@ namespace StudentUI.ViewModel
                         Name = "실시간 프로그램 & 웹 차단",
                         Status = policyStatus,
                         StatusLevel = policyLevel,
-                        Description = policyDescription,
-                        TimeOrNote = policyNote
+                        Description = policyDescription
                     });
 
                     // 5. 인터넷 차단
                     // 사이트는 "오프라인입니다"라고만 해서 학생이 인터넷이 끊긴 줄 안다. 막은 것임을 여기서 알린다.
                     // '차단 중'은 시험 중 정상 상태지만 초록(Success)으로 두면 '인터넷 정상'으로 읽혀 안내(Info)로 둔다.
-                    var (networkStatus, networkLevel, networkDescription, networkNote) = ExamMonitorService.Instance.NetworkState switch
+                    var (networkStatus, networkLevel, networkDescription) = ExamMonitorService.Instance.NetworkState switch
                     {
                         NetworkBlockState.Blocked  => ("차단 중", "Info",
-                                                       "시험 중에는 교수님 PC 외의 인터넷이 막힙니다. 사이트가 '오프라인'으로 보이는 것은 정상이며, 답안을 제출하면 자동으로 풀립니다.",
-                                                       "답안 제출 후 자동 해제"),
+                                                       "시험 중에는 교수님 PC 외의 인터넷이 막힙니다. 사이트가 '오프라인'으로 보이는 것은 정상이며, 답안을 제출하면 자동으로 풀립니다."),
                         NetworkBlockState.Released => ("해제됨", "Success",
-                                                       "답안 제출이 끝나 인터넷 차단이 풀렸습니다.",
-                                                       "답안 제출 완료"),
+                                                       "답안 제출이 끝나 인터넷 차단이 풀렸습니다."),
                         NetworkBlockState.Failed   => ("적용 실패", "Warning",
-                                                       "인터넷 차단을 적용하지 못했습니다. 교수님 PC에 자동으로 보고되었습니다.",
-                                                       "교수님 PC에 보고됨"),
+                                                       "인터넷 차단을 적용하지 못했습니다. 교수님 PC에 자동으로 보고되었습니다."),
                         _                          => ("시험 시작 시 적용", "Normal",
-                                                       "시험이 시작되면 교수님 PC 연결을 제외한 인터넷이 차단됩니다.",
-                                                       "-"),
+                                                       "시험이 시작되면 교수님 PC 연결을 제외한 인터넷이 차단됩니다."),
                     };
                     StatusItems.Add(new ExamFileStatusItem
                     {
@@ -516,8 +411,7 @@ namespace StudentUI.ViewModel
                         Name = "외부 인터넷 차단 (교수님 PC 연결만 허용)",
                         Status = networkStatus,
                         StatusLevel = networkLevel,
-                        Description = networkDescription,
-                        TimeOrNote = networkNote
+                        Description = networkDescription
                     });
                 });
             }
@@ -531,7 +425,6 @@ namespace StudentUI.ViewModel
             private void Unsubscribe()
             {
                 _clockTimer.Stop();
-                _toastTimer.Stop();
                 ChatVM.MessageArrived -= OnChatMessageArrived;
                 NetworkService.Instance.Disconnected -= OnServerDisconnected;
                 ReconnectService.Reconnected -= OnServerReconnected;
@@ -541,23 +434,13 @@ namespace StudentUI.ViewModel
                 ExamMonitorService.Instance.NetworkStateChanged -= RefreshStatusItems;
             }
 
-            // 채팅 메시지가 도착했을 때 토스트 알림 처리
+            // 채팅창을 열어 두고 있을 때 온 메시지는 바로 읽은 것으로 처리한다.
+            // (닫혀 있을 때는 채팅 단추가 깜빡이고, 열어 볼 때 MarkAsRead 가 한꺼번에 회신한다)
             private void OnChatMessageArrived()
             {
                 UiThread.Post(() =>
                 {
-                    if (IsChatOpen)
-                    {
-                        ChatVM.MarkAsRead();
-                        return;
-                    }
-
-                    ToastTitle = string.IsNullOrEmpty(ChatVM.LastSender) ? "새 메시지" : ChatVM.LastSender;
-                    ToastMessage = ChatVM.LastMessage;
-                    IsToastVisible = true;
-
-                    _toastTimer.Stop();
-                    _toastTimer.Start();
+                    if (IsChatOpen) ChatVM.MarkAsRead();
                 });
             }
 
@@ -565,17 +448,10 @@ namespace StudentUI.ViewModel
             private void OnPacketReceived(PacketType type, IntPtr payload, uint payloadLen)
             {
                 if (type != PacketType.ExamPhaseChange) return;
-                if (!ExamPhasePayload.TryDecode(payload, payloadLen, out ExamPhase phase)) return;
+                if (!ExamPhasePayload.TryDecode(payload, payloadLen, out _)) return;
 
-                UiThread.Post(() =>
-                {
-                    OnPropertyChanged(nameof(CurrentStep));
-                    OnPropertyChanged(nameof(IsStep1Active));
-                    OnPropertyChanged(nameof(IsStep2Active));
-                    OnPropertyChanged(nameof(IsStep3Active));
-                    OnPropertyChanged(nameof(IsStep4Active));
-                    RefreshStatusItems();
-                });
+                // RefreshStatusItems 가 스스로 화면 스레드로 넘기므로 여기서 감싸지 않는다.
+                RefreshStatusItems();
             }
 
             // ── 답안 제출 ──

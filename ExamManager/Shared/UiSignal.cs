@@ -14,12 +14,9 @@ namespace ExamManager.Shared
     // 그래서 바뀌는 순간에만 잠깐 깜빡이고, 창이 뒤에 있으면 작업표시줄 아이콘을 깜빡인다.
     public static class UiSignal
     {
-        // 평소 화면은 무채색이라 깜빡일 때만 색을 쓴다.
-        // 진한 색은 검은 버튼 위에, 옅은 색은 흰 칸·패널 위에 쓴다.
-        public static readonly Color AlertColor       = Color.FromRgb(0xDC, 0x26, 0x26);   // 부정행위 경고
-        public static readonly Color AlertSoftColor   = Color.FromRgb(0xFE, 0xE2, 0xE2);
-        public static readonly Color MessageColor     = Color.FromRgb(0x25, 0x63, 0xEB);   // 채팅·공지
-        public static readonly Color MessageSoftColor = Color.FromRgb(0xDB, 0xEA, 0xFE);
+        // 평소 화면은 무채색이라 깜빡일 때만 색을 쓴다. 흰 칸·패널 위에 쓰는 옅은 색이다.
+        public static readonly Color AlertSoftColor   = Color.FromRgb(0xFE, 0xE2, 0xE2);   // 부정행위 경고
+        public static readonly Color MessageSoftColor = Color.FromRgb(0xDB, 0xEA, 0xFE);   // 채팅·공지
         public static readonly Color GoodSoftColor    = Color.FromRgb(0xDC, 0xFC, 0xE7);   // 접속
 
         // 창이 뒤에 있거나 최소화돼 있으면 작업표시줄 아이콘을 깜빡인다.

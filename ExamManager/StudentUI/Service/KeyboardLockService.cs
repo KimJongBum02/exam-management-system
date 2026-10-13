@@ -21,8 +21,6 @@ namespace StudentUI.Service
         private bool _isLocked;
         private View.Shared.KeyboardLockBannerWindow? _bannerWindow;
 
-        public bool IsLocked => _isLocked;
-
         private KeyboardLockService()
         {
             // GC 가 수거하지 않도록 인스턴스 필드에 대리자를 보관합니다.

@@ -33,13 +33,6 @@ namespace ProfessorUI.ViewModel
 
         public bool HasSelectedItems => SelectedItems.Count > 0;
 
-        private int _progressValue = 0;
-        public int ProgressValue
-        {
-            get => _progressValue;
-            set { _progressValue = value; OnPropertyChanged(); }
-        }
-
         private string _progressText = "0%";
         public string ProgressText
         {
@@ -248,7 +241,6 @@ namespace ProfessorUI.ViewModel
             else
                 CurrentStatusMessage = "파일 선택 완료. 준비되었습니다.";
 
-            ProgressValue = 0;
             ProgressText = "0%";
         }
 
@@ -286,14 +278,12 @@ namespace ProfessorUI.ViewModel
             }
 
             CurrentStatusMessage = "압축·암호화 진행 중...";
-            ProgressValue = 0;
             ProgressText = "0%";
 
             // 파일을 모으고 묶는 동안 진행률이 조금씩 오른다(ZipService).
             // Progress<T> 가 화면 스레드로 넘겨 주므로 여기서 그대로 값만 담는다.
             var progress = new Progress<(int Percent, string Phase)>(step =>
             {
-                ProgressValue = step.Percent;
                 ProgressText = $"{step.Percent}%";
                 CurrentStatusMessage = step.Phase;
             });
@@ -304,7 +294,6 @@ namespace ProfessorUI.ViewModel
 
             if (result.Ok)
             {
-                ProgressValue = 100;
                 ProgressText = "100%";
                 CurrentStatusMessage = "압축·암호화 완료!";
                 PackagePathText = PackageFolderText + Path.GetFileName(result.OutputPath);

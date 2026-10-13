@@ -119,9 +119,5 @@ namespace ProfessorUI.Service
             foreach (string entry in DefaultBlackList)
                 AddToBlackList(entry);
         }
-
-        // 전체 삭제 메서드
-        public static void ClearBlackList() => BlackList.Clear();
-        public static void ClearWhiteList() => WhiteList.Clear();
     }
 }
