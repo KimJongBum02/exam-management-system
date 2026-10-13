@@ -23,11 +23,9 @@ namespace StudentUI.Service
             }
             NetworkService.Instance.PacketReceived += OnPacket;
 
-            // 학번(16바이트) + 이름을 담은 로그인 패킷 전송 → 교수 PC 현황판에 표시됨
-            byte[] loginPayload = new byte[80];
-            Encoding.UTF8.GetBytes(student.StudentNumber).CopyTo(loginPayload, 0);
-            Encoding.UTF8.GetBytes(student.StudentName).CopyTo(loginPayload, 16);
-            NetworkService.Instance.SendPacket(PacketType.StudentLogin, loginPayload);
+            // 학번 + 이름을 담은 로그인 패킷 전송 → 교수 PC 현황판에 표시됨
+            NetworkService.Instance.SendPacket(PacketType.StudentLogin,
+                LoginPayload.Encode(student.StudentNumber, student.StudentName));
 
             // 회신이 오지 않으면 승인된 것으로 보고 넘어간다. 회신 하나 때문에 로그인이 막히지 않게 한다.
             Task finished = await Task.WhenAny(response.Task, Task.Delay(TimeSpan.FromSeconds(3)));

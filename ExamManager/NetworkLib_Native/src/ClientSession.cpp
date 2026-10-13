@@ -43,6 +43,14 @@ void ClientSession::RecvLoop()
         }
 
         // 2. 페이로드 수신
+        //    길이는 학생 PC 가 적어 보낸 값이다. 그대로 믿고 할당하면, 헤더 8바이트만 꾸며 보내도
+        //    교수 서버가 수 GB 를 잡다 죽어 시험 전체가 멈춘다. 넘으면 그 학생 연결만 끊는다.
+        if (hdr.payloadLen > MAX_PAYLOAD_SIZE)
+        {
+            Close(static_cast<int>(DisconnectReason::NetworkError));
+            return;
+        }
+
         std::vector<uint8_t> payload(hdr.payloadLen);
         if (hdr.payloadLen > 0)
         {

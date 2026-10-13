@@ -319,7 +319,8 @@ namespace StudentUI.Service
             string friendlyName = KnownPrograms.FriendlyLabel(processName);
             (CheatingAlertType alertType, string description) = Describe(type, friendlyName);
 
-            NetworkService.Instance.SendPacket(PacketType.CheatingAlert, BuildAlertPayload(alertType, description));
+            NetworkService.Instance.SendPacket(PacketType.CheatingAlert,
+                                               CheatingAlertPayload.Encode(alertType, description));
 
             // 허용 프로그램 종료는 학생이 스스로 닫은 것이라 학생 화면에는 띄우지 않는다.
             // 학생 화면의 감시 알림은 부정행위 경고로 보이며, 원래 '왜 꺼졌는지' 알려 주려는 용도다.
@@ -336,21 +337,6 @@ namespace StudentUI.Service
                 1 => (CheatingAlertType.RequiredProcessTerminated, $"[참고] 허용 프로그램 종료: {processName}"),
                 _ => (CheatingAlertType.UnauthorizedProcess, $"목록에 없는 프로그램 실행: {processName}"),
             };
-
-        // Protocol.h의 CheatingAlertPayload 형식으로 만든다.
-        //   [studentId 16][studentName 64][alertType 4][description 256] = 340바이트
-        // 학번·이름 칸은 비워 둔다 — 교수 PC는 로그인 때 등록된 세션으로 누가 보냈는지 이미 안다.
-        private static byte[] BuildAlertPayload(CheatingAlertType alertType, string description)
-        {
-            byte[] payload = new byte[340];
-            BitConverter.GetBytes((uint)alertType).CopyTo(payload, 80);
-
-            // 설명이 길면 잘라 담는다. 마지막 1바이트는 문자열 끝 표시로 남겨 둔다.
-            byte[] text = Encoding.UTF8.GetBytes(description);
-            Array.Copy(text, 0, payload, 84, Math.Min(text.Length, 255));
-
-            return payload;
-        }
 
         public void Dispose()
         {

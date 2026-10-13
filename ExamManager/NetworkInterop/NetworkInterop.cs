@@ -390,6 +390,83 @@ namespace NetworkLib
     }
 
     // ══════════════════════════════════════════════════════════════════
+    //  StudentLogin(10) 페이로드 — 학생이 접속할 때 자기가 누구인지 알린다
+    //
+    //  Protocol.h의 LoginPayload와 같은 형식(고정 80바이트):
+    //    [char studentId[16]][char studentName[64]]
+    //
+    //  읽는 쪽은 네이티브(ClientSession)라 TryDecode 가 없다. 만드는 형식만 여기서 정한다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class LoginPayload
+    {
+        private const int StudentIdSize   = 16;
+        private const int StudentNameSize = 64;
+        public  const int Size            = StudentIdSize + StudentNameSize;   // 80
+
+        public static byte[] Encode(string studentId, string studentName)
+        {
+            byte[] payload = new byte[Size];
+            ExamSubmitPayload.WriteFixedString(payload, 0, studentId, StudentIdSize);
+            ExamSubmitPayload.WriteFixedString(payload, StudentIdSize, studentName, StudentNameSize);
+            return payload;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  CheatingAlert(31) 페이로드 — 학생이 적발 내용을 교수에게 올린다
+    //
+    //  Protocol.h의 CheatingAlertPayload와 같은 형식(고정 340바이트):
+    //    [char studentId[16]][char studentName[64]][uint32 alertType][char description[256]]
+    //
+    //  학번·이름 칸은 비워 둔다 — 교수 PC 는 로그인 때 등록된 세션으로 누가 보냈는지 이미 안다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class CheatingAlertPayload
+    {
+        private const int AlertTypeOffset   = 80;
+        private const int DescriptionOffset = 84;
+        private const int DescriptionSize   = 256;
+        public  const int Size              = DescriptionOffset + DescriptionSize;   // 340
+
+        public static byte[] Encode(CheatingAlertType alertType, string description)
+        {
+            byte[] payload = new byte[Size];
+            BitConverter.GetBytes((uint)alertType).CopyTo(payload, AlertTypeOffset);
+            ExamSubmitPayload.WriteFixedString(payload, DescriptionOffset, description, DescriptionSize);
+            return payload;
+        }
+
+        // 길이가 모자란 패킷은 통째로 버린다. 반쯤 읽으면 교수 화면에 깨진 문구나 엉뚱한 종류가 뜬다.
+        public static bool TryDecode(IntPtr payload, uint payloadLen,
+                                     out CheatingAlertType alertType, out string description)
+        {
+            alertType = CheatingAlertType.UnauthorizedProcess;
+            description = string.Empty;
+            if (payload == IntPtr.Zero || payloadLen < Size) return false;
+
+            byte[] buffer = new byte[Size];
+            Marshal.Copy(payload, buffer, 0, Size);
+
+            alertType = (CheatingAlertType)BitConverter.ToUInt32(buffer, AlertTypeOffset);
+            description = ExamSubmitPayload.ReadFixedString(buffer, DescriptionOffset, DescriptionSize);
+            return true;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  교수 PC 찾기 — 학생이 UDP 로 외치면 교수가 답한다.
+    //
+    //  패킷이 아니라 짧은 문자열 약속이라 Encode/Decode 가 없다.
+    //  듣는 자리(UDP)는 시험 서버 포트(TCP)와 따로 고정이다 — 서버 포트가 바뀌어도 찾을 수 있어야 한다.
+    //  (보내는 쪽: 학생 ProfessorDiscovery, 받는 쪽: 교수 AutoConnectService)
+    // ══════════════════════════════════════════════════════════════════
+    public static class DiscoveryProtocol
+    {
+        public const int    Port           = 9000;
+        public const string Request        = "EXAM-FIND";
+        public const string ResponsePrefix = "EXAM-HERE ";   // 뒤에 시험 서버 포트를 붙인다
+    }
+
+    // ══════════════════════════════════════════════════════════════════
     //  ExamStatusUpdate(21) 페이로드 — 학생이 교수에게 알리는 자기 상태
     //
     //  Protocol.h의 ExamStatusUpdatePayload와 같은 형식(고정 276바이트):
@@ -957,42 +1034,6 @@ namespace NetworkLib
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Client_SendFile  ([MarshalAs(UnmanagedType.LPUTF8Str)] string filePath, [MarshalAs(UnmanagedType.LPUTF8Str)] string archivePassword);
         // 채팅
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Client_SendChat  ([MarshalAs(UnmanagedType.LPUTF8Str)] string message);
-    }
-
-    // ══════════════════════════════════════════════════════════════════
-    //  PayloadHelper — 페이로드 바이트 배열 빌더 (구조체 → byte[])
-    //  UI 팀이 패킷 데이터를 만들 때 사용합니다.
-    // ══════════════════════════════════════════════════════════════════
-    public static class PayloadHelper
-    {
-        /// <summary>구조체를 byte[]로 직렬화합니다.</summary>
-        public static byte[] ToBytes<T>(T structure) where T : struct
-        {
-            int size = Marshal.SizeOf<T>();
-            byte[] arr = new byte[size];
-            IntPtr ptr = Marshal.AllocHGlobal(size);
-            try
-            {
-                Marshal.StructureToPtr(structure, ptr, false);
-                Marshal.Copy(ptr, arr, 0, size);
-            }
-            finally { Marshal.FreeHGlobal(ptr); }
-            return arr;
-        }
-
-        /// <summary>byte[]를 구조체로 역직렬화합니다.</summary>
-        public static T FromBytes<T>(IntPtr payloadPtr, uint payloadLen) where T : struct
-        {
-            return Marshal.PtrToStructure<T>(payloadPtr);
-        }
-
-        /// <summary>UTF-8 문자열을 고정 크기 바이트 배열에 복사합니다.</summary>
-        public static void CopyString(byte[] dest, string src, int maxBytes)
-        {
-            byte[] srcBytes = Encoding.UTF8.GetBytes(src);
-            int count = Math.Min(srcBytes.Length, maxBytes - 1);
-            Array.Copy(srcBytes, dest, count);
-        }
     }
 
     // ══════════════════════════════════════════════════════════════════
