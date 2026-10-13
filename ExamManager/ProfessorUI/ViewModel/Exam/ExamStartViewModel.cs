@@ -1,4 +1,5 @@
 using ProfessorUI.Service;
+using ExamManager.Shared;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
@@ -21,7 +22,7 @@ namespace ProfessorUI.ViewModel
         {
             SendFileState.StateChanged += OnStateChanged;
             ExamState.StateChanged += OnStateChanged; // 시험 상태 변화도 구독
-            StartExamCommand = new RelayCommand(ExecuteStartExam);
+            StartExamCommand = new UiCommand(ExecuteStartExam);
         }
 
         private void OnStateChanged()
@@ -45,4 +46,4 @@ namespace ProfessorUI.ViewModel
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
-}
+}

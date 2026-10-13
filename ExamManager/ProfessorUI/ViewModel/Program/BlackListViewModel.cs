@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using ExamManager.Shared;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -37,10 +38,10 @@ namespace ProfessorUI.ViewModel
 
         public BlackListViewModel()
         {
-            AddCommand = new RelayCommand(_ => AddProcess());
-            RemoveCommand = new RelayCommand(param => RemoveProcess(param as string));
-            ClearAllCommand = new RelayCommand(_ => ClearAll());
-            RestoreDefaultsCommand = new RelayCommand(_ => ProgramControlStore.RestoreBlackListDefaults());
+            AddCommand = new UiCommand(_ => AddProcess());
+            RemoveCommand = new UiCommand(param => RemoveProcess(param as string));
+            ClearAllCommand = new UiCommand(_ => ClearAll());
+            RestoreDefaultsCommand = new UiCommand(_ => ProgramControlStore.RestoreBlackListDefaults());
 
             DefaultItems = new ListCollectionView(ProgramControlStore.BlackList)
             {
@@ -84,4 +85,4 @@ namespace ProfessorUI.ViewModel
         protected void OnPropertyChanged([CallerMemberName] string? name = null) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
-}
+}

@@ -97,8 +97,8 @@ namespace ProfessorUI.ViewModel
             _tabs.Add(globalTab);
             SelectedTab = globalTab;
 
-            SendMessageCommand = new RelayCommand(o => SendMessage());
-            SendNoticeCommand = new RelayCommand(o => SendNotice());
+            SendMessageCommand = new UiCommand(o => SendMessage());
+            SendNoticeCommand = new UiCommand(o => SendNotice());
 
             // 받은 메시지·공지 회신 구독 (보내고 받는 일은 ChatService 가 맡는다)
             _chat.MessageReceived += OnMessageReceived;

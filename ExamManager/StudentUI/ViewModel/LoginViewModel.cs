@@ -1,4 +1,5 @@
 using NetworkLib;
+using ExamManager.Shared;
 using StudentUI.Model;
 using StudentUI.Service;
 using System;
@@ -48,7 +49,7 @@ namespace StudentUI.ViewModel
         public LoginViewModel(NavigationStore navigationStore)
         {
             _navigationStore = navigationStore;
-            LoginCommand = new RelayCommand(() => _ = LoginAsync());
+            LoginCommand = new UiCommand(_ => { _ = LoginAsync(); });
         }
 
         private async Task LoginAsync()

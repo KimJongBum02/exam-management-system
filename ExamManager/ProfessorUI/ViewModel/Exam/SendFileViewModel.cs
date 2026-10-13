@@ -54,20 +54,20 @@ namespace ProfessorUI.ViewModel
         public SendFileViewModel()
         {
             // ⭐ 핵심 2: Command CanExecute 조건에 IsContainerEnabled 연결
-            StartDeployCommand = new RelayCommand(
+            StartDeployCommand = new UiCommand(
                 ExecuteStartDeploy,
                 canExecute: o => IsContainerEnabled && !_isDeploying
             );
-            SelectAllCommand = new RelayCommand(
+            SelectAllCommand = new UiCommand(
                 o => SetAllSelection(true),
                 canExecute: o => IsContainerEnabled
             );
-            DeselectAllCommand = new RelayCommand(
+            DeselectAllCommand = new UiCommand(
                 o => SetAllSelection(false),
                 canExecute: o => IsContainerEnabled
             );
 
-            RedeployOneCommand = new RelayCommand(
+            RedeployOneCommand = new UiCommand(
                 ExecuteRedeployOne,
                 canExecute: o => IsContainerEnabled
             );

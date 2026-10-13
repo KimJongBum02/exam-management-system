@@ -1,4 +1,5 @@
 using System;
+using ExamManager.Shared;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
@@ -28,7 +29,7 @@ namespace ProfessorUI.ViewModel
             _timer.Tick += (_, _) => Refresh();
             _timer.Start();
 
-            RestartCommand = new RelayCommand(_ => ExecuteRestart());
+            RestartCommand = new UiCommand(_ => ExecuteRestart());
             Refresh();
         }
 

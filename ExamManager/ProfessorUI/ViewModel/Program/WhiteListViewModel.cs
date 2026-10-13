@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using ExamManager.Shared;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -36,9 +37,9 @@ namespace ProfessorUI.ViewModel
 
         public WhiteListViewModel()
         {
-            AddCommand = new RelayCommand(_ => AddProcess());
-            RemoveCommand = new RelayCommand(param => RemoveProcess(param as string));
-            ClearAllCommand = new RelayCommand(_ => ClearAll());
+            AddCommand = new UiCommand(_ => AddProcess());
+            RemoveCommand = new UiCommand(param => RemoveProcess(param as string));
+            ClearAllCommand = new UiCommand(_ => ClearAll());
 
             DefaultItems = new ListCollectionView(ProgramControlStore.WhiteList)
             {
@@ -81,4 +82,4 @@ namespace ProfessorUI.ViewModel
         protected void OnPropertyChanged([CallerMemberName] string? name = null) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
-}
+}

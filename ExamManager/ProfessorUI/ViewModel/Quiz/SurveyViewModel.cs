@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using ExamManager.Shared;
 using ProfessorUI.Common;
 
 namespace ProfessorUI.ViewModel
@@ -23,7 +24,7 @@ namespace ProfessorUI.ViewModel
 
         public SurveyViewModel()
         {
-            NewCommand = new RelayCommand(ExecuteNew);
+            NewCommand = new UiCommand(ExecuteNew);
         }
 
         private void ExecuteNew(object? parameter)

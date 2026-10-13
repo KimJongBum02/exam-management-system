@@ -106,7 +106,7 @@ namespace StudentUI.ViewModel
                 OnPropertyChanged(nameof(HasMessages));
                 OnPropertyChanged(nameof(HasNoMessages));
             };
-            SendMessageCommand = new RelayCommand(SendMessage);
+            SendMessageCommand = new UiCommand(_ => SendMessage());
 
             // 네트워크 수신 이벤트 구독
             NetworkService.Instance.PacketReceived += OnPacketReceived;

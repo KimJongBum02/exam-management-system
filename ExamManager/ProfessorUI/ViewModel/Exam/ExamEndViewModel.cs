@@ -1,4 +1,5 @@
 using NetworkLib;
+using ExamManager.Shared;
 using ProfessorUI.Service;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -30,9 +31,9 @@ namespace ProfessorUI.ViewModel
 
         public ExamEndViewModel()
         {
-            EndExamCommand = new RelayCommand(ExecuteEndExam, canExecute: o => IsContainerEnabled && !IsExamEnded);
-            ApproveSelectedCommand = new RelayCommand(ExecuteApproveSelected);
-            RecollectCommand = new RelayCommand(ExecuteRecollect, canExecute: o => IsExamEnded);
+            EndExamCommand = new UiCommand(ExecuteEndExam, canExecute: o => IsContainerEnabled && !IsExamEnded);
+            ApproveSelectedCommand = new UiCommand(ExecuteApproveSelected);
+            RecollectCommand = new UiCommand(ExecuteRecollect, canExecute: o => IsExamEnded);
 
             ExamState.StateChanged += () =>
             {
@@ -110,4 +111,4 @@ namespace ProfessorUI.ViewModel
         protected void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
-}
+}

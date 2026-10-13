@@ -255,13 +255,13 @@ namespace StudentUI.ViewModel
 
                 // 문제 폴더가 풀리기 전(앱만 켠 상태)에는 낼 답안이 없으므로 누를 수 없다.
                 // 교수 PC 와 끊긴 동안에는 보낼 곳이 없으므로 누르지 못하게 한다(SubmitBlockedReason 이 이유를 보여 준다).
-                SubmitAnswerCommand = new RelayCommand(SubmitAnswer, () => !IsSubmitting && ExamFile.IsExtracted && IsConnected);
+                SubmitAnswerCommand = new UiCommand(_ => SubmitAnswer(), _ => !IsSubmitting && ExamFile.IsExtracted && IsConnected);
 
                 // 시험은 이미 끝났으므로 '시험을 끝냅니다' 확인은 묻지 않는다.
                 // 결과는 StateChanged 로 올라와 종료 화면의 상태 줄과 결과 창에 나온다.
-                SubmitAfterEndCommand = new RelayCommand(
-                    () => _ = AnswerSubmitService.Instance.SubmitAsync(),
-                    () => CanSubmitAfterEnd);
+                SubmitAfterEndCommand = new UiCommand(
+                    _ => { _ = AnswerSubmitService.Instance.SubmitAsync(); },
+                    _ => CanSubmitAfterEnd);
 
                 AnswerSubmitService.Instance.StateChanged += OnSubmitStateChanged;
                 ExamMonitorService.Instance.CheatWarning += OnCheatWarning;
@@ -286,7 +286,7 @@ namespace StudentUI.ViewModel
                     IsToastVisible = false;
                 };
 
-                OpenChatFromToastCommand = new RelayCommand(() =>
+                OpenChatFromToastCommand = new UiCommand(_ =>
                 {
                     _toastTimer.Stop();
                     IsToastVisible = false;
@@ -295,7 +295,7 @@ namespace StudentUI.ViewModel
                     ChatVM.MarkAsRead();
                 });
 
-                CloseToastCommand = new RelayCommand(() =>
+                CloseToastCommand = new UiCommand(_ =>
                 {
                     _toastTimer.Stop();
                     IsToastVisible = false;
@@ -345,15 +345,15 @@ namespace StudentUI.ViewModel
 
                 // 압축 해제 뒤 탐색기가 자동으로 열리지만, 학생이 창을 닫았거나
                 // 자동 열기가 실패한 경우를 위해 언제든 다시 열 수 있게 둔다.
-                OpenExtractFolderCommand = new RelayCommand(() => ExamFile.OpenExtractFolder());
+                OpenExtractFolderCommand = new UiCommand(_ => ExamFile.OpenExtractFolder());
 
-                ToggleNotificationCommand = new RelayCommand(() =>
+                ToggleNotificationCommand = new UiCommand(_ =>
                 {
                     IsNotificationOpen = !IsNotificationOpen;
                     if (IsNotificationOpen) IsChatOpen = false; // 한 번에 하나만
                 });
 
-                ToggleChatCommand = new RelayCommand(() =>
+                ToggleChatCommand = new UiCommand(_ =>
                 {
                     IsChatOpen = !IsChatOpen;
                     if (IsChatOpen)
@@ -365,13 +365,13 @@ namespace StudentUI.ViewModel
                     }
                 });
 
-                GoToWaitingCommand = new RelayCommand(() =>
+                GoToWaitingCommand = new UiCommand(_ =>
                 {
                     Unsubscribe();
                     _navigationStore.CurrentViewModel = new WaitingViewModel(_navigationStore, Student);
                 });
 
-                LogoutCommand = new RelayCommand(() =>
+                LogoutCommand = new UiCommand(_ =>
                 {
                     Unsubscribe();
                     ReconnectService.Disable(); // 스스로 나가는 것이라 다시 붙지 않는다
