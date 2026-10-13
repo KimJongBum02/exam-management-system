@@ -1,4 +1,5 @@
 using System;
+using NetworkLib;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
@@ -17,10 +18,12 @@ namespace ProfessorUI.Service
     // 교수가 시험 서버 포트를 바꿔도 학생은 늘 같은 자리로 묻고, 회신에 담긴 새 포트로 붙는다.
     public static class AutoConnectService
     {
-        public const int DiscoveryPort = 9000;
+        // 자리와 주고받는 말은 두 앱이 같은 약속을 써야 하므로 NetworkInterop 의 DiscoveryProtocol 한 곳에 둔다
+        // (학생 쪽 ProfessorDiscovery 도 같은 것을 쓴다).
+        public const int DiscoveryPort = DiscoveryProtocol.Port;
 
-        private const string Request  = "EXAM-FIND";
-        private const string Response = "EXAM-HERE ";   // 뒤에 시험 서버 포트를 붙인다
+        private const string Request  = DiscoveryProtocol.Request;
+        private const string Response = DiscoveryProtocol.ResponsePrefix;   // 뒤에 시험 서버 포트를 붙인다
 
         private static UdpClient? _listener;
 

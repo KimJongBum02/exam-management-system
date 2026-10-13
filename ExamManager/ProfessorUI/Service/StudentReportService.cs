@@ -98,38 +98,21 @@ namespace ProfessorUI.Service
         // 알림 목록에만 남기고 학생을 '부정행위 감지'로 바꾸지 않는다.
         public void CheatingAlert(string studentId, string name, IntPtr payload, uint len)
         {
+            // 형식이 깨진 패킷은 통째로 버린다. 반쯤 읽으면 깨진 문구나 엉뚱한 종류가 알림에 남는다.
             // 누가 보냈는지는 로그인 때 등록된 세션 정보로 알 수 있으므로 페이로드에서 읽지 않는다.
+            if (!CheatingAlertPayload.TryDecode(payload, len,
+                                                out CheatingAlertType alertType, out string rawDescription))
+                return;
+
             // 학생이 보낸 문구는 실행 파일 이름 기준이라, 아는 프로그램은 사람이 부르는 이름으로 바꿔 보여 준다.
-            string description = FriendlyAlert(ReadAlertDescription(payload, len));
-            bool isReference = ReadAlertType(payload, len) == CheatingAlertType.RequiredProcessTerminated;
+            string description = FriendlyAlert(rawDescription);
+            bool isReference = alertType == CheatingAlertType.RequiredProcessTerminated;
 
             if (!isReference)
                 StudentStore.Instance.MarkCheatingDetected(studentId);
 
             AlertStore.Instance.Add(studentId, name, description,
                 isReference ? AlertKind.Reference : AlertKind.Cheating);
-        }
-
-        // 부정행위 알림 패킷에서 설명 문구만 꺼낸다.
-        // CheatingAlertPayload = [studentId 16][studentName 64][alertType 4][description 256]
-        private static string ReadAlertDescription(IntPtr payload, uint len)
-        {
-            const int DescriptionOffset = 84;
-            if (payload == IntPtr.Zero || len <= DescriptionOffset) return "(내용 없음)";
-
-            // 남은 길이만큼만 읽어 버퍼 밖으로 나가지 않도록 하고, 빈 칸(널)은 잘라낸다.
-            int available = (int)len - DescriptionOffset;
-            string text = Marshal.PtrToStringUTF8(payload + DescriptionOffset, available) ?? "";
-            return text.Split('\0')[0];
-        }
-
-        // 부정행위 알림 패킷에서 종류를 꺼낸다. 길이가 모자라면 null.
-        private static CheatingAlertType? ReadAlertType(IntPtr payload, uint len)
-        {
-            const int AlertTypeOffset = 80;
-            if (payload == IntPtr.Zero || len < AlertTypeOffset + 4) return null;
-
-            return (CheatingAlertType)(uint)Marshal.ReadInt32(payload + AlertTypeOffset);
         }
 
         // 알림 문구 속 실행 파일 이름을 사람이 부르는 이름으로 바꾼다.

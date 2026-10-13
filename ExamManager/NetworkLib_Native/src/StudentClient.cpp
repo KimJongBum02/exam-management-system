@@ -125,6 +125,14 @@ void StudentClient::RecvLoop()
             return;
         }
 
+        // 길이는 상대가 적어 보낸 값이다. 그대로 믿고 할당하면 깨진 값 하나로 수 GB 를 잡다 죽는다.
+        // 정상 패킷은 MAX_PAYLOAD_SIZE 를 넘지 않으므로, 넘으면 흐름이 어긋난 것으로 보고 연결을 끊는다.
+        if (hdr.payloadLen > MAX_PAYLOAD_SIZE)
+        {
+            HandleDisconnect(static_cast<int>(DisconnectReason::NetworkError));
+            return;
+        }
+
         std::vector<uint8_t> payload(hdr.payloadLen);
         if (hdr.payloadLen > 0)
         {
