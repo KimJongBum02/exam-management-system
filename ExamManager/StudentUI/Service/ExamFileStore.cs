@@ -372,16 +372,8 @@ namespace StudentUI.Service
         // 폴더를 통째로 지운다. 읽기 전용 항목이 하나라도 있으면 Directory.Delete 가 거기서 멈춰
         // 폴더가 남는다(.NET 10 에서 확인). 7za 는 배포 파일의 읽기 전용 속성을 그대로 풀어 주므로 먼저 벗긴다.
         // 제출 뒤 시험 폴더, 압축을 푸는 임시 폴더, 지난 실행이 남긴 임시 폴더를 모두 이걸로 지운다.
-        public static void DeleteFolder(string folder)
-        {
-            foreach (string path in Directory.GetFileSystemEntries(folder, "*", SearchOption.AllDirectories))
-            {
-                FileAttributes attributes = File.GetAttributes(path);
-                if (attributes.HasFlag(FileAttributes.ReadOnly))
-                    File.SetAttributes(path, attributes & ~FileAttributes.ReadOnly);
-            }
-            Directory.Delete(folder, true);
-        }
+        // 두 앱이 함께 쓰는 삭제다 (ExamManager\Shared\FileSystem.cs).
+        public static void DeleteFolder(string folder) => ExamManager.Shared.FileSystem.DeleteFolder(folder);
 
         private void OnFileError(string transferId, string message) => Post(() =>
         {
@@ -423,7 +415,6 @@ namespace StudentUI.Service
             IsExtracting = true;
             StatusText = "압축 해제 중...";
 
-            string sevenZa = Path.Combine(AppContext.BaseDirectory, "7za.exe");
             string archive = _archivePath;
             string password = _password;
             string outputFolder = ExtractedRoot;
@@ -447,7 +438,7 @@ namespace StudentUI.Service
                     {
                         Directory.CreateDirectory(staging);
 
-                        int rc = FileControlService.FC_ExtractDecrypt(sevenZa, archive, staging, password);
+                        int rc = FileSystem.ExtractDecrypt(archive, staging, password);
                         if (rc != 0) return rc;
 
                         MergeIntoExamFolder(staging, outputFolder, previous, delivered);

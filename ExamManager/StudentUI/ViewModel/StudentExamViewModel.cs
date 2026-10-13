@@ -73,8 +73,17 @@ namespace StudentUI.ViewModel
             // ── 종료 화면의 답안 제출 ──
             // 교수의 자동 수집이 실패했거나(편집기를 열어 둠 등) 앱을 다시 켜 아직 내지 못한 학생이
             // 교수를 기다리지 않고 직접 다시 낼 수 있게 한다. 이미 냈거나 보내는 중이면 숨긴다.
-            public bool CanSubmitAfterEnd => IsExamEnded &&
+            // 교수 PC 와 끊긴 동안에는 보낼 곳이 없으므로 누르지 못하게 한다.
+            public bool CanSubmitAfterEnd => IsExamEnded && IsConnected &&
                 AnswerSubmitService.Instance.State is AnswerSubmitState.Idle or AnswerSubmitState.Failed;
+
+            // 지금 답안을 낼 수 없는 이유. 낼 수 있으면 빈 문자열이다.
+            // 끊긴 채로 눌러 '제출 실패'를 보면 학생은 답안을 잃은 줄 알고 당황한다. 누르기 전에 알린다.
+            public string SubmitBlockedReason => IsConnected
+                ? string.Empty
+                : "교수님 PC 와 연결이 끊겨 지금은 제출할 수 없습니다. 연결되면 바로 제출할 수 있습니다.";
+
+            public bool HasSubmitBlockedReason => SubmitBlockedReason.Length > 0;
 
             public string SubmitAfterEndText =>
                 AnswerSubmitService.Instance.State == AnswerSubmitState.Failed ? "답안 다시 제출" : "답안 제출";
@@ -98,6 +107,12 @@ namespace StudentUI.ViewModel
                     _isConnected = value;
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(ConnectionStatusText));
+
+                    // 끊기면 제출 버튼이 바로 잠기고, 다시 붙으면 바로 풀려야 한다.
+                    OnPropertyChanged(nameof(SubmitBlockedReason));
+                    OnPropertyChanged(nameof(HasSubmitBlockedReason));
+                    OnPropertyChanged(nameof(CanSubmitAfterEnd));
+                    UiThread.Post(CommandManager.InvalidateRequerySuggested);
                 }
             }
 
@@ -239,7 +254,8 @@ namespace StudentUI.ViewModel
                 Student = student;
 
                 // 문제 폴더가 풀리기 전(앱만 켠 상태)에는 낼 답안이 없으므로 누를 수 없다.
-                SubmitAnswerCommand = new RelayCommand(SubmitAnswer, () => !IsSubmitting && ExamFile.IsExtracted);
+                // 교수 PC 와 끊긴 동안에는 보낼 곳이 없으므로 누르지 못하게 한다(SubmitBlockedReason 이 이유를 보여 준다).
+                SubmitAnswerCommand = new RelayCommand(SubmitAnswer, () => !IsSubmitting && ExamFile.IsExtracted && IsConnected);
 
                 // 시험은 이미 끝났으므로 '시험을 끝냅니다' 확인은 묻지 않는다.
                 // 결과는 StateChanged 로 올라와 종료 화면의 상태 줄과 결과 창에 나온다.

@@ -45,6 +45,15 @@ namespace ProfessorUI.Service
         // 교수가 [시험 종료]를 누른 시각. 시험 전·중에는 null.
         public static DateTime? EndedAt { get; private set; }
 
+        // 프로그램을 다시 켤 때 진행 중이던 시험을 그대로 되살린다(ExamSessionStore).
+        // 끝낸 시각은 기록에 있는 값을 그대로 쓴다 — 위 setter 를 거치면 지금 시각으로 덮어써진다.
+        public static void Restore(ExamPhase phase, DateTime? endedAt)
+        {
+            _currentPhase = phase;
+            EndedAt = endedAt;
+            StateChanged?.Invoke();
+        }
+
         public static event Action StateChanged;
     }
 }

@@ -438,9 +438,15 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <TextBlock Grid.Column="0" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,20,0"
-                                   Text="💡 시험 진행 중에는 위 작업 폴더에서 소스 코드를 편집하고, 시험 종료 전 [답안 제출] 버튼을 눌러주세요."
-                                   FontSize="{StaticResource FontBody}" Foreground="#64748B"/>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0">
+                            <TextBlock TextWrapping="Wrap"
+                                       Text="💡 시험 시작 시 시험 폴더 안의 파일에서 실습 진행 후, 시험 종료 전 [답안 제출] 버튼을 눌러주세요."
+                                       FontSize="{StaticResource FontBody}" Foreground="#64748B"/>
+                            <!-- 끊긴 동안에는 제출 버튼이 잠긴다. 왜 눌리지 않는지 여기서 알려 준다 -->
+                            <TextBlock Text="{Binding SubmitBlockedReason}" TextWrapping="Wrap" Margin="0,6,0,0"
+                                       FontSize="{StaticResource FontBody}" FontWeight="SemiBold" Foreground="#B91C1C"
+                                       Visibility="{Binding HasSubmitBlockedReason, Converter={StaticResource BoolToVis}}"/>
+                        </StackPanel>
 
                         <!-- 주 액션 버튼: 모던 블랙 라운드 버튼 -->
                         <!-- 문제 폴더가 풀리기 전에는 낼 답안이 없어 누를 수 없다. 교수 화면처럼 짙은 회색으로 바꿔 알린다 -->

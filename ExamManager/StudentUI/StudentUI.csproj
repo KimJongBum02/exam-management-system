@@ -42,6 +42,8 @@
     <Compile Include="..\Shared\HeaderBarPanel.cs" Link="HeaderBarPanel.cs" />
     <!-- 네이티브·배경 스레드에서 화면으로 넘길 때 거치는 한 곳 -->
     <Compile Include="..\Shared\UiThread.cs" Link="UiThread.cs" />
+    <!-- 읽기 전용 파일까지 지우는 폴더 삭제 -->
+    <Compile Include="..\Shared\FileSystem.cs" Link="FileSystem.cs" />
     <!-- 교수 앱과 같은 글자 크기 한 벌 (App.xaml 이 합쳐 쓴다) -->
     <Page Include="..\Shared\FontSizes.xaml" Link="FontSizes.xaml">
       <Generator>MSBuild:Compile</Generator>

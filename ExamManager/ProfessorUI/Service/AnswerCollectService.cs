@@ -1,3 +1,4 @@
+using ExamManager.Shared;
 using NetworkLib;
 using System;
 using System.IO;
@@ -85,25 +86,32 @@ namespace ProfessorUI.Service
 
                 File.Copy(tempPath, archivePath, true);
 
-                // 앞 제출이 남아 있으면 지우고 새로 푼다.
-                // 남겨 두면 이번에 빠진 파일이 앞 제출분으로 남아 헷갈린다.
-                if (Directory.Exists(studentFolder)) Directory.Delete(studentFolder, true);
-                Directory.CreateDirectory(studentFolder);
+                // 새 답안은 옆에 먼저 푼다.
+                // 앞 제출 폴더를 먼저 지우고 그 자리에 풀면, 해제가 실패했을 때 앞 제출로 받아 둔 답안까지 사라진다.
+                // (ack 가 늦어 학생이 거짓 '제출 실패'를 보고 다시 내는 일이 있어 재제출은 드물지 않다)
+                string staging = studentFolder + ".새제출";
+                if (Directory.Exists(staging)) FileSystem.DeleteFolder(staging);
+                Directory.CreateDirectory(staging);
 
-                string sevenZa = Path.Combine(AppContext.BaseDirectory, "7za.exe");
-                int code = ZipNative.FC_ExtractDecrypt(sevenZa, archivePath, studentFolder, password);
+                int code = FileSystem.ExtractDecrypt(archivePath, staging, password);
 
-                if (code == 0)
+                if (code != 0)
                 {
-                    // 잘 풀렸으면 묶음 파일은 필요 없다.
-                    try { File.Delete(archivePath); } catch { }
-                    return studentFolder;
+                    // 못 풀었으면 묶음이라도 남긴다. 답안을 잃는 것보다 낫다. 앞 제출은 그대로 둔다.
+                    System.Diagnostics.Debug.WriteLine($"답안 압축 해제 실패 (코드 {code}) — 묶음 파일로 남깁니다.");
+                    try { FileSystem.DeleteFolder(staging); } catch { }
+                    return archivePath;
                 }
 
-                // 못 풀었으면 묶음이라도 남긴다. 답안을 잃는 것보다 낫다.
-                System.Diagnostics.Debug.WriteLine($"답안 압축 해제 실패 (코드 {code}) — 묶음 파일로 남깁니다.");
-                try { Directory.Delete(studentFolder, true); } catch { }
-                return archivePath;
+                // 다 풀렸을 때만 앞 제출을 치우고 자리를 바꾼다.
+                // 공용 삭제를 쓴다 — 답안에 읽기 전용 파일이 섞여 있으면 Directory.Delete 는 그냥 실패해서,
+                // 그 학생은 몇 번을 다시 내도 '제출 실패'만 받게 된다.
+                if (Directory.Exists(studentFolder)) FileSystem.DeleteFolder(studentFolder);
+                Directory.Move(staging, studentFolder);
+
+                // 잘 풀렸으면 묶음 파일은 필요 없다.
+                try { File.Delete(archivePath); } catch { }
+                return studentFolder;
             }
             catch (Exception ex)
             {
