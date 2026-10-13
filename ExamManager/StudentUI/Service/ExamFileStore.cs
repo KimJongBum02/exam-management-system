@@ -84,15 +84,82 @@ namespace StudentUI.Service
         }
         private string _transferId = string.Empty;  // 현재 전송 식별자 (재배포 판별용)
 
+        // 교수의 시험 시작 신호가 왔는데 그때 아직 파일을 받지 못한 상태.
+        // 파일이 도착하면 이 표시를 보고 스스로 압축을 푼다(OnFileReceived).
+        private bool _startPending;
+
         private ExamFileStore() { }
 
-        // 앱 시작 시 한 번 호출 — 파일 수신 이벤트를 구독한다.
+        // 앱 시작 시 한 번 호출 — 파일 수신 이벤트를 구독하고, 받은 파일이 그 자리에 있는지 지켜본다.
         public void Start()
         {
             NetworkService.Instance.FileProgress += OnFileProgress;
             NetworkService.Instance.FileReceived += OnFileReceived;
             NetworkService.Instance.FileError += OnFileError;
             NetworkService.Instance.PacketReceived += OnPacketReceived;
+
+            // 타이머는 부른 스레드에 묶이므로 반드시 여기(앱 시작, 화면 스레드)에서 만든다.
+            _fileWatch = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+            _fileWatch.Tick += (_, _) => CheckExamFilesStillThere();
+            _fileWatch.Start();
+        }
+
+        // ── 받은 시험 파일이 아직 있는지 지켜보기 ──
+        //
+        // 학생이 시험 파일을 지우면(실수든 고의든) 교수 화면에는 여전히 '수신완료'로 남아,
+        // 재배포 대상에서 빠져 파일을 다시 받을 길이 없어진다. 그래서 상태가 바뀌는 순간 교수에게 알린다.
+        // 교수 표가 '파일 삭제됨'으로 바뀌면 그 학생은 다시 재배포 대상이 된다.
+        private System.Windows.Threading.DispatcherTimer? _fileWatch;
+
+        // 받았던 시험 파일이 지금 이 PC 에 없는 상태. 학생 화면의 '시험 파일' 줄과 교수 보고가 같이 쓴다.
+        private bool _isMissing;
+        public bool IsMissing
+        {
+            get => _isMissing;
+            private set { _isMissing = value; OnPropertyChanged(); }
+        }
+
+        // 마지막 전송이 실패로 끝났는지. 새 전송이 시작되거나 파일을 받으면 풀린다.
+        private bool _transferFailed;
+        public bool TransferFailed
+        {
+            get => _transferFailed;
+            private set { _transferFailed = value; OnPropertyChanged(); }
+        }
+
+        private void CheckExamFilesStillThere()
+        {
+            // 받은 적이 없으면 볼 것이 없다. 답안을 낸 뒤에는 우리가 일부러 지운 것이라 보고하지 않는다.
+            if (!IsReceived || AnswerSubmitService.Instance.State == AnswerSubmitState.Succeeded) return;
+
+            ReportMissing(IsExtracted ? !WorkFolderHasDeliveredFiles() : !File.Exists(_archivePath));
+        }
+
+        // 파일이 있고 없음이 바뀐 순간에만 교수에게 알린다. 같은 보고를 5초마다 반복하지 않는다.
+        // '없음'을 받은 교수 화면은 그 학생을 '파일 삭제됨 · 미수신'으로 바꿔 재배포 대상에 다시 올린다.
+        private void ReportMissing(bool missing)
+        {
+            if (missing == IsMissing) return;
+
+            IsMissing = missing;
+            NetworkService.Instance.SendPacket(
+                PacketType.ExamStatusUpdate,
+                ExamStatusUpdatePayload.Encode(missing ? StudentStatus.FileMissing : StudentStatus.FileReceived));
+        }
+
+        // 작업 폴더에 배포받은 파일이 하나라도 남아 있는지.
+        // 하나도 없을 때만 '삭제됨'으로 본다 — 일부만 지운 학생에게 다시 보내면
+        // 남아 있는 파일(학생이 고쳐 둔 것)까지 원본으로 덮어쓰기 때문이다.
+        private bool WorkFolderHasDeliveredFiles()
+        {
+            string folder = ResolveAnswerFolder();
+            if (folder.Length == 0) return false;
+            if (_lastExtracted.Count == 0) return true;   // 무엇을 받았는지 모르면 폴더가 있는 것으로 친다
+
+            foreach (string rel in _lastExtracted)
+                if (File.Exists(Path.Combine(folder, rel))) return true;
+
+            return false;
         }
 
         // 시험 시작 명령의 처리(압축 해제·폴더 열기)가 모두 끝나면 알린다.
@@ -122,7 +189,12 @@ namespace StudentUI.Service
                 else if (IsExtracted)
                     OpenExtractFolder();    // 이미 풀려 있으면 폴더만 다시 띄운다
                 else if (!IsReceived)
-                    StatusText = "시험이 시작됐지만 아직 시험 파일을 받지 못했습니다. 교수님께 재배포를 요청해 주세요.";
+                {
+                    // 아직 받는 중이거나 전송이 늦은 학생이다. 교수의 시작 신호는 한 번뿐이므로,
+                    // 파일이 도착하면 스스로 풀도록 표시해 둔다(OnFileReceived).
+                    _startPending = true;
+                    StatusText = "시험이 시작됐습니다. 시험 파일을 받는 대로 자동으로 열립니다.";
+                }
 
                 // 해제 성공 여부와 관계없이 시험은 시작된 것이므로 감시는 켠다
                 ExamStartHandled?.Invoke();
@@ -135,6 +207,7 @@ namespace StudentUI.Service
             _archivePath = string.Empty;
             _password = string.Empty;
             _transferId = string.Empty;
+            _startPending = false;
             _lastExtracted.Clear();
             ExtractedFiles.Clear();
             FileName = "-";
@@ -142,6 +215,8 @@ namespace StudentUI.Service
             IsReceived = false;
             IsExtracted = false;
             IsExtracting = false;
+            IsMissing = false;
+            TransferFailed = false;
             StatusText = "파일 수신 대기 중";
             OnPropertyChanged(nameof(HasExamFolder));
             OnPropertyChanged(nameof(ExtractedRoot));
@@ -245,7 +320,23 @@ namespace StudentUI.Service
             Progress = 100;
             IsReceived = true;
             StatusText = $"수신 완료 · {FormatSize(fileSize)} · AES-256 암호화됨";
+
+            // 시험 시작 신호가 먼저 왔고 그때는 파일이 없어 풀지 못한 경우다(전송이 아직 끝나지 않았던 학생).
+            // 교수는 시작 신호를 한 번만 보내므로, 여기서 스스로 풀지 않으면 이 학생은 파일을 받고도
+            // 문제를 열지 못한 채 타이머만 돌아간다.
+            if (_startPending)
+            {
+                _startPending = false;
+                _ = StartLateAsync();
+            }
         });
+
+        // 늦게 도착한 파일을 풀고, 시험 시작으로 켜야 할 것(감시·인터넷 차단)을 켠다.
+        private async Task StartLateAsync()
+        {
+            await ExtractAsync();
+            ExamStartHandled?.Invoke();
+        }
 
         // 새 전송이 시작되면 이전 수신·해제 결과를 버린다.
         // (이렇게 하지 않으면 재배포된 파일을 받고도 IsExtracted가 true로 남아 다시 해제할 수 없다)
@@ -259,6 +350,14 @@ namespace StudentUI.Service
             IsReceived = false;
             IsExtracted = false;
             ExtractedFiles.Clear();
+
+            // 다시 받기 시작했으므로 지난 전송의 실패·삭제 표시를 지운다.
+            TransferFailed = false;
+            IsMissing = false;
+
+            // 새 전송은 교수가 다시 보낸 것이라, 받고 나면 교수 쪽이 시작 신호를 따로 보내 준다
+            // (SendFileService.StartLateStudent). 스스로도 풀면 두 번 풀게 되므로 표시를 내린다.
+            _startPending = false;
         }
 
         // 수신된 .7z를 지운다. 실패해도 기능에는 영향이 없으므로 무시한다.
@@ -287,6 +386,7 @@ namespace StudentUI.Service
         private void OnFileError(string transferId, string message) => Post(() =>
         {
             StatusText = $"파일 수신 실패: {message}";
+            TransferFailed = true;   // 학생 화면의 '시험 파일' 줄에 '전송 실패'로 보인다
         });
 
         // 답안 제출이 끝나면 시험 파일이 지워지므로 상태 문구도 그에 맞게 바꾼다.
@@ -309,6 +409,17 @@ namespace StudentUI.Service
         {
             if (!CanExtract) return;
 
+            // 받아 둔 묶음이 아직 있는지 먼저 본다.
+            // 학생이 .7z 를 지운 뒤 교수가 [시험 시작]을 누르면, 예전에는 그대로 풀려 들어가
+            // 7za 는 실패하는데 만들어 둔 **빈 시험 폴더만 남았다**. 그 빈 폴더가 작업 폴더로 잡혀
+            // 답안 제출 때 빈 채로 나갈 수 있어, 풀기 전에 끊는다.
+            if (!File.Exists(_archivePath))
+            {
+                StatusText = "받은 시험 파일이 없습니다 — 교수님께 재배포를 요청해 주세요.";
+                ReportMissing(true);   // 교수 화면이 '파일 삭제됨'이 되어야 다시 보낼 수 있다
+                return;
+            }
+
             IsExtracting = true;
             StatusText = "압축 해제 중...";
 
@@ -326,7 +437,8 @@ namespace StudentUI.Service
                 // 7za.exe 실행이 끝날 때까지 블로킹되므로 백그라운드에서 수행
                 code = await Task.Run(() =>
                 {
-                    Directory.CreateDirectory(outputFolder);
+                    // 시험 폴더는 7za 가 성공한 뒤에 만든다(MergeIntoExamFolder 가 만든다).
+                    // 먼저 만들어 두면 해제가 실패했을 때 빈 폴더만 남는다.
 
                     // 시험 폴더에 바로 풀지 않고 임시 폴더에 푼 뒤 항목 단위로 옮긴다.
                     // 바로 풀면 이번 배포에서 빠진 파일이 이전 배포분으로 남는다.
@@ -421,6 +533,9 @@ namespace StudentUI.Service
         private static void MergeIntoExamFolder(
             string staging, string target, List<string> previous, List<string> delivered)
         {
+            // 여기까지 왔다는 것은 7za 가 성공했다는 뜻이다. 그때 시험 폴더를 만든다.
+            Directory.CreateDirectory(target);
+
             foreach (string entry in Directory.GetFileSystemEntries(staging))
             {
                 string name = Path.GetFileName(entry);

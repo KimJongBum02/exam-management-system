@@ -107,6 +107,20 @@ namespace ProfessorUI.Service
             }
         }
 
+        // 받았던 시험 파일이 학생 PC 에서 사라졌다는 보고 처리.
+        // '미수신'으로 되돌려 재배포 대상 목록에 다시 올린다(ExamManagePage 는 IsFileReceived 로 거른다).
+        // 지운 학생에게 다시 보내는 것은 덮어쓸 작업물이 없다는 뜻이라 안전하다.
+        public void MarkFileMissing(string studentId)
+        {
+            var student = Students.FirstOrDefault(s => s.StudentId == studentId);
+            if (student == null) return;
+
+            student.IsFileReceived = false;
+            student.Status = "파일 삭제됨";
+            student.DeployStatus = "파일 삭제됨";
+            student.DeployProgress = 0;
+        }
+
         // 답안 수신 처리: 해당 학번 학생을 '제출완료'로 표시
         // 이 기록은 학생이 접속을 끊어도 남는다. 그래야 시험 끝에
         // '제출하고 나간 학생'과 '못 내고 끊긴 학생'을 구분할 수 있다.
