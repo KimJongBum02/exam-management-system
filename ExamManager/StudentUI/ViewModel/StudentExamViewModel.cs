@@ -1,4 +1,5 @@
 using System;
+using ExamManager.Shared;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -298,7 +299,7 @@ namespace StudentUI.ViewModel
                     // 압축이 풀리면 [답안 제출 및 시험 종료]를 바로 다시 따진다.
                     // 그대로 두면 마우스를 움직이기 전까지 회색으로 남는다.
                     if (e.PropertyName == nameof(ExamFile.IsExtracted))
-                        Application.Current?.Dispatcher.BeginInvoke(() => CommandManager.InvalidateRequerySuggested());
+                        UiThread.Post(CommandManager.InvalidateRequerySuggested);
                 };
 
                 ExamTime.PropertyChanged += (s, e) =>
@@ -369,10 +370,7 @@ namespace StudentUI.ViewModel
 
             public void RefreshStatusItems()
             {
-                var dispatcher = Application.Current?.Dispatcher;
-                if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-
-                dispatcher.BeginInvoke(() =>
+                UiThread.Post(() =>
                 {
                     StatusItems.Clear();
 
@@ -516,10 +514,7 @@ namespace StudentUI.ViewModel
             // 채팅 메시지가 도착했을 때 토스트 알림 처리
             private void OnChatMessageArrived()
             {
-                var dispatcher = Application.Current?.Dispatcher;
-                if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-
-                dispatcher.BeginInvoke(() =>
+                UiThread.Post(() =>
                 {
                     if (IsChatOpen)
                     {
@@ -542,10 +537,7 @@ namespace StudentUI.ViewModel
                 if (type != PacketType.ExamPhaseChange) return;
                 if (!ExamPhasePayload.TryDecode(payload, payloadLen, out ExamPhase phase)) return;
 
-                var dispatcher = Application.Current?.Dispatcher;
-                if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-
-                dispatcher.BeginInvoke(() =>
+                UiThread.Post(() =>
                 {
                     OnPropertyChanged(nameof(CurrentStep));
                     OnPropertyChanged(nameof(IsStep1Active));
@@ -589,10 +581,7 @@ namespace StudentUI.ViewModel
             // 제출 진행 상황 (다른 스레드에서 호출될 수 있음)
             private void OnSubmitStateChanged(AnswerSubmitState state, string message)
             {
-                var dispatcher = Application.Current?.Dispatcher;
-                if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-
-                dispatcher.BeginInvoke(() =>
+                UiThread.Post(() =>
                 {
                     SubmitStatus = message;
 
@@ -608,10 +597,7 @@ namespace StudentUI.ViewModel
             // 감시에 걸렸을 때 (네이티브 감시 스레드에서 호출됨)
             private void OnCheatWarning(string description)
             {
-                var dispatcher = Application.Current?.Dispatcher;
-                if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-
-                dispatcher.BeginInvoke(() =>
+                UiThread.Post(() =>
                 {
                     CheatWarnings.Insert(0, new CheatWarningItem
                     {
@@ -632,17 +618,13 @@ namespace StudentUI.ViewModel
             // 서버 연결이 끊겼을 때 UI 상태를 갱신 (네이티브 스레드에서 호출됨)
             private void OnServerDisconnected(DisconnectReason reason)
             {
-                var dispatcher = Application.Current?.Dispatcher;
-                if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-                dispatcher.BeginInvoke(() => IsConnected = false);
+                UiThread.Post(() => IsConnected = false);
             }
 
             // 자동 재연결로 다시 로그인까지 끝났을 때 (배경 스레드에서 호출됨)
             private void OnServerReconnected()
             {
-                var dispatcher = Application.Current?.Dispatcher;
-                if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-                dispatcher.BeginInvoke(() =>
+                UiThread.Post(() =>
                 {
                     IsConnected = true;
                     RefreshStatusItems();

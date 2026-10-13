@@ -53,6 +53,7 @@ namespace StudentUI.View.StudentExamView
         }
 
         // 새 말풍선이 쌓이면 맨 아래를 보여 준다. 줄이 그려진 뒤라야 끝까지 내려간다.
+        // (Loaded 우선순위라 UiThread.Post 로 바꾸면 안 된다 — 그리기 전에 실행돼 엉뚱한 위치에 멈춘다)
         private void OnChatMessagesChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
             if (e.Action != NotifyCollectionChangedAction.Add) return;
@@ -77,7 +78,7 @@ namespace StudentUI.View.StudentExamView
             _pip.Show();
         }
 
-        // 패널이 보이게 된 뒤라야 입력칸이 포커스를 받는다.
+        // 패널이 보이게 된 뒤라야 입력칸이 포커스를 받는다. (Loaded 우선순위 — UiThread.Post 로 바꾸면 안 된다)
         private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(StudentExamViewModel.IsChatOpen) && sender is StudentExamViewModel { IsChatOpen: true })

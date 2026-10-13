@@ -1,4 +1,5 @@
 using NetworkLib;
+using ExamManager.Shared;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -457,13 +458,8 @@ namespace StudentUI.Service
                 CopyDirectory(dir, Path.Combine(dest, Path.GetFileName(dir)));
         }
 
-        // 네이티브 스레드에서 온 알림을 UI 스레드로 넘긴다
-        private static void Post(Action action)
-        {
-            var dispatcher = Application.Current?.Dispatcher;
-            if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-            dispatcher.BeginInvoke(action);
-        }
+        // 네이티브 스레드에서 온 알림을 UI 스레드로 넘긴다 (두 앱이 함께 쓰는 Shared\UiThread.cs)
+        private static void Post(Action action) => UiThread.Post(action);
 
         private static string FormatSize(long bytes)
             => bytes >= 1024 * 1024 ? $"{bytes / 1024.0 / 1024.0:0.#} MB" : $"{bytes / 1024.0:0.#} KB";

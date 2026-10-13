@@ -102,8 +102,9 @@ namespace StudentUI
             };
 
             // ── 서버 연결 시 화면 캡처 시작, 연결 해제 시 정지 ──
+            // 네이티브 연결 콜백에서 올라오므로 기다리지 않고 넘긴다(UiThread). 기다리면 그 스레드가 묶인다.
             Service.NetworkService.Instance.Connected += (ip, port) =>
-                Dispatcher.Invoke(() => Service.ScreenCaptureService.Instance.Start());
+                ExamManager.Shared.UiThread.Post(() => Service.ScreenCaptureService.Instance.Start());
 
             Service.NetworkService.Instance.Disconnected += reason =>
                 Service.ScreenCaptureService.Instance.Stop();

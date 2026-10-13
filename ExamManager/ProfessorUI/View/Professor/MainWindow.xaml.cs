@@ -246,7 +246,7 @@ namespace ProfessorUI.View.Professor
 
         // 화면을 바꾸면 항상 맨 위부터 보여 준다.
         // 새 화면 안의 컨트롤이 포커스를 받으면서 스크롤이 내려가는 경우가 있어,
-        // 배치가 끝난 뒤에 되돌린다.
+        // 배치가 끝난 뒤에 되돌린다. (Loaded 우선순위 — UiThread.Post 로 바꾸면 안 된다)
         private void ScrollPageToTop()
             => Dispatcher.BeginInvoke(new Action(() => PageScroll.ScrollToTop()),
                                       DispatcherPriority.Loaded);

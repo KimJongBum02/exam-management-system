@@ -122,9 +122,7 @@ namespace ProfessorUI
         private void PostToUi(Action action)
         {
             if (_shuttingDown) return;
-            var dispatcher = Dispatcher;
-            if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-            dispatcher.BeginInvoke(action);
+            ExamManager.Shared.UiThread.Post(action);
         }
 
 

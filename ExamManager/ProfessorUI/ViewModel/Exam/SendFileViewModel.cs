@@ -1,4 +1,5 @@
 using System;
+using ExamManager.Shared;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -82,7 +83,7 @@ namespace ProfessorUI.ViewModel
         }
 
         // 전송 진행률 (네이티브 스레드에서 올라온다)
-        private void OnSendProgress(string sessionId, string studentId, int percent) => PostToUi(() =>
+        private void OnSendProgress(string sessionId, string studentId, int percent) => UiThread.Post(() =>
         {
             var row = Students.FirstOrDefault(s => s.StudentId == studentId);
             if (row == null || row.SendingSessionId != sessionId) return;
@@ -92,7 +93,7 @@ namespace ProfessorUI.ViewModel
         });
 
         // 전송 실패 (네이티브 스레드에서 올라온다)
-        private void OnSendFailed(string sessionId, string studentId) => PostToUi(() =>
+        private void OnSendFailed(string sessionId, string studentId) => UiThread.Post(() =>
         {
             var row = Students.FirstOrDefault(s => s.StudentId == studentId);
             if (row == null || row.SendingSessionId != sessionId) return;
@@ -103,13 +104,6 @@ namespace ProfessorUI.ViewModel
         });
 
         // 콜백은 네이티브 스레드에서 올라오므로 UI 스레드로 넘겨 처리한다.
-        private static void PostToUi(Action action)
-        {
-            var dispatcher = Application.Current?.Dispatcher;
-            if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-            dispatcher.BeginInvoke(action);
-        }
-
         // static 상태 변경 시 호출되는 이벤트 핸들러
         private void OnSendFileStateChanged()
         {

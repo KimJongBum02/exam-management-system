@@ -1,4 +1,5 @@
 using NetworkLib;
+using ExamManager.Shared;
 using StudentUI.Model;
 using System;
 using System.ComponentModel;
@@ -139,10 +140,7 @@ namespace StudentUI.ViewModel
             if (phase != ExamPhase.Ready) return;
 
             // 화면 전환은 UI 스레드에서만 할 수 있다.
-            var dispatcher = Application.Current?.Dispatcher;
-            if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-
-            dispatcher.BeginInvoke(() =>
+            UiThread.Post(() =>
             {
                 // 신호가 두 번 와도 화면을 두 번 만들지 않는다.
                 if (_navigationStore.CurrentViewModel != this) return;
@@ -155,17 +153,13 @@ namespace StudentUI.ViewModel
         // 서버 연결이 끊겼을 때 UI 상태를 갱신 (네이티브 스레드에서 호출됨)
         private void OnServerDisconnected(DisconnectReason reason)
         {
-            var dispatcher = Application.Current?.Dispatcher;
-            if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-            dispatcher.BeginInvoke(() => IsConnected = false);
+            UiThread.Post(() => IsConnected = false);
         }
 
         // 자동 재연결로 다시 로그인까지 끝났을 때 (배경 스레드에서 호출됨)
         private void OnServerReconnected()
         {
-            var dispatcher = Application.Current?.Dispatcher;
-            if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-            dispatcher.BeginInvoke(() => IsConnected = true);
+            UiThread.Post(() => IsConnected = true);
         }
 
         // 화면을 떠날 때 타이머·이벤트 구독을 정리

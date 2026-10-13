@@ -1,4 +1,5 @@
 using System;
+using ExamManager.Shared;
 using System.Collections.Generic;
 using System.Windows;
 using NetworkLib;
@@ -82,20 +83,17 @@ namespace StudentUI.Service
         {
             if (type != PacketType.QuizQuestion) return;
 
-            // 네이티브 수신 스레드에서 올라오므로 화면 작업은 UI 스레드로 넘긴다.
-            var dispatcher = Application.Current?.Dispatcher;
-            if (dispatcher == null || dispatcher.HasShutdownStarted) return;
-
+            // 네이티브 수신 스레드에서 올라오므로 화면 작업은 UI 스레드로 넘긴다(UiThread.Post).
             if (QuizQuestionPayload.TryDecode(payload, payloadLen,
                                               out string quizId, out string question, out _))
             {
                 _currentQuizId = quizId;
-                dispatcher.BeginInvoke(() => QuestionReceived?.Invoke(question));
+                UiThread.Post(() => QuestionReceived?.Invoke(question));
                 return;
             }
 
             if (ClassQuizPayload.TryDecode(payload, payloadLen, out string classQuizId, out var questions))
-                dispatcher.BeginInvoke(() => ClassQuizReceived?.Invoke(classQuizId, questions));
+                UiThread.Post(() => ClassQuizReceived?.Invoke(classQuizId, questions));
         }
     }
 }
