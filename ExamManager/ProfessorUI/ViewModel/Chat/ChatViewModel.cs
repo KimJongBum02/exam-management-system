@@ -59,8 +59,6 @@ namespace ProfessorUI.ViewModel
             set { _noticeInput = value; OnPropertyChanged(); }
         }
 
-        public ICommand SendNoticeCommand { get; }
-
         // 보낸 전체 공지. 최근 것이 위로 오도록 앞에 넣는다.
         public ObservableCollection<NoticeViewModel> Notices { get; } = new();
         public NoticeViewModel? LatestNotice => Notices.FirstOrDefault();
@@ -98,7 +96,6 @@ namespace ProfessorUI.ViewModel
             SelectedTab = globalTab;
 
             SendMessageCommand = new UiCommand(o => SendMessage());
-            SendNoticeCommand = new UiCommand(o => SendNotice());
 
             // 받은 메시지·공지 회신 구독 (보내고 받는 일은 ChatService 가 맡는다)
             _chat.MessageReceived += OnMessageReceived;

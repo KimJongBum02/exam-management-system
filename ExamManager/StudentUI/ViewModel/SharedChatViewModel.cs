@@ -23,9 +23,6 @@ namespace StudentUI.ViewModel
             set { _messages = value; OnPropertyChanged(); }
         }
 
-        public bool HasMessages => Messages != null && Messages.Count > 0;
-        public bool HasNoMessages => Messages == null || Messages.Count == 0;
-
         private int _unreadCount;
         public int UnreadCount
         {
@@ -39,9 +36,6 @@ namespace StudentUI.ViewModel
         }
 
         public bool HasUnreadMessages => _unreadCount > 0;
-
-        public string LastSender { get; private set; } = string.Empty;
-        public string LastMessage { get; private set; } = string.Empty;
 
         public void MarkAsRead()
         {
@@ -101,11 +95,6 @@ namespace StudentUI.ViewModel
         private SharedChatViewModel()
         {
             _messages = new ObservableCollection<ChatMessageModel>();
-            _messages.CollectionChanged += (s, e) =>
-            {
-                OnPropertyChanged(nameof(HasMessages));
-                OnPropertyChanged(nameof(HasNoMessages));
-            };
             SendMessageCommand = new UiCommand(_ => SendMessage());
 
             // 네트워크 수신 이벤트 구독
@@ -120,8 +109,6 @@ namespace StudentUI.ViewModel
             InputMessage = string.Empty;
             UnreadCount = 0;
             _unreadChatIds.Clear();
-            LastSender = string.Empty;
-            LastMessage = string.Empty;
             ImportantNotice = string.Empty;
         }
 
@@ -199,8 +186,6 @@ namespace StudentUI.ViewModel
                     ShowSender = StartsNewTurn(false)
                 });
 
-                LastSender = "[교수님]";
-                LastMessage = message;
                 UnreadCount++;
 
                 // 아직 열어 보지 않았으므로 회신은 미뤄 둔다. MarkAsRead 가 한꺼번에 보낸다.
