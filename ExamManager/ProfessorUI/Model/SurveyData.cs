@@ -2,7 +2,6 @@
 // 정답이 없다. 학생이 O·X 중 무엇을 골랐는지만 모은다 (예: 실습 희망 명단 나누기).
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Linq;
 
 namespace ProfessorUI.Model
 {

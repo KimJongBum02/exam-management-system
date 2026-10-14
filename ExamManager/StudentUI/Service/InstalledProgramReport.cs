@@ -1,8 +1,5 @@
 using ExamManager.Shared;
 using NetworkLib;
-using System;
-using System.Linq;
-using System.Threading;
 
 namespace StudentUI.Service
 {

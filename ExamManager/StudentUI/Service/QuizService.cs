@@ -1,7 +1,4 @@
-using System;
 using ExamManager.Shared;
-using System.Collections.Generic;
-using System.Windows;
 using NetworkLib;
 
 namespace StudentUI.Service

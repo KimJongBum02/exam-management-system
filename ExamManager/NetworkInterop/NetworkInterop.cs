@@ -7,8 +7,6 @@
 //   2. NetworkLib_Native.dll 을 출력 폴더에 복사 (빌드 이벤트로 자동화 권장)
 //   3. 아래 클래스를 통해 서버/클라이언트를 초기화
 
-using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;

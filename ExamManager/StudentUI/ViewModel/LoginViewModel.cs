@@ -2,8 +2,6 @@ using NetworkLib;
 using ExamManager.Shared;
 using StudentUI.Model;
 using StudentUI.Service;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;

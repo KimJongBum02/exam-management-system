@@ -4,7 +4,6 @@
 // 수강생 명단을 불러오면 명단 순서대로 검은 칸을 미리 깔고, 학생이 접속하면 그 칸에 화면이 뜹니다.
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using NetworkLib;
 using ProfessorUI.Service;

@@ -1,14 +1,9 @@
-using System;
 using ExamManager.Shared;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Linq;
-using System.Windows;
 using System.Windows.Input;
-using NetworkLib;
 using ProfessorUI.Service;
 using ProfessorUI.Model;
-using ProfessorUI.Common;
 
 namespace ProfessorUI.ViewModel
 {

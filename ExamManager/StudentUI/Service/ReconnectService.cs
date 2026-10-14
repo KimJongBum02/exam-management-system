@@ -1,7 +1,4 @@
 using StudentUI.Model;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace StudentUI.Service
 {

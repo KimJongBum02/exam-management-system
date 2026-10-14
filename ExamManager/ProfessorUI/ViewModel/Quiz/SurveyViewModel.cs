@@ -1,6 +1,5 @@
 using System.Windows.Input;
 using ExamManager.Shared;
-using ProfessorUI.Common;
 
 namespace ProfessorUI.ViewModel
 {

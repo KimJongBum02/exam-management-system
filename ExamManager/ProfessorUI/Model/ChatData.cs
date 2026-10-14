@@ -1,5 +1,4 @@
 // 채팅 데이터: 메시지 한 건(ChatMessageModel)
-using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
