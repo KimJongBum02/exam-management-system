@@ -1,8 +1,6 @@
-using System;
 using ExamManager.Shared;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Windows;
 using NetworkLib;
 
 namespace StudentUI.Service

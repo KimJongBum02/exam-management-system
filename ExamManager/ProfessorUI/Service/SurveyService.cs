@@ -1,9 +1,5 @@
-using System;
 using ExamManager.Shared;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Windows;
 using NetworkLib;
 using ProfessorUI.Model;
 

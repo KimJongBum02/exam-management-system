@@ -1,6 +1,5 @@
 // StudentScreenViewModel.cs
 // 화면 모니터링 그리드에서 학생 한 명의 썸네일 타일을 나타내는 뷰모델 아이템.
-using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Media.Imaging;

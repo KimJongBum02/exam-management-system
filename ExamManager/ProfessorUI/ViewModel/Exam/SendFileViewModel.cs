@@ -1,15 +1,10 @@
-using System;
 using ExamManager.Shared;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
 using ProfessorUI.Service;
-using ProfessorUI.Common;
 
 
 namespace ProfessorUI.ViewModel

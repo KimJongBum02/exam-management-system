@@ -1,14 +1,11 @@
 using NetworkLib;
 using ExamManager.Shared;
-using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using System.Windows;
 
 namespace StudentUI.Service
 {

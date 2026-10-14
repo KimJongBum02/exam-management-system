@@ -1,10 +1,8 @@
-using System;
 using ExamManager.Shared;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
-using ProfessorUI.Common;
 using ProfessorUI.Service;
 
 namespace ProfessorUI.ViewModel

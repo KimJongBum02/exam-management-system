@@ -1,9 +1,6 @@
 // 수업 확인 퀴즈 데이터: 낸 퀴즈 한 번(QuizRound) · 그 안의 문제(QuizQuestion)
 // · 학생 한 명의 답안(QuizSubmission) · 문제별 집계(QuizQuestionStat) · 학생별 누적(QuizStudentTally)
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 
 namespace ProfessorUI.Model
 {

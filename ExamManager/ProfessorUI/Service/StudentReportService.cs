@@ -1,6 +1,3 @@
-using System;
-using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using ExamManager.Shared;
 using NetworkLib;

@@ -1,5 +1,4 @@
-﻿using System;
-
+﻿
 namespace ProfessorUI.Service
 {
     public static class SendFileState

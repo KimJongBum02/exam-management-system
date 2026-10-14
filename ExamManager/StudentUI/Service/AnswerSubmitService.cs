@@ -1,9 +1,6 @@
 using NetworkLib;
 using ExamManager.Shared;
-using System;
 using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace StudentUI.Service
 {

@@ -1,9 +1,6 @@
-using System;
 using NetworkLib;
 using StudentUI.Service;
 using StudentUI.ViewModel;
-using System.Configuration;
-using System.Data;
 using System.Windows;
 
 namespace StudentUI

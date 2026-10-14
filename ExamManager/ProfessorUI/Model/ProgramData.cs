@@ -1,9 +1,6 @@
 // 프로그램 데이터: 감시 목록 후보 하나(ProgramEntry) · 어디서 찾았는지(ProgramSource)
-using System;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
-using System.Runtime.CompilerServices;
 
 namespace ProfessorUI.Model
 {

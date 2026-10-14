@@ -1,8 +1,5 @@
 using ExamManager.Shared;
 using NetworkLib;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace StudentUI.Service
 {

@@ -1,7 +1,6 @@
 // ScreenCaptureService.cs
 // 화면을 주기적으로 캡처해 교수 서버로 전송하는 서비스.
 // GDI P/Invoke + WPF JpegBitmapEncoder 사용 — 외부 NuGet 패키지 없음.
-using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;

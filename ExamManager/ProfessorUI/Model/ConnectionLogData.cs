@@ -1,5 +1,4 @@
 // 접속 기록 한 건(ConnectionLogEntry)
-using System;
 
 namespace ProfessorUI.Model
 {

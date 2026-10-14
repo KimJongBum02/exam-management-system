@@ -1,13 +1,11 @@
 using Microsoft.Win32; // 파일 대화상자 사용을 위해 추가
 using ExamManager.Shared;
-using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using ProfessorUI.Service;
-using ProfessorUI.Common;
 
 
 namespace ProfessorUI.ViewModel

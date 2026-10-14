@@ -1,6 +1,5 @@
 using ExamManager.Shared;
 using NetworkLib;
-using System;
 using System.IO;
 
 namespace ProfessorUI.Service

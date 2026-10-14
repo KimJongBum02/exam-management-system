@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-
+﻿
 // 교수·학생이 함께 쓰는 프로그램 사전. 두 UI 가 같은 친숙한 이름을 보이도록 공용 폴더에 둔다.
 // (교수 알림·목록 표시, 학생 화면 경고가 모두 이 표의 이름을 쓴다)
 namespace ExamManager.Shared
