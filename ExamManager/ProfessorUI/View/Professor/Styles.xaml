@@ -22,19 +22,13 @@
     <SolidColorBrush x:Key="TextSecondary" Color="#3F4651"/>
     <SolidColorBrush x:Key="TextMuted"     Color="#5A626D"/>
     <SolidColorBrush x:Key="BtnDark"       Color="#18181B"/>
-    <SolidColorBrush x:Key="BtnDarkHover"  Color="#2E2E33"/>
 
-    <!-- 교표 청록. 지금 눌러야 할 버튼 하나에만 쓴다 — 아무 데나 칠하면 강조가 사라진다.
-         교표 원색(BrandTeal)은 흰 글씨 대비가 2.73:1 뿐이라 글씨를 얹지 못한다.
-         그래서 글씨 없는 자리(로고 옆 띠)에만 쓰고, 버튼 바탕은 같은 색조를 어둡게 내린 값을 쓴다. -->
-    <SolidColorBrush x:Key="BrandTeal"     Color="#1AB18B"/>
+    <!-- 교표 원색(#1AB18B)은 흰 글씨 대비가 2.73:1 뿐이라 글씨를 얹지 못한다. 쓰려거든 글씨 없는 자리에만. -->
 
     <!-- 학생 프로그램이 쓰는 파랑을 그대로 가져왔다. 두 화면을 나란히 놓아도 따로 놀지 않는다. -->
     <SolidColorBrush x:Key="BtnPrimary"        Color="#1A56DB"/>   <!-- 흰 글씨 6.18:1 (AA) -->
     <SolidColorBrush x:Key="BtnPrimaryHover"   Color="#1D4ED8"/>
     <SolidColorBrush x:Key="BtnPrimaryPressed" Color="#1E40AF"/>
-    <!-- 끝난 일에 입히는 글씨색 (수집 완료·배포 완료·압축 완료). 학생 쪽 상태 글씨와 같은 값 -->
-    <SolidColorBrush x:Key="DoneBlue"          Color="#1D4ED8"/>   <!-- 흰 바탕 6.70:1 (AA) -->
 
     <!-- 눌리지 않는 버튼. 예전 값(TextMuted)은 너무 진해 눌러도 되는 줄 알기 쉬웠다. -->
     <SolidColorBrush x:Key="BtnDisabled"   Color="#C8CCD2"/>

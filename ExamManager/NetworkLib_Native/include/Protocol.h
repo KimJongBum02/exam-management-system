@@ -42,7 +42,6 @@ enum class PacketType : uint32_t
 
     // 프로세스 제어 (40~49)
     ProcessListUpdate        = 40,   // 가변 길이 페이로드
-    ForceProcessKill         = 41,
     MonitorStatusReport      = 43,   // 학생 → 교수. 감시가 실제로 켜졌는지 알린다
                                      // (네이티브는 해석하지 않고 그대로 전달한다)
     InstalledProgramsReport  = 44,   // 학생 → 교수. 학생 PC 에 설치된 프로그램 목록 (가변 길이)
@@ -221,11 +220,6 @@ struct ExamSubmitRequestPayload
 //   [uint32_t blacklistCount]
 //   whitelistCount 개의 문자열: 각 [uint16_t len][len bytes UTF-8]
 //   blacklistCount 개의 문자열: 각 [uint16_t len][len bytes UTF-8]
-
-struct ForceProcessKillPayload
-{
-    char processName[260]; // 예: "chrome.exe"
-};
 
 // ─── 퀴즈 ─────────────────────────────────────────────────────────
 // QuizQuestion은 가변 길이입니다.

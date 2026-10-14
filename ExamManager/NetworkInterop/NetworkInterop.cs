@@ -34,7 +34,6 @@ namespace NetworkLib
         ExtractArchive          = 33,
         ExamSubmitRequest       = 34,
         ProcessListUpdate       = 40,
-        ForceProcessKill        = 41,
         MonitorStatusReport     = 43,   // 학생 → 교수. 감시가 실제로 켜졌는지
         InstalledProgramsReport = 44,   // 학생 → 교수. 학생 PC 에 설치된 프로그램 목록
         LockKeyboard            = 45,   // 교수 → 특정 학생. payload = 1 byte (1=잠금, 0=해제)
