@@ -1,10 +1,8 @@
 using NetworkLib;
 using ExamManager.Shared;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace StudentUI.Service
@@ -12,7 +10,7 @@ namespace StudentUI.Service
     // 교수 PC가 배포한 시험 파일의 수신·압축 해제 상태를 앱 전체에서 공유한다.
     // 파일은 학생이 대기 화면에 머무는 동안 도착하므로, 시험 준비 화면이
     // 그 뒤에 열려도 상태를 볼 수 있도록 여기에 보관한다.
-    public class ExamFileStore : INotifyPropertyChanged
+    public class ExamFileStore : UiBinding
     {
         public static ExamFileStore Instance { get; } = new ExamFileStore();
 
@@ -566,9 +564,5 @@ namespace StudentUI.Service
 
         private static string FormatSize(long bytes)
             => bytes >= 1024 * 1024 ? $"{bytes / 1024.0 / 1024.0:0.#} MB" : $"{bytes / 1024.0:0.#} KB";
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        private void OnPropertyChanged([CallerMemberName] string? name = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

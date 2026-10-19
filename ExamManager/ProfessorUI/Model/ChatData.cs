@@ -1,10 +1,9 @@
 // 채팅 데이터: 메시지 한 건(ChatMessageModel)
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
+using ExamManager.Shared;
 
 namespace ProfessorUI.Model
 {
-    public class ChatMessageModel : INotifyPropertyChanged
+    public class ChatMessageModel : UiBinding
     {
         private string _senderName = string.Empty;
         private string _message = string.Empty;
@@ -52,9 +51,5 @@ namespace ProfessorUI.Model
                                      : IsRead ? "읽음" : "안 읽음";
 
         public string DisplayTime => Timestamp.ToString("HH:mm");
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string? name = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

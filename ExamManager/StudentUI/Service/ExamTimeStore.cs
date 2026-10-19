@@ -1,7 +1,5 @@
 using NetworkLib;
 using ExamManager.Shared;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Windows.Threading;
 
 namespace StudentUI.Service
@@ -15,7 +13,7 @@ namespace StudentUI.Service
     // 강의실 PC마다 시계가 맞다는 보장이 없어, 교수가 보낸 시각을 그대로 믿으면
     // 시계가 틀어진 PC에서 엉뚱한 시간이 나온다. 신호는 전원에게 거의 동시에
     // 도착하므로 학생 간 차이는 무시할 수 있다.
-    public class ExamTimeStore : INotifyPropertyChanged
+    public class ExamTimeStore : UiBinding
     {
         public static ExamTimeStore Instance { get; } = new ExamTimeStore();
 
@@ -193,9 +191,5 @@ namespace StudentUI.Service
 
             Remaining = left;
         }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        private void OnPropertyChanged([CallerMemberName] string? name = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

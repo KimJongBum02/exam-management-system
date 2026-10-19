@@ -1,10 +1,10 @@
-using System.ComponentModel;
+using ExamManager.Shared;
 
 namespace StudentUI.Model
 {
     // 수업 확인 퀴즈의 문제 하나와 학생이 고른 답.
     // 문제 칸과 오른쪽 답안 표기란이 같은 객체를 보므로, 어느 쪽에서 골라도 양쪽이 함께 바뀐다.
-    public class ClassQuizItem : INotifyPropertyChanged
+    public class ClassQuizItem : UiBinding
     {
         public ClassQuizItem(int number, string text, string[] options)
         {
@@ -33,15 +33,13 @@ namespace StudentUI.Model
         {
             _answer = choice.Value;
             foreach (var option in Options) option.NotifySelected();
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Answer)));
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsAnswered)));
+            OnPropertyChanged(nameof(Answer));
+            OnPropertyChanged(nameof(IsAnswered));
         }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
     }
 
     // 보기 하나. OX 문제는 O·X 두 개를 보기처럼 둔다.
-    public class ClassQuizChoice : INotifyPropertyChanged
+    public class ClassQuizChoice : UiBinding
     {
         public ClassQuizChoice(ClassQuizItem owner, string value, string mark, string text)
         {
@@ -57,8 +55,6 @@ namespace StudentUI.Model
         public string Text { get; }    // 보기 내용. OX 는 비어 있다
         public bool IsSelected => Owner.Answer == Value;
 
-        internal void NotifySelected() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
-
-        public event PropertyChangedEventHandler? PropertyChanged;
+        internal void NotifySelected() => OnPropertyChanged(nameof(IsSelected));
     }
 }

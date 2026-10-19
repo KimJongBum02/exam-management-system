@@ -1,5 +1,5 @@
 // 경고 데이터: 경고 한 건(AlertItem) · 경고 종류(AlertKind)
-using System.ComponentModel;
+using ExamManager.Shared;
 
 namespace ProfessorUI.Model
 {
@@ -12,7 +12,7 @@ namespace ProfessorUI.Model
     }
 
     // 알림 한 건. 화면에 그대로 바인딩된다.
-    public class AlertItem : INotifyPropertyChanged
+    public class AlertItem : UiBinding
     {
         public string Time { get; init; } = string.Empty;
         public string StudentId { get; init; } = string.Empty;
@@ -48,9 +48,5 @@ namespace ProfessorUI.Model
         }
 
         public string StateText => _isAcknowledged ? "확인 완료" : "미확인";
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        private void OnPropertyChanged(string name)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }
