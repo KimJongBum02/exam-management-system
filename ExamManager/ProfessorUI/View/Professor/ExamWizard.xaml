@@ -238,14 +238,14 @@
                 </Border>
 
                 <StackPanel Grid.Column="2">
-                    <!-- 금지 목록 카드. 목록은 길어서 펼치지 않고 [보기]로 팝업에 띄운다. 저장은 한 목록이다(BlackListViewModel) -->
+                    <!-- 금지 목록 카드. 목록은 길어서 펼치지 않고 [보기]로 팝업에 띄운다. 저장은 한 목록이다(ProgramControlViewModel) -->
                     <Border Style="{StaticResource Card}" Padding="22" Margin="0,0,0,20">
                         <StackPanel>
                             <Grid Margin="0,0,0,18">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="금지 프로그램 목록" Style="{StaticResource SectionTitle}" Margin="0,0,12,0"
                                                VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding BlackList.BlackList.Count}" Style="{StaticResource Caption}"
+                                    <TextBlock Text="{Binding BlackList.Items.Count}" Style="{StaticResource Caption}"
                                                VerticalAlignment="Center"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
@@ -285,7 +285,7 @@
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="허용 프로그램 목록" Style="{StaticResource SectionTitle}" Margin="0,0,12,0"
                                                VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding WhiteList.WhiteList.Count}" Style="{StaticResource Caption}"
+                                    <TextBlock Text="{Binding WhiteList.Items.Count}" Style="{StaticResource Caption}"
                                                VerticalAlignment="Center"/>
                                 </StackPanel>
                                 <Button Content="전체 삭제" Style="{StaticResource DangerLink}"
@@ -476,12 +476,12 @@
 
                         <Grid Style="{StaticResource CheckRow}">
                             <TextBlock Text="● 허용 프로그램" Style="{StaticResource Body}"/>
-                            <TextBlock Text="{Binding WhiteList.WhiteList.Count}" Style="{StaticResource Caption}"
+                            <TextBlock Text="{Binding WhiteList.Items.Count}" Style="{StaticResource Caption}"
                                        HorizontalAlignment="Right"/>
                         </Grid>
                         <Grid Style="{StaticResource CheckRow}">
                             <TextBlock Text="● 금지 프로그램" Style="{StaticResource Body}"/>
-                            <TextBlock Text="{Binding BlackList.BlackList.Count}" Style="{StaticResource Caption}"
+                            <TextBlock Text="{Binding BlackList.Items.Count}" Style="{StaticResource Caption}"
                                        HorizontalAlignment="Right"/>
                         </Grid>
                         <Grid Style="{StaticResource CheckRow}">
