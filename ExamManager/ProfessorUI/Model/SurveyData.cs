@@ -1,7 +1,7 @@
 // 설문 데이터: 문제 한 건(SurveyRound) · 학생 응답(SurveyResponse) · 학생별 누적(SurveyStudentTally)
 // 정답이 없다. 학생이 O·X 중 무엇을 골랐는지만 모은다 (예: 실습 희망 명단 나누기).
 using System.Collections.ObjectModel;
-using System.ComponentModel;
+using ExamManager.Shared;
 
 namespace ProfessorUI.Model
 {
@@ -24,7 +24,7 @@ namespace ProfessorUI.Model
     //
     // 출제 시점에 접속해 있던 학생 전원을 미리 만들어 두고 Answer 를 비워 둔다.
     // 그래야 "안 낸 사람"과 "그때 없던 사람"이 섞이지 않는다 —
-    public class SurveyResponse : INotifyPropertyChanged
+    public class SurveyResponse : UiBinding
     {
         public string StudentId { get; init; } = string.Empty;
         public string StudentName { get; init; } = string.Empty;
@@ -54,9 +54,7 @@ namespace ProfessorUI.Model
         // 튀면 오히려 읽기 어렵기 때문이다. 화면에서 정렬 여부를 고르게 두고, 이 값만 제공한다.
         public int SortRank => _answer == true ? 0 : _answer == false ? 1 : 2;
 
-        private void NotifyAll() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(null));
-
-        public event PropertyChangedEventHandler? PropertyChanged;
+        private void NotifyAll() => OnPropertyChanged(null);
     }
 
     // 학생 한 명의 누적. 설문에 얼마나 참여했는지 본다.

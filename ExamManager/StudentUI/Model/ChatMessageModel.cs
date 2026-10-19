@@ -1,9 +1,8 @@
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
+using ExamManager.Shared;
 
 namespace StudentUI.Model
 {
-    public class ChatMessageModel : INotifyPropertyChanged
+    public class ChatMessageModel : UiBinding
     {
         private string _senderName = string.Empty;
         private string _message = string.Empty;
@@ -38,11 +37,5 @@ namespace StudentUI.Model
 
         // 같은 사람이 이어서 말하면 얼굴과 이름을 다시 그리지 않는다. 쌓을 때 한 번 정해지고 바뀌지 않는다.
         public bool ShowSender { get; init; } = true;
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string? name = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-        }
     }
 }

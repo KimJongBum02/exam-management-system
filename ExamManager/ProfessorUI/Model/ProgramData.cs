@@ -1,6 +1,6 @@
 // 프로그램 데이터: 감시 목록 후보 하나(ProgramEntry) · 어디서 찾았는지(ProgramSource)
-using System.ComponentModel;
 using System.IO;
+using ExamManager.Shared;
 
 namespace ProfessorUI.Model
 {
@@ -18,7 +18,7 @@ namespace ProfessorUI.Model
     //
     // 교수는 "카카오톡"으로 찾고, 학생 PC의 감시는 "KakaoTalk.exe"로 한다.
     // 그래서 보여 주는 이름과 실제로 저장할 이름을 따로 들고 있는다.
-    public class ProgramEntry : INotifyPropertyChanged
+    public class ProgramEntry : UiBinding
     {
         public string DisplayName { get; init; } = string.Empty;
         public string ExecutableName { get; init; } = string.Empty;
@@ -77,15 +77,13 @@ namespace ProfessorUI.Model
             {
                 if (_isChosen == value) return;
                 _isChosen = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsChosen)));
+                OnPropertyChanged(nameof(IsChosen));
             }
         }
 
         // 견주기 전에 공백을 모두 없앤다.
         private static string Squeeze(string text) =>
             new string(text.Where(c => !char.IsWhiteSpace(c)).ToArray());
-
-        public event PropertyChangedEventHandler? PropertyChanged;
 
         // 한글 이름과 실행 파일명 어느 쪽으로 쳐도 걸리게 한다.
         // "카카오"로도 "kakao"로도 찾을 수 있어야 하기 때문이다.

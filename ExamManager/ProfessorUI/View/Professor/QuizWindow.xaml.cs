@@ -10,6 +10,7 @@ using ProfessorUI.Common;
 using ProfessorUI.Model;
 using ProfessorUI.Service;
 using ProfessorUI.ViewModel;
+using ExamManager.Shared;
 
 namespace ProfessorUI.View.Professor
 {
@@ -317,7 +318,7 @@ namespace ProfessorUI.View.Professor
     }
 
     // 결과 표의 한 줄 (학생 한 명).
-    public class QuizResultRow : INotifyPropertyChanged
+    public class QuizResultRow : UiBinding
     {
         private readonly QuizSubmission _submission;
         private readonly IReadOnlyList<QuizQuestion> _questions;
@@ -351,10 +352,8 @@ namespace ProfessorUI.View.Professor
                 QuizSubmission.Result.Blank   => new QuizResultCell("−", Brushes.Transparent, "안 푼 문제"),
                 _                                  => new QuizResultCell("", Brushes.Transparent, "미제출"),
             }).ToList();
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(null));
+            OnPropertyChanged(null);
         }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
     }
 
     // 결과 표의 한 칸.
