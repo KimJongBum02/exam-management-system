@@ -1,7 +1,5 @@
 using ExamManager.Shared;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
 using ProfessorUI.Service;
@@ -11,7 +9,7 @@ namespace ProfessorUI.ViewModel
 {
     // 시험 준비 2단계(파일 배포) 화면의 뷰모델.
     // 배포 표를 만들고 결과를 문구로 보여 준다 — 실제 전송과 판단은 SendFileService 가 맡는다.
-    public class SendFileViewModel : INotifyPropertyChanged
+    public class SendFileViewModel : UiBinding
     {
         private readonly SendFileService _deploy = SendFileService.Instance;
 
@@ -292,12 +290,6 @@ namespace ProfessorUI.ViewModel
             row.DeployStatus = "전송 중";
             DeployStatusMessage = $"{row.Name}({studentId}) 에게 다시 전송했습니다.";
             return null;
-        }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string? name = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
 }

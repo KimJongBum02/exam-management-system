@@ -1,9 +1,8 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using ProfessorUI.Model;
 using ProfessorUI.Service;
+using ExamManager.Shared;
 
 namespace ProfessorUI.ViewModel
 {
@@ -11,7 +10,7 @@ namespace ProfessorUI.ViewModel
     //
     // 학생 정보는 StudentStore, 부정행위는 AlertStore 에 따로 쌓인다.
     // 둘을 학번으로 이어 붙이는 일을 여기서 한다.
-    public class ExamLogRow : INotifyPropertyChanged
+    public class ExamLogRow : UiBinding
     {
         public ExamLogRow(StudentStatusViewModel student)
         {
@@ -49,19 +48,14 @@ namespace ProfessorUI.ViewModel
         // 부정행위가 없는 학생 줄에는 아무것도 띄우지 않기 위한 값이다.
         public bool HasCheated => _cheatCount > 0;
 
-        private void NotifyAll() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(null));
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        private void OnPropertyChanged([CallerMemberName] string? name = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        private void NotifyAll() => OnPropertyChanged(null);
     }
 
     // 시험 로그 화면이 쓰는 표.
     //
     // 화면은 메뉴를 옮길 때마다 새로 만들어지므로 목록은 여기(UiContext 가 들고 있는 뷰모델)에 둔다.
     // 학생이 들어오거나 경고가 올라오면 표를 다시 맞춘다.
-    public class ExamLogViewModel : INotifyPropertyChanged
+    public class ExamLogViewModel : UiBinding
     {
         public ObservableCollection<ExamLogRow> Rows { get; } = new();
 
@@ -127,10 +121,5 @@ namespace ProfessorUI.ViewModel
             OnPropertyChanged(nameof(AttendedCount));
             OnPropertyChanged(nameof(CheatedCount));
         }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        private void OnPropertyChanged([CallerMemberName] string? name = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

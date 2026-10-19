@@ -2,8 +2,6 @@ using NetworkLib;
 using ExamManager.Shared;
 using ProfessorUI.Service;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
 
@@ -12,7 +10,7 @@ namespace ProfessorUI.ViewModel
     // 시험을 끝내는 흐름 하나를 맡는다: 시험 종료 + 답안 수집 → 학생 승인.
     // 두 가지가 같은 화면(ExamEndWindow)에서 이어지므로 한 뷰모델에 둔다.
     // 실제 전송·승인 처리는 ExamFlowService 가 하고, 여기서는 버튼 상태와 확인·결과 창만 다룬다.
-    public class ExamEndViewModel : INotifyPropertyChanged
+    public class ExamEndViewModel : UiBinding
     {
         public bool IsContainerEnabled => ExamState.IsExamStarted;
 
@@ -104,9 +102,5 @@ namespace ProfessorUI.ViewModel
         // (학생이 한 명이면 승인하자마자 그렇게 된다)
         //
         // 초기화는 종료 완료 현황 화면의 [처음 화면으로] 가 확인을 받고 처리한다.
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string? name = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

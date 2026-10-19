@@ -1,7 +1,5 @@
 using ExamManager.Shared;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
 using NetworkLib;
@@ -28,7 +26,7 @@ namespace StudentUI.ViewModel
         public string Description { get; set; } = string.Empty;
     }
 
-    public class StudentExamViewModel : INotifyPropertyChanged
+    public class StudentExamViewModel : UiBinding
     {
             private readonly NavigationStore _navigationStore;
 
@@ -533,9 +531,5 @@ namespace StudentUI.ViewModel
                     RefreshStatusItems();
                 });
             }
-
-            public event PropertyChangedEventHandler? PropertyChanged;
-            protected void OnPropertyChanged([CallerMemberName] string? name = null)
-                => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
 }

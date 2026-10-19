@@ -1,5 +1,4 @@
 using ExamManager.Shared;
-using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -12,7 +11,7 @@ namespace ProfessorUI.ViewModel
     // 서버는 앱을 켤 때 자동으로 열린다. 그 뒤에 네트워크가 끊기거나 접속 받기가 멈출 수 있어
     // 몇 초마다 실제 상태를 다시 본다(ServerService.CheckHealth). 상태를 따로 들고 있지 않는다.
     // 꺼졌으면 [서버 다시 열기]로 같은 포트에 다시 연다.
-    public class ServerStatusViewModel : INotifyPropertyChanged
+    public class ServerStatusViewModel : UiBinding
     {
         // 네트워크가 끊기는 것은 몇 초 늦게 알아도 된다. 짧게 잡을 이유가 없다.
         private static readonly TimeSpan CheckInterval = TimeSpan.FromSeconds(3);
@@ -63,7 +62,7 @@ namespace ProfessorUI.ViewModel
 
             _health = health;
             Address = address;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(null));
+            OnPropertyChanged(null);
         }
 
         // 네트워크가 끊긴 경우는 다시 열어도 소용이 없다 — 네트워크가 돌아오면 저절로 초록불로 바뀐다.
@@ -85,7 +84,5 @@ namespace ProfessorUI.ViewModel
             if (problem != null)
                 MessageBox.Show(problem, "서버 다시 열기", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
     }
 }

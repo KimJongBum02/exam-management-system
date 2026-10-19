@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using ProfessorUI.Service;
+using ExamManager.Shared;
 
 namespace ProfessorUI.ViewModel
 {
@@ -9,7 +10,7 @@ namespace ProfessorUI.ViewModel
     //
     // 화면은 메뉴를 옮길 때마다 새로 만들어지므로 목록은 여기(UiContext)에 두고 늘 맞춰 둔다.
     // 명단을 불러오면 칸을 다시 만들고, 학생이 처음 접속하면 명단 칸에 붙이거나 새 칸을 뒤에 더한다.
-    public class StudentBoardViewModel : INotifyPropertyChanged
+    public class StudentBoardViewModel : UiBinding
     {
         public ObservableCollection<StudentCardViewModel> Cards { get; } = new();
 
@@ -97,10 +98,8 @@ namespace ProfessorUI.ViewModel
 
         private void NotifySummary()
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasRoster)));
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(RosterSummaryText)));
+            OnPropertyChanged(nameof(HasRoster));
+            OnPropertyChanged(nameof(RosterSummaryText));
         }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
     }
 }

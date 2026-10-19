@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using ProfessorUI.Model;
 using ProfessorUI.Service;
+using ExamManager.Shared;
 
 namespace ProfessorUI.ViewModel
 {
@@ -9,7 +10,7 @@ namespace ProfessorUI.ViewModel
     //   명단에도 있고 접속함     → 초록, 끊기면 다시 빨강. 로그인 때 친 이름이 명단과 다르면 경고 줄
     //   접속했는데 명단에 없음   → 학번을 잘못 쳤을 수 있어 경고 줄
     // 명단을 불러오지 않았으면 Roster 는 늘 비어 있고, 예전처럼 접속한 학생만 칸이 된다.
-    public class StudentCardViewModel : INotifyPropertyChanged
+    public class StudentCardViewModel : UiBinding
     {
         public StudentCardViewModel(RosterEntry? roster, int rosterIndex, StudentStatusViewModel? student)
         {
@@ -113,9 +114,7 @@ namespace ProfessorUI.ViewModel
         private void Raise(params string[] names)
         {
             foreach (string name in names)
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+                OnPropertyChanged(name);
         }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
     }
 }

@@ -1,9 +1,7 @@
 using Microsoft.Win32; // 파일 대화상자 사용을 위해 추가
 using ExamManager.Shared;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using ProfessorUI.Service;
 
@@ -13,7 +11,7 @@ namespace ProfessorUI.ViewModel
     // 시험 준비 1단계 화면의 뷰모델.
     // 고른 목록을 들고 화면에 보여 주는 일까지만 한다 —
     // 이름 짓기·같은 내용 판정·압축 실행은 ExamReadyService 가 맡는다.
-    public class ExamReadyViewModel : INotifyPropertyChanged
+    public class ExamReadyViewModel : UiBinding
     {
         private readonly ExamReadyService _package = ExamReadyService.Instance;
 
@@ -317,11 +315,5 @@ namespace ProfessorUI.ViewModel
                    System.Windows.MessageBoxButton.YesNo,
                    System.Windows.MessageBoxImage.Warning,
                    System.Windows.MessageBoxResult.No) == System.Windows.MessageBoxResult.Yes;
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string? name = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-        }
     }
 }

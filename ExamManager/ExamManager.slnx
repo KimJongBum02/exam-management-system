@@ -4,6 +4,22 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Folder Name="/NetworkInterop/">
+    <File Path="NetworkInterop/NetworkInterop.cs" />
+  </Folder>
+  <Folder Name="/Shared/">
+    <File Path="Shared/FileSystem.cs" />
+    <File Path="Shared/FontSizes.xaml" />
+    <File Path="Shared/HeaderBarPanel.cs" />
+    <File Path="Shared/KnownPrograms.cs" />
+    <File Path="Shared/StartMenuPrograms.cs" />
+    <File Path="Shared/UiBinding.cs" />
+    <File Path="Shared/UiCommand.cs" />
+    <File Path="Shared/UiFont.cs" />
+    <File Path="Shared/UiSignal.cs" />
+    <File Path="Shared/UiThread.cs" />
+    <File Path="Shared/UiWindow.cs" />
+  </Folder>
   <Project Path="FileControl/FileControl.vcxproj" Id="49a2fb45-ad36-4e8a-a573-453a4be75705" />
   <Project Path="NetworkLib_Native/NetworkLib_Native.vcxproj" Id="f3a7d2e1-8b4c-4f6a-9d2e-1a3b5c7d9e0f">
     <Platform Project="x64" />

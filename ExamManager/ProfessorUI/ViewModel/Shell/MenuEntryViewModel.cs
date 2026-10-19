@@ -1,10 +1,9 @@
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
+using ExamManager.Shared;
 
 namespace ProfessorUI.ViewModel
 {
     // 좌측 운영 메뉴 한 줄. 시험 단계에 따라 잠기고, 잠긴 이유를 툴팁으로 보여준다.
-    public class MenuEntryViewModel : INotifyPropertyChanged
+    public class MenuEntryViewModel : UiBinding
     {
         public MenuEntryViewModel(string name) => Name = name;
 
@@ -39,10 +38,5 @@ namespace ProfessorUI.ViewModel
             Enabled = open;
             LockReason = open ? null : reason;
         }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        private void OnPropertyChanged([CallerMemberName] string? name = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

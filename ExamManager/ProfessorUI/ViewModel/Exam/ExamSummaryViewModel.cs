@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using ProfessorUI.Service;
 using ProfessorUI.Model;
+using ExamManager.Shared;
 
 namespace ProfessorUI.ViewModel
 {
@@ -10,7 +11,7 @@ namespace ProfessorUI.ViewModel
     //
     // 세 화면이 같은 숫자를 각자 세면 서로 어긋나기 쉬워서 한곳에서만 센다.
     // 학생 목록이 바뀌거나 학생 한 명의 상태가 바뀔 때마다 다시 센다.
-    public class ExamSummaryViewModel : INotifyPropertyChanged
+    public class ExamSummaryViewModel : UiBinding
     {
         public ExamSummaryViewModel()
         {
@@ -129,9 +130,7 @@ namespace ProfessorUI.ViewModel
             LastUpdatedText = DateTime.Now.ToString("HH:mm:ss");
 
             // 이름을 하나씩 적기보다 전체를 다시 읽게 하는 편이 셈이 늘어나도 어긋나지 않는다
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(null));
+            OnPropertyChanged(null);
         }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
     }
 }
