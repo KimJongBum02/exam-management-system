@@ -21,8 +21,8 @@ namespace ProfessorUI.Common
         public SendFileViewModel Distribute { get; } = new();
         public ExamStartViewModel ExamStart { get; } = new();
         public ExamEndViewModel ExamEnd { get; } = new();
-        public WhiteListViewModel WhiteList { get; } = new();
-        public BlackListViewModel BlackList { get; } = new();
+        public ProgramControlViewModel WhiteList { get; } = new(ProgramListKind.White);
+        public ProgramControlViewModel BlackList { get; } = new(ProgramListKind.Black);
         public ChatViewModel Chat { get; } = new();
         public SurveyViewModel Survey { get; } = new();
         public QuizViewModel Quiz { get; } = new();
