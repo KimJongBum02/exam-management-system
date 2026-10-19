@@ -1,7 +1,6 @@
 ﻿using ExamManager.Shared;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
@@ -9,7 +8,7 @@ using ProfessorUI.Service;
 
 namespace ProfessorUI.ViewModel
 {
-    public class BlackListViewModel : INotifyPropertyChanged
+    public class BlackListViewModel : UiBinding
     {
         private string _inputProcessName = string.Empty;
 
@@ -75,10 +74,5 @@ namespace ProfessorUI.ViewModel
                 BlackList.Clear();
             }
         }
-
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string? name = null) =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

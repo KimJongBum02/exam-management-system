@@ -1,13 +1,11 @@
 using ProfessorUI.Service;
 using ExamManager.Shared;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
 
 namespace ProfessorUI.ViewModel
 {
-    public class ExamStartViewModel : INotifyPropertyChanged
+    public class ExamStartViewModel : UiBinding
     {
         // ⭐ 공용 저장소의 상태에 따라 버튼 활성화 여부 결정
         public bool IsStartButtonEnabled => SendFileState.IsFileDistributed && !ExamState.IsExamStarted;
@@ -37,12 +35,6 @@ namespace ProfessorUI.ViewModel
             ExamFlowService.Instance.StartExam();
 
             MessageBox.Show("시험을 시작합니다!", "알림");
-        }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string? name = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
 }

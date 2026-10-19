@@ -4,7 +4,7 @@ using ExamManager.Shared;
 namespace ProfessorUI.ViewModel
 {
     // 설문 문제 작성 칸. 정답이 없어 문제 내용만 들고 있다.
-    public class SurveyViewModel : ViewModelBase
+    public class SurveyViewModel : UiBinding
     {
         private string _currentQuestion = string.Empty;
 

@@ -1,4 +1,4 @@
-using System.ComponentModel;
+using ExamManager.Shared;
 
 namespace ProfessorUI.ViewModel
 {
@@ -6,7 +6,7 @@ namespace ProfessorUI.ViewModel
     //
     // 받을 사람은 보내는 순간 접속해 있던 학생으로 정한다. 그 뒤에 접속한 학생의 회신은 세지 않는다 —
     // 그 학생은 이 공지를 받은 적이 없으므로, 섞어 세면 '수신 41 / 40명' 같은 숫자가 나온다.
-    public class NoticeViewModel : INotifyPropertyChanged
+    public class NoticeViewModel : UiBinding
     {
         private readonly Dictionary<string, string> _targets;   // 학번 → 이름
         private readonly HashSet<string> _received = new();
@@ -44,9 +44,7 @@ namespace ProfessorUI.ViewModel
             if (!_targets.ContainsKey(studentId) || !_received.Add(studentId)) return;
 
             // 숫자와 문구가 모두 이 두 목록에서 나오므로 전부 다시 읽게 한다
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(null));
+            OnPropertyChanged(null);
         }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
     }
 }

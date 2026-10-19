@@ -1,12 +1,11 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using ProfessorUI.Model;
+using ExamManager.Shared;
 
 namespace ProfessorUI.ViewModel
 {
-    public class ChatTabViewModel : INotifyPropertyChanged
+    public class ChatTabViewModel : UiBinding
     {
         private string _tabName = string.Empty;
         private string? _sessionId;
@@ -95,9 +94,5 @@ namespace ProfessorUI.ViewModel
             OnPropertyChanged(nameof(HasMessages));
             OnPropertyChanged(nameof(ReadStateText));
         }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string? name = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

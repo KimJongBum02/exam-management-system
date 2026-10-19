@@ -7,7 +7,7 @@ using ProfessorUI.Model;
 
 namespace ProfessorUI.ViewModel
 {
-    public class ChatViewModel : ViewModelBase
+    public class ChatViewModel : UiBinding
     {
         private readonly ChatService _chat = ChatService.Instance;
 

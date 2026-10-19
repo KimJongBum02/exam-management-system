@@ -1,12 +1,11 @@
 // StudentScreenViewModel.cs
 // 화면 모니터링 그리드에서 학생 한 명의 썸네일 타일을 나타내는 뷰모델 아이템.
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Windows.Media.Imaging;
+using ExamManager.Shared;
 
 namespace ProfessorUI.ViewModel
 {
-    public class StudentScreenViewModel : INotifyPropertyChanged
+    public class StudentScreenViewModel : UiBinding
     {
         // 접속해 있지 않으면 비어 있다(명단 학생이 아직 들어오지 않았거나 끊긴 경우).
         public string SessionId  { get; private set; }
@@ -96,9 +95,5 @@ namespace ProfessorUI.ViewModel
             }
             catch { /* 손상된 JPEG는 무시 */ }
         }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string? name = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

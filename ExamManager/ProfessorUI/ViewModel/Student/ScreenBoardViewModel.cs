@@ -3,14 +3,13 @@
 // 접속 중인 학생 목록과 각 학생의 최신 화면 이미지를 관리합니다.
 // 수강생 명단을 불러오면 명단 순서대로 검은 칸을 미리 깔고, 학생이 접속하면 그 칸에 화면이 뜹니다.
 using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using NetworkLib;
 using ProfessorUI.Service;
+using ExamManager.Shared;
 
 namespace ProfessorUI.ViewModel
 {
-    public class ScreenBoardViewModel : INotifyPropertyChanged
+    public class ScreenBoardViewModel : UiBinding
     {
         // ── 싱글톤 ──────────────────────────────────────────────────────────
         public static ScreenBoardViewModel Instance { get; } = new();
@@ -145,9 +144,5 @@ namespace ProfessorUI.ViewModel
             OnPropertyChanged(nameof(StudentCountText));
             OnPropertyChanged(nameof(HasNoStudents));
         }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string? name = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

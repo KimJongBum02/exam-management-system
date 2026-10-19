@@ -3,14 +3,12 @@ using ExamManager.Shared;
 using StudentUI.Model;
 using StudentUI.Service;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Windows.Input;
 
 namespace StudentUI.ViewModel
 {
-    public class SharedChatViewModel : INotifyPropertyChanged
+    public class SharedChatViewModel : UiBinding
     {
         public static SharedChatViewModel Instance { get; } = new SharedChatViewModel();
 
@@ -207,12 +205,6 @@ namespace StudentUI.ViewModel
                 ImportantNotice = notice;
                 if (notice.Length > 0) ExamManager.Shared.UiSignal.FlashTaskbar();
             });
-        }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string? name = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
 }

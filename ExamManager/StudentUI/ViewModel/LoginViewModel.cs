@@ -2,15 +2,13 @@ using NetworkLib;
 using ExamManager.Shared;
 using StudentUI.Model;
 using StudentUI.Service;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Input;
 
 namespace StudentUI.ViewModel
 {
-    public class LoginViewModel : INotifyPropertyChanged
+    public class LoginViewModel : UiBinding
     {
         private readonly NavigationStore _navigationStore;
         public Student Student { get; set; } = new Student();
@@ -179,9 +177,5 @@ namespace StudentUI.ViewModel
 
             return true;
         }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string? name = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

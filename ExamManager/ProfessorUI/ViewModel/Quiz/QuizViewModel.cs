@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using ProfessorUI.Model;
+using ExamManager.Shared;
 
 namespace ProfessorUI.ViewModel
 {
@@ -7,7 +8,7 @@ namespace ProfessorUI.ViewModel
     // 왼쪽 목록에서 문제를 고르고 오른쪽에서 그 문제 하나만 고친다(Kahoot 방식) — 문제가 늘어도 화면이 길어지지 않는다.
     //
     // 화면은 메뉴를 옮길 때마다 새로 만들어지므로, 쓰던 문제가 사라지지 않게 UiContext 에 한 벌만 둔다.
-    public class QuizViewModel : ViewModelBase
+    public class QuizViewModel : UiBinding
     {
         public ObservableCollection<QuizQuestionDraft> Questions { get; } = new();
 
@@ -76,7 +77,7 @@ namespace ProfessorUI.ViewModel
     }
 
     // 작성 중인 문제 하나. OX 는 보기가 없고, N지선다는 보기를 2~10개 둔다.
-    public class QuizQuestionDraft : ViewModelBase
+    public class QuizQuestionDraft : UiBinding
     {
         public const int MinOptions = 2;
         public const int MaxOptions = 10;   // 보기 번호 ①~⑩
@@ -200,7 +201,7 @@ namespace ProfessorUI.ViewModel
     }
 
     // 작성 중인 보기 하나.
-    public class QuizOptionDraft : ViewModelBase
+    public class QuizOptionDraft : UiBinding
     {
         private readonly QuizQuestionDraft _owner;
         private int _number;

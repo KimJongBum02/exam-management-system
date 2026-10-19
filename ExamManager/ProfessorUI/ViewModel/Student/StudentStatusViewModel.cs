@@ -1,9 +1,8 @@
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
+using ExamManager.Shared;
 
 namespace ProfessorUI.ViewModel
 {
-    public class StudentStatusViewModel : INotifyPropertyChanged
+    public class StudentStatusViewModel : UiBinding
     {
         private string _studentId = string.Empty;
         private string _name = string.Empty;
@@ -242,9 +241,5 @@ namespace ProfessorUI.ViewModel
                 return $"{time} (종료 {elapsed} 뒤)";
             }
         }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string? name = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }
