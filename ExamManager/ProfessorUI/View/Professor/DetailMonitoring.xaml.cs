@@ -73,6 +73,17 @@ namespace ProfessorUI.View.Professor
             }
         }
 
+        // 이 학생 한 명에게만 상태 전환을 보낸다(전체 일괄은 교수 상단바에서).
+        private void ClassModeFree_Click(object sender, RoutedEventArgs e) => SendClassMode(ClassMode.Free);
+        private void ClassModeLocked_Click(object sender, RoutedEventArgs e) => SendClassMode(ClassMode.Locked);
+        private void ClassModeExam_Click(object sender, RoutedEventArgs e) => SendClassMode(ClassMode.Exam);
+
+        private void SendClassMode(ClassMode mode)
+        {
+            if (!_item.IsConnected) return;
+            NetworkService.Instance.SendToSession(_item.SessionId, PacketType.ClassModeChange, new byte[] { (byte)mode });
+        }
+
         private void KeyboardLock_Click(object sender, RoutedEventArgs e)
         {
             bool newLockedState = !_item.IsKeyboardLocked;

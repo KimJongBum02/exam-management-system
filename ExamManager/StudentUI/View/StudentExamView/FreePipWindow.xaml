@@ -1,0 +1,48 @@
+<Window x:Class="StudentUI.View.StudentExamView.FreePipWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="시험 대기" WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ResizeMode="NoResize"
+        SizeToContent="WidthAndHeight" ShowActivated="True">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/StudentUI;component/FontSizes.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <!-- 자유 시간 동안 바탕화면 위에 떠 있는 작은 창. 최소 정보(이름·학번·시각·연결)만 보여 준다.
+         몸통을 끌어서 옮길 수 있다(코드 비하인드) -->
+    <Border Background="#0F172A" CornerRadius="16" Padding="22,16" Margin="12"
+            BorderBrush="#334155" BorderThickness="1" MinWidth="240">
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" Opacity="0.35" ShadowDepth="3" BlurRadius="18"/>
+        </Border.Effect>
+
+        <StackPanel>
+            <!-- 연결 상태 + 닫기 -->
+            <Grid>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse x:Name="ConnDot" Width="9" Height="9" Fill="#EF4444" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                    <TextBlock x:Name="ConnText" Text="서버 미연결" FontSize="{StaticResource FontSmall}"
+                               Foreground="#94A3B8" VerticalAlignment="Center"/>
+                </StackPanel>
+                <Button Content="✕" Click="OnClose" HorizontalAlignment="Right" ToolTip="프로그램 종료"
+                        Background="Transparent" BorderThickness="0" Foreground="#64748B"
+                        FontSize="{StaticResource FontSmall}" FontWeight="Bold" Cursor="Hand" Padding="6,0,0,0"/>
+            </Grid>
+
+            <!-- 이름 · 학번 -->
+            <TextBlock x:Name="InfoText" Text="학생" FontSize="{StaticResource FontLarge}" FontWeight="Bold"
+                       Foreground="#F8FAFC" Margin="0,10,0,0"/>
+
+            <!-- 현재 시각 -->
+            <TextBlock x:Name="ClockText" Text="00:00:00" FontSize="34" FontWeight="Bold"
+                       Foreground="#F8FAFC" FontFamily="Consolas, Segoe UI" Margin="0,4,0,2"/>
+
+            <TextBlock Text="자유 이용 중" FontSize="{StaticResource FontSmall}" Foreground="#64748B"/>
+        </StackPanel>
+    </Border>
+</Window>

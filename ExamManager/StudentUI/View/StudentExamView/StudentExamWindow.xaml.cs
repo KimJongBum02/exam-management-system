@@ -1,7 +1,10 @@
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Interop;
 using ExamManager.Shared;
+using NetworkLib;
 using StudentUI.ViewModel;
 
 namespace StudentUI.View.StudentExamView
@@ -12,8 +15,22 @@ namespace StudentUI.View.StudentExamView
         {
             InitializeComponent();
 
-            // 최대화로 시작하고, 복원하면 교수 화면과 같은 크기로 화면 가운데에 온다.
-            UiWindow.ApplyMainWindowSize(this);
+            // 이 큰 창은 '시험' 상태일 때만 화면에 뜬다(시작 전=덮개, 시작 후=일반 작업 창).
+            // 자유·통제에서는 숨어 있고, 자유에서는 작은 PIP 창(FreePipWindow)이 대신 떠 있다.
+            // 로그인 직후 큰 창이 번쩍이지 않도록, 보이지 않게(최소화) 시작한다.
+            ShowActivated = false;
+            WindowState = WindowState.Minimized;
+            Width = 1180; Height = 720;
+
+            // 상태 전환(자유·통제·시험) + 시험 시작/종료에 따라 덮개·작업창·숨김·PIP 을 전환한다.
+            Service.ClassControlService.Instance.ModeChanged += OnClassModeChanged;
+            Closed += (_, _) => Service.ClassControlService.Instance.ModeChanged -= OnClassModeChanged;
+            Service.ExamTimeStore.Instance.PropertyChanged += OnExamTimeChanged;
+            Closed += (_, _) => Service.ExamTimeStore.Instance.PropertyChanged -= OnExamTimeChanged;
+            // 자유 PIP 창도 큰 창이 닫힐 때 함께 정리한다.
+            Closed += (_, _) => { _freePip?.Close(); _freePip = null; };
+            // 로그인 직후 현재 상태(기본 자유)에 맞춰 화면을 잡는다.
+            Loaded += (_, _) => UpdatePresentation();
 
             // 교수의 채팅·공지가 오면 채팅 버튼을 깜빡인다.
             SharedChatViewModel.Instance.MessageArrived += OnMessageArrived;
@@ -55,16 +72,31 @@ namespace StudentUI.View.StudentExamView
 
         private void OnTogglePip(object sender, RoutedEventArgs e)
         {
-            if (_pip != null)
-            {
-                _pip.Close();
-                return;
-            }
+            if (_pip is { Visibility: Visibility.Visible }) { _pip.Visibility = Visibility.Hidden; return; }
+            ShowExamPip();
+        }
 
-            // 주인 창을 두지 않는다 — 주인을 두면 시험 화면을 내렸을 때 이 창도 같이 사라져 뜻이 없다.
-            _pip = new ExamTimerPipWindow();
-            _pip.Closed += (_, _) => _pip = null;
-            _pip.Show();
+        // 타이머 + '답안 제출 · 시험 종료' 플로팅 위젯. 만들었다 닫기를 반복하면(투명 창)
+        // 간헐적으로 렌더링 크래시가 날 수 있어, 한 번만 만들고 보이기/숨기기만 한다.
+        // 주인 창을 두지 않는다 — 주인을 두면 시험 창을 내렸을 때 이 창도 같이 사라져 뜻이 없다.
+        private void ShowExamPip()
+        {
+            if (_pip == null)
+            {
+                var submit = (DataContext as StudentExamViewModel)?.SubmitAnswerCommand;
+                _pip = new ExamTimerPipWindow(submit);
+                _pip.Closed += (_, _) => _pip = null;
+                _pip.Show();
+            }
+            else
+            {
+                _pip.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void HideExamPip()
+        {
+            if (_pip != null) _pip.Visibility = Visibility.Hidden;
         }
 
         // 패널이 보이게 된 뒤라야 입력칸이 포커스를 받는다. (Loaded 우선순위 — UiThread.Post 로 바꾸면 안 된다)
@@ -127,5 +159,146 @@ namespace StudentUI.View.StudentExamView
 
             base.OnClosing(e);
         }
+
+        private FreePipWindow? _freePip;
+
+        private void OnClassModeChanged(ClassMode mode) => UpdatePresentation();
+
+        private void OnExamTimeChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            // 교수가 '시험 시작'을 누르면(IsRunning) 덮개를 걷어 작업 창으로, 종료(IsFinished)돼도 작업 창을 유지한다.
+            if (e.PropertyName is nameof(Service.ExamTimeStore.IsRunning) or nameof(Service.ExamTimeStore.IsFinished))
+                UpdatePresentation();
+        }
+
+        // 지금 상태 + 시험 진행 여부에 맞춰 큰 창의 모습을 정한다.
+        //   자유            → 숨김 + 작은 PIP 창
+        //   통제            → 숨김(서비스의 어두운 덮개가 가린다)
+        //   시험, 시작 전    → 전체화면 덮개(대기 화면, 파일은 받는다)
+        //   시험, 시작 후    → 일반 작업 창(작업표시줄·바탕화면 복귀, 파일 열고 제출)
+        private void UpdatePresentation()
+        {
+            switch (Service.ClassControlService.Instance.CurrentMode)
+            {
+                case ClassMode.Exam:
+                    if (ExamStarted()) PresentExamWorking();
+                    else PresentCover();
+                    break;
+                case ClassMode.Locked:
+                    PresentHidden();
+                    break;
+                default:
+                    PresentFree();
+                    break;
+            }
+
+            // 시험이 실제 진행 중일 때만(시작 후~종료 전) 바탕화면 위에 타이머+제출 위젯을 띄운다.
+            // 그러면 학생은 창을 내리고 바탕화면에서 응시하다가 여기서 바로 답안을 낼 수 있다.
+            bool wantPip = Service.ClassControlService.Instance.CurrentMode == ClassMode.Exam
+                           && Service.ExamTimeStore.Instance.IsRunning;
+            if (wantPip) ShowExamPip();
+            else HideExamPip();
+        }
+
+        // 교수가 '시험 시작'을 누른 뒤인지(진행 중이거나 이미 끝나 제출 대기인지).
+        private static bool ExamStarted()
+            => Service.ExamTimeStore.Instance.IsRunning || Service.ExamTimeStore.Instance.IsFinished;
+
+        // 자유: 큰 창을 숨기고 작은 PIP 창만 띄운다.
+        // 숨어 있는 동안 WindowState 를 Normal 로 정착시켜 둔다 — 덮개로 넘어갈 때
+        // Minimized→Normal 복원이 비동기로 걸려 전체화면 크기를 덮어쓰는 것을 막는다.
+        private void PresentFree()
+        {
+            Topmost = false;
+            WindowState = WindowState.Normal;
+            Visibility = Visibility.Hidden;
+            ShowFreePip();
+        }
+
+        // 통제: 큰 창도 PIP 도 숨긴다. 화면은 서비스가 띄우는 어두운 덮개가 가린다.
+        private void PresentHidden()
+        {
+            Topmost = false;
+            WindowState = WindowState.Normal;
+            Visibility = Visibility.Hidden;
+            _freePip?.Hide();
+        }
+
+        // 시험 덮개로. 테두리를 없애고 모니터 전체 크기로 직접 맞춘 뒤 맨 위로 띄운다.
+        // WindowState(최대화·최소화)를 건드리지 않아, 시험↔자유를 여러 번 오가도 상태가 꼬이지 않는다.
+        // (예전엔 최대화 토글 + WM_GETMINMAXINFO 를 썼는데, 재진입 때 예외가 나 앱이 통째로 죽었다)
+        private void PresentCover()
+        {
+            _freePip?.Hide();
+            WindowStyle = WindowStyle.None;
+            ResizeMode = ResizeMode.NoResize;
+            WindowState = WindowState.Normal;
+            ApplyFullScreenBounds();        // 숨김 상태에서 이미 Normal 이면 깜빡임 없이 바로 전체화면
+            Topmost = true;
+            Visibility = Visibility.Visible;
+            ApplyFullScreenBounds();        // 최대화 등에서 온 경우, 보인 뒤 복원 크기를 다시 덮어쓴다
+            Activate();
+        }
+
+        // 시험 진행: 일반 작업 창으로 되돌린다. 작업표시줄·바탕화면이 보여 학생이 파일을 열어 시험을 치르고,
+        // 창을 최소화했다가 다시 띄워 '답안 제출'을 누를 수 있다(기존 시험 흐름 그대로).
+        private void PresentExamWorking()
+        {
+            _freePip?.Hide();
+            Topmost = false;
+            WindowStyle = WindowStyle.SingleBorderWindow;
+            ResizeMode = ResizeMode.CanResize;
+            WindowState = WindowState.Maximized;
+            Visibility = Visibility.Visible;
+            Activate();
+        }
+
+        // 창을 지금 모니터 전체(작업표시줄 자리 포함)에 딱 맞춘다.
+        // 물리 픽셀을 DPI 로 나눠 WPF 단위로 바꾼다(다중 모니터 대응은 테스트 범위 밖).
+        private void ApplyFullScreenBounds()
+        {
+            IntPtr hwnd = new WindowInteropHelper(this).Handle;
+            IntPtr monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+            if (monitor == IntPtr.Zero) return;
+
+            var mi = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+            if (!GetMonitorInfo(monitor, ref mi)) return;
+
+            double dpiX = 1, dpiY = 1;
+            if (PresentationSource.FromVisual(this)?.CompositionTarget is { } ct)
+            {
+                System.Windows.Media.Matrix m = ct.TransformToDevice;
+                dpiX = m.M11;
+                dpiY = m.M22;
+            }
+
+            Left = mi.rcMonitor.left / dpiX;
+            Top = mi.rcMonitor.top / dpiY;
+            Width = (mi.rcMonitor.right - mi.rcMonitor.left) / dpiX;
+            Height = (mi.rcMonitor.bottom - mi.rcMonitor.top) / dpiY;
+        }
+
+        private void ShowFreePip()
+        {
+            if (_freePip == null)
+            {
+                if (DataContext is not StudentExamViewModel vm) return;
+                _freePip = new FreePipWindow(vm.Student);
+                _freePip.Closed += (_, _) => _freePip = null;
+            }
+            _freePip.Show();
+            _freePip.Activate();
+        }
+
+        private const int MONITOR_DEFAULTTONEAREST = 0x2;
+
+        [DllImport("user32.dll")] private static extern IntPtr MonitorFromWindow(IntPtr hwnd, int flags);
+        [DllImport("user32.dll")] private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT { public int left, top, right, bottom; }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MONITORINFO { public int cbSize; public RECT rcMonitor; public RECT rcWork; public uint dwFlags; }
     }
 }
