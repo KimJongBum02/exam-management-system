@@ -146,6 +146,21 @@ namespace ProfessorUI.View.Professor
             _settle.BadgeCount = _ctx.Overview.ApprovalWaitingCount;
         }
 
+        // 학생 PC 상태 전환(자유·통제·시험). 접속한 모든 학생에게 한꺼번에 보낸다.
+        private void ClassModeFree_Click(object sender, RoutedEventArgs e) => SetClassMode(ClassMode.Free);
+        private void ClassModeLocked_Click(object sender, RoutedEventArgs e) => SetClassMode(ClassMode.Locked);
+        private void ClassModeExam_Click(object sender, RoutedEventArgs e) => SetClassMode(ClassMode.Exam);
+
+        private void SetClassMode(ClassMode mode)
+        {
+            NetworkService.Instance.Broadcast(PacketType.ClassModeChange, new byte[] { (byte)mode });
+
+            // 지금 어느 상태인지 활성 버튼을 굵게 하여 표시한다.
+            FreeModeButton.FontWeight   = mode == ClassMode.Free   ? FontWeights.Bold : FontWeights.Normal;
+            LockedModeButton.FontWeight = mode == ClassMode.Locked ? FontWeights.Bold : FontWeights.Normal;
+            ExamModeButton.FontWeight   = mode == ClassMode.Exam   ? FontWeights.Bold : FontWeights.Normal;
+        }
+
         // 포트는 9000 을 그대로 쓰는 것이 기본이다. 그 자리를 다른 프로그램이 쓰고 있을 때만 여기서 바꾼다.
         private void PortButton_Click(object sender, RoutedEventArgs e)
         {

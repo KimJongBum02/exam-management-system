@@ -35,6 +35,7 @@ namespace NetworkLib
         MonitorStatusReport     = 43,   // 학생 → 교수. 감시가 실제로 켜졌는지
         InstalledProgramsReport = 44,   // 학생 → 교수. 학생 PC 에 설치된 프로그램 목록
         LockKeyboard            = 45,   // 교수 → 특정 학생. payload = 1 byte (1=잠금, 0=해제)
+        ClassModeChange         = 46,   // 교수 → 학생. payload = 1 byte (ClassMode: 0=자유, 1=통제, 2=시험). 전체/개별 모두 이 패킷을 쓴다
         QuizQuestion            = 50,
         QuizAnswer              = 51,
 
@@ -49,6 +50,15 @@ namespace NetworkLib
         ScreenQualityMode       = 71,  // 교수 → 특정 학생, payload = 1 byte (0=기본 320x180, 1=고화질 1920x1080)
 
         CommandAck              = 100,
+    }
+
+    // 교수가 학생 PC를 두는 상태. ClassModeChange 패킷의 payload 1바이트로 전달한다.
+    // 시험(Exam)은 기존 ExamPhase 흐름과 별개의 '덮개·입력잠금' 표시용이며, 전환은 교수 상단바 버튼이 한다.
+    public enum ClassMode : byte
+    {
+        Free   = 0,   // 자유 — 아무 제한 없음
+        Locked = 1,   // 통제 — 키보드·마우스 잠금 + 전체화면 덮개
+        Exam   = 2,   // 시험 — 통제와 같되 덮개 문구가 다름
     }
 
     public enum ExamPhase : uint

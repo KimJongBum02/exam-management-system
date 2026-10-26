@@ -61,6 +61,8 @@ namespace StudentUI
             Service.AnswerSubmitService.Instance.Start();
             // 키보드 잠금 제어 서비스 구독 시작
             Service.KeyboardLockService.Instance.Start();
+            // 학생 PC 상태(자유·통제·시험) 제어 서비스 구독 시작
+            Service.ClassControlService.Instance.Start();
             // 교수 프로그램이 꺼졌다 다시 켜지면 스스로 다시 붙는다. 로그인한 뒤부터 동작한다.
             Service.ReconnectService.Start();
 
@@ -233,6 +235,7 @@ namespace StudentUI
         {
             try { Service.ExamMonitorService.Instance.Dispose(); } catch { }
             try { Service.KeyboardLockService.Instance.Unlock(); } catch { }
+            try { Service.ClassControlService.Instance.ReleaseAll(); } catch { }
         }
 
         // 프로그램 종료 시 서버 연결을 끊고 네이티브 리소스를 정리한다.
@@ -244,6 +247,7 @@ namespace StudentUI
             // 감시를 먼저 멈춘다. 네트워크를 먼저 닫으면 적발 보고가 갈 곳을 잃는다.
             try { Service.ExamMonitorService.Instance.Dispose(); } catch { }
             try { Service.KeyboardLockService.Instance.Unlock(); } catch { }
+            try { Service.ClassControlService.Instance.ReleaseAll(); } catch { }
             try { Service.NetworkService.Instance.Dispose(); } catch { }
             base.OnExit(e);
         }

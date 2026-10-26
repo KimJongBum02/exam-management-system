@@ -78,6 +78,19 @@
                     <Image Source="/Icon/Professor64.png" Width="22" Height="22" Margin="0,0,10,0"/>
                     <TextBlock Text="교수용" FontSize="{StaticResource FontLarge}" FontWeight="Bold"
                                Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"/>
+                    <!-- 학생 PC 상태 전환(자유·통제·시험). 전체 학생에게 한꺼번에 보낸다.
+                         제목줄 안이라 눌리려면 IsHitTestVisibleInChrome 이 있어야 한다 -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="28,0,0,0"
+                                shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                        <TextBlock Text="학생 상태" FontSize="{StaticResource FontSmall}"
+                                   Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <Button x:Name="FreeModeButton" Content="자유" FontWeight="Bold"
+                                Style="{StaticResource SecondaryButton}" Click="ClassModeFree_Click"/>
+                        <Button x:Name="LockedModeButton" Content="통제" Margin="6,0,0,0"
+                                Style="{StaticResource SecondaryButton}" Click="ClassModeLocked_Click"/>
+                        <Button x:Name="ExamModeButton" Content="시험" Margin="6,0,0,0"
+                                Style="{StaticResource SecondaryButton}" Click="ClassModeExam_Click"/>
+                    </StackPanel>
                 </StackPanel>
                 <!-- 가운데: 중요 공지. 학생 앱 상단 가운데에도 같은 문구가 뜬다.
                      제목줄 안이라 IsHitTestVisibleInChrome 이 있어야 눌린다 -->

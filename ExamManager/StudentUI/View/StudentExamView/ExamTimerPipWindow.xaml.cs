@@ -8,12 +8,17 @@ namespace StudentUI.View.StudentExamView
     // 시험 화면 시간 카드의 작은 창 버튼으로 켜고 끈다.
     public partial class ExamTimerPipWindow : Window
     {
-        public ExamTimerPipWindow()
+        // submitCommand: 바탕화면에서 바로 답안을 낼 수 있게 메인 시험 창과 같은 제출 명령을 받는다.
+        // 없으면(타이머만 쓰는 경우) 제출 버튼을 숨긴다.
+        public ExamTimerPipWindow(ICommand? submitCommand = null)
         {
             InitializeComponent();
 
             // 남은 시간은 화면이 바뀌어도 이어지는 저장소 하나에서 온다.
             DataContext = ExamTimeStore.Instance;
+
+            if (submitCommand != null) SubmitButton.Command = submitCommand;
+            else SubmitButton.Visibility = Visibility.Collapsed;
 
             // 처음에는 화면 오른쪽 위에 둔다. 코딩 화면과 겹치면 끌어서 옮기면 된다.
             Loaded += (_, _) =>
