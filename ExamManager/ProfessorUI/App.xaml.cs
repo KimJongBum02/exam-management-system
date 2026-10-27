@@ -91,6 +91,9 @@ namespace ProfessorUI
             Service.SurveyService.Instance.Start();
             Service.QuizService.Instance.Start();
 
+            // 원격 제어 구독 시작 — 학생이 보내는 접속 문자열을 받는다.
+            Service.RemoteControlService.Instance.Start();
+
             // 답안 수집 구독 시작 — 학생이 보낸 답안을 저장하고 확인 회신을 보낸다.
             Service.AnswerCollectService.Instance.Start();
             // 먼저 제출한 학생이 있으면 교수가 바로 알 수 있게 작업표시줄도 깜빡인다.

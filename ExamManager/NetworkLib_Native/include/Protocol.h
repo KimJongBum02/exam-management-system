@@ -52,6 +52,11 @@ enum class PacketType : uint32_t
     // 화면 모니터링 (70~79)
     ScreenCapture            = 70,  // 학생 → 교수, payload = JPEG 바이너리
     ScreenQualityMode        = 71,  // 교수 → 특정 학생, payload = uint8_t (0=기본 320x180, 1=고화질 1920x1080)
+    RemoteControlStart       = 72,  // 교수 → 특정 학생. 원격 제어 시작 요청 (payload 없음)
+    RemoteControlInvitation  = 73,  // 학생 → 교수. 접속 문자열 + 암호 (가변 길이)
+                                    // 형식은 NetworkInterop.cs 의 RemoteControlPayload, 네이티브는 그대로 전달한다
+    RemoteControlStop        = 74,  // 교수 → 특정 학생. 원격 제어 종료 (payload 없음)
+    RemoteControlFailed      = 75,  // 학생 → 교수. 원격 제어를 하지 못한 이유 (UTF-8 문자열, 교수 화면에 그대로 띄운다)
 
     // 퀴즈 (50~59)
     QuizQuestion             = 50,   // 가변 길이 페이로드
