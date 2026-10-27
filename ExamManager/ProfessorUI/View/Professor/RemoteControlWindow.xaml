@@ -1,0 +1,45 @@
+<Window x:Class="ProfessorUI.View.Professor.RemoteControlWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wfi="clr-namespace:System.Windows.Forms.Integration;assembly=WindowsFormsIntegration"
+        Title="원격 제어" Width="1280" Height="820"
+        WindowStartupLocation="CenterScreen" Background="#0F172A">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/ProfessorUI;component/View/Professor/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Background="#1E293B" Padding="18,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock x:Name="NameText" FontSize="{StaticResource FontBody}"
+                               FontWeight="Bold" Foreground="#F1F5F9"/>
+                    <TextBlock Text="이 창 안을 클릭·입력하면 학생 PC 가 그대로 조작됩니다. 학생 화면에는 안내가 떠 있습니다."
+                               FontSize="{StaticResource FontTiny}" Foreground="#94A3B8" Margin="0,3,0,0"/>
+                </StackPanel>
+
+                <Button Grid.Column="1" Content="연결 끊기" Click="Close_Click"
+                        Padding="16,7" FontSize="{StaticResource FontSmall}" FontWeight="SemiBold"
+                        Background="#DC2626" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+            </Grid>
+        </Border>
+
+        <Grid>
+            <!-- RDPViewer 는 ActiveX 라 WPF 에 바로 못 얹는다. WindowsFormsHost 를 거친다. -->
+            <wfi:WindowsFormsHost x:Name="ViewerArea"/>
+
+            <TextBlock x:Name="StatusText" Text="학생 PC 에 연결하는 중입니다…"
+                       FontSize="{StaticResource FontSection}" Foreground="#CBD5E1"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Grid>
+    </DockPanel>
+</Window>

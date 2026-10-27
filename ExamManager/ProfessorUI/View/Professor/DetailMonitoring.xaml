@@ -61,6 +61,9 @@
                 <Button Content="자유" Click="ClassModeFree_Click" Style="{StaticResource DetailDarkButton}"/>
                 <Button Content="통제" Click="ClassModeLocked_Click" Style="{StaticResource DetailDarkButton}"/>
                 <Button Content="시험" Click="ClassModeExam_Click" Style="{StaticResource DetailDarkButton}" Margin="0,0,14,0"/>
+                <!-- 이 학생 PC 를 교수가 직접 조작한다(1:1) -->
+                <Button Content="🖥  원격 제어" Click="RemoteControl_Click"
+                        Style="{StaticResource DetailDarkButton}" Margin="0,0,10,0"/>
                 <Button x:Name="KeyboardLockButton" Content="🔒  키보드 잠금"
                         Click="KeyboardLock_Click" Margin="0,0,10,0"
                         Padding="14,6" FontSize="{StaticResource FontSmall}" FontWeight="SemiBold"

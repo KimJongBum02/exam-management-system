@@ -6,6 +6,20 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <!-- 원격 제어 화면(RDPViewer)은 ActiveX 라 WPF 에 바로 못 얹는다. WindowsFormsHost 를 거친다 -->
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+
+  <!-- WinForms 를 켜면 System.Windows.Forms · System.Drawing 이 암시적 using 으로 들어와
+       WPF 의 Controls · Media 와 이름이 부딪힌다(UserControl · Button · Brush …).
+       원격 제어 창 하나 때문에 기존 화면 15개를 고칠 수는 없으니, 그 둘만 떼어 둔다.
+       그 창은 System.Windows.Forms.AxHost 처럼 전체 이름으로 적는다. -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <PropertyGroup>
     <Platforms>AnyCPU;x64</Platforms>
     <!-- 작업표시줄·탐색기에 보이는 아이콘. 학생용(Student.ico)과 같은 자리에 두고 색으로 구분한다 -->
     <ApplicationIcon>..\Icon\Professor.ico</ApplicationIcon>

@@ -48,6 +48,10 @@ namespace NetworkLib
         // 화면 모니터링
         ScreenCapture           = 70,  // 학생 → 교수, payload = JPEG 바이너리
         ScreenQualityMode       = 71,  // 교수 → 특정 학생, payload = 1 byte (0=기본 320x180, 1=고화질 1920x1080)
+        RemoteControlStart      = 72,  // 교수 → 특정 학생. 원격 제어 시작 요청 (payload 없음)
+        RemoteControlInvitation = 73,  // 학생 → 교수. 화면 공유 접속 문자열 + 암호 (RemoteControlPayload)
+        RemoteControlStop       = 74,  // 교수 → 특정 학생. 원격 제어 종료 (payload 없음)
+        RemoteControlFailed     = 75,  // 학생 → 교수. 원격 제어를 하지 못한 이유 (UTF-8 문자열)
 
         CommandAck              = 100,
     }
@@ -669,6 +673,37 @@ namespace NetworkLib
             byte[] buffer = new byte[payloadLen];
             Marshal.Copy(payload, buffer, 0, (int)payloadLen);
             return Encoding.UTF8.GetString(buffer);
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  RemoteControlInvitation(73) 페이로드 — 화면 공유 접속 문자열과 암호
+    //
+    //  학생이 만든 초대(약 1,450자 XML)와 그번만 쓰는 암호를 교수에게 넘긴다.
+    //  구분자는 퀴즈와 같은 U+001F — 초대 XML 에는 들어갈 수 없는 문자라 안전하다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class RemoteControlPayload
+    {
+        private const char Delimiter = (char)0x1F;
+
+        public static byte[] Encode(string connectionString, string password)
+            => Encoding.UTF8.GetBytes(connectionString + Delimiter + password);
+
+        public static bool TryDecode(IntPtr payload, uint payloadLen,
+                                     out string connectionString, out string password)
+        {
+            connectionString = string.Empty;
+            password = string.Empty;
+            if (payload == IntPtr.Zero || payloadLen == 0) return false;
+
+            byte[] buffer = new byte[payloadLen];
+            Marshal.Copy(payload, buffer, 0, (int)payloadLen);
+            string[] parts = Encoding.UTF8.GetString(buffer).Split(Delimiter);
+            if (parts.Length != 2 || parts[0].Length == 0) return false;
+
+            connectionString = parts[0];
+            password = parts[1];
+            return true;
         }
     }
 

@@ -153,6 +153,11 @@ namespace ProfessorUI.View.Professor
 
         private void SetClassMode(ClassMode mode)
         {
+            // 통제·시험은 학생 입력을 잠그고 덮개를 띄운다 — 그러면 교수가 보낸 원격 입력까지 함께 막히고
+            // 화면은 덮개만 보여, 원격 창은 못 쓰는데 떠 있는 상태가 된다. 먼저 끊고 알린다.
+            if (mode != ClassMode.Free)
+                RemoteControlWindow.CloseIfOpen("상태를 바꾸려면 원격 제어를 먼저 끊어야 합니다.");
+
             NetworkService.Instance.Broadcast(PacketType.ClassModeChange, new byte[] { (byte)mode });
 
             // 지금 어느 상태인지 활성 버튼을 굵게 하여 표시한다.
