@@ -177,7 +177,18 @@ namespace StudentUI.Service
 
             if (type != PacketType.ExtractArchive) return;
 
-            Post(async () =>
+            Post(StartExamAsync);
+        }
+
+        // 교수의 시작 신호를 받아 실제로 하는 일. 화면 스레드에 맡겨져 돌아간다.
+        //
+        // 통째로 try 로 감싼 이유: 이 메서드는 화면 스레드에 맡긴 async void 라서
+        // 예외가 하나라도 새면 앱이 통째로 죽는다. 그러면 학생은 압축도 풀리지 않은 채
+        // 창만 사라지고, 시작 신호는 교수가 한 번만 보내므로 다시 풀 기회도 없다.
+        // 여기서 끊어 이유를 학생 화면에 남기고, 자세한 내용은 crash.log 에 적는다.
+        private async void StartExamAsync()
+        {
+            try
             {
                 if (CanExtract)
                     await ExtractAsync();   // 해제가 끝나면 ExtractAsync가 폴더를 연다
@@ -193,7 +204,16 @@ namespace StudentUI.Service
 
                 // 해제 성공 여부와 관계없이 시험은 시작된 것이므로 감시는 켠다
                 ExamStartHandled?.Invoke();
-            });
+            }
+            catch (Exception ex)
+            {
+                CrashLog.Write("시험 시작 처리", ex);
+
+                // 풀다 말았을 수 있으므로 '해제 중' 표시를 내려 둔다. 그대로 두면 재배포를 받아도
+                // CanExtract 가 false 라 다시 풀지 못한다.
+                IsExtracting = false;
+                StatusText = $"시험 시작 처리 실패: {ex.Message} — 교수님께 재배포를 요청해 주세요.";
+            }
         }
 
         public void Reset()
@@ -319,19 +339,15 @@ namespace StudentUI.Service
             // 시험 시작 신호가 먼저 왔고 그때는 파일이 없어 풀지 못한 경우다(전송이 아직 끝나지 않았던 학생).
             // 교수는 시작 신호를 한 번만 보내므로, 여기서 스스로 풀지 않으면 이 학생은 파일을 받고도
             // 문제를 열지 못한 채 타이머만 돌아간다.
+            // 늦게 도착한 파일도 시작 신호를 받은 것과 똑같이 처리한다(StartExamAsync).
+            // 따로 풀던 코드가 있었는데, 그쪽에는 예외를 잡는 자리가 없어 압축이 실패하면
+            // 학생 화면에 아무 말도 남지 않았다.
             if (_startPending)
             {
                 _startPending = false;
-                _ = StartLateAsync();
+                StartExamAsync();
             }
         });
-
-        // 늦게 도착한 파일을 풀고, 시험 시작으로 켜야 할 것(감시·인터넷 차단)을 켠다.
-        private async Task StartLateAsync()
-        {
-            await ExtractAsync();
-            ExamStartHandled?.Invoke();
-        }
 
         // 새 전송이 시작되면 이전 수신·해제 결과를 버린다.
         // (이렇게 하지 않으면 재배포된 파일을 받고도 IsExtracted가 true로 남아 다시 해제할 수 없다)

@@ -222,10 +222,22 @@ namespace StudentUI
             // UI 스레드에서 처리되지 않은 예외. 실제로 가장 자주 밟는 경로다.
             // 일부러 Handled 로 덮지 않는다 — 상태가 깨진 채로 시험을 이어 가는 것보다,
             // 감시와 차단을 정리하고 끝낸 뒤 다시 실행하는 편이 낫다.
-            DispatcherUnhandledException += (_, _) => RestoreSafely();
+            // 다만 끝내기 전에 이유는 반드시 남긴다. 예전에는 (_, _) 로 받아 예외를 통째로 버려,
+            // 학생 앱이 왜 사라졌는지 알 길이 자체가 없었다(CrashLog 참고).
+            DispatcherUnhandledException += (_, e) =>
+            {
+                Service.CrashLog.Write("화면 스레드", e.Exception);
+                RestoreSafely();
+            };
 
             // 감시 콜백처럼 UI 가 아닌 스레드에서 터진 예외.
-            AppDomain.CurrentDomain.UnhandledException += (_, _) => RestoreSafely();
+            // 네이티브 수신 스레드에서 올라온 것도 여기로 온다 — 패킷 처리기와 네이티브 사이에
+            // try/catch 가 한 군데도 없어, 처리기 하나가 던지면 이 경로로 앱이 통째로 끝난다.
+            AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            {
+                Service.CrashLog.Write("배경 스레드", e.ExceptionObject as Exception);
+                RestoreSafely();
+            };
 
             // Shutdown() 을 거치지 않고 프로세스가 내려가는 경우의 마지막 그물.
             AppDomain.CurrentDomain.ProcessExit += (_, _) => RestoreSafely();
