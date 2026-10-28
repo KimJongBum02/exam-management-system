@@ -248,6 +248,15 @@ namespace StudentUI.View.StudentExamView
             Topmost = false;
             WindowStyle = WindowStyle.SingleBorderWindow;
             ResizeMode = ResizeMode.CanResize;
+
+            // 보이기 전에 ShowActivated 를 되돌린다.
+            // 이 창은 로그인 직후 번쩍이지 않으려고 ShowActivated=false 로 만들어지는데(생성자),
+            // WPF 는 그 상태인 창을 최대화한 채로 보이게 하는 것을 막는다
+            // ("ShowActivated가 false이고 WindowState가 Maximized로 설정되어 있으면 창을 표시할 수 없습니다").
+            // 화면 스레드에서 나는 예외라 그대로 학생 앱이 죽었다 — 시험 모드와 시험 시작이 모두 참이 되는
+            // 순간(여기로 오는 유일한 길)마다 터졌다. 시험 작업 창은 어차피 앞으로 나와야 하므로 true 로 둔다.
+            ShowActivated = true;
+
             WindowState = WindowState.Maximized;
             Visibility = Visibility.Visible;
             Activate();
