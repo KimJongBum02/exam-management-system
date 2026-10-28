@@ -6,7 +6,7 @@ namespace ProfessorUI.View.Professor
 {
     // 중요 공지를 등록·수정·내리는 창. 상단바 가운데의 공지 칸을 누르면 뜬다.
     //
-    // 전체 공지(알림·채팅 화면)는 학생 화면에 팝업으로 한 번 뜨고 닫히지만,
+    // 전체 공지(채팅 화면)는 학생 화면에 팝업으로 한 번 뜨고 닫히지만,
     // 중요 공지는 내릴 때까지 학생·교수 앱 상단 가운데에 계속 보인다.
     // 답안 파일 이름 형식처럼 시험 내내 지켜야 할 것을 적어 둔다.
     public partial class ImportantNoticeWindow : Window

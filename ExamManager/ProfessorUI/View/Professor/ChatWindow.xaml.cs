@@ -10,12 +10,15 @@ using ProfessorUI.Common;
 
 namespace ProfessorUI.View.Professor
 {
-    // 알림·채팅 화면. 학생 채팅은 학생별로 한 줄씩 묶고, 전체 공지는 누가 받았는지까지 보여 준다.
+    // 채팅 화면. 학생 채팅은 학생별로 한 줄씩 묶고, 전체 공지는 누가 받았는지까지 보여 준다.
+    // 보안 경고는 여기 있다가 시험 관리 화면 한 곳으로 옮겼다(메뉴 배지가 무엇을 뜻하는지 흐려져서).
+    // 그때 이름도 AlertAndChat 에서 바꿨다. 따로 뜨는 창은 아니지만 교수 화면은 끼워 넣는 것도
+    // …Window 로 부른다(DashboardWindow · ExamEndWindow 등, 이름 규칙 문서 참고).
     //
     // 시간순으로 한 줄씩 쌓으면 학생 여럿이 동시에 말을 걸 때 누가 몇 번 불렀는지 알 수 없다.
     // 그래서 들어온 학생마다 한 줄을 두고(말이 오가기 전이라도 골라서 먼저 말을 건다),
     // 안 읽은 대화가 있는 학생 → 최근에 말이 오간 학생 → 나머지는 학번순으로 놓는다.
-    public partial class AlertAndChat : UserControl
+    public partial class ChatWindow : UserControl
     {
         private readonly UiContext _ctx = UiContext.Instance;
         private readonly ListCollectionView _conversations;
@@ -23,10 +26,10 @@ namespace ProfessorUI.View.Professor
         // 오른쪽에 열어 둔 대화. 새 메시지가 오면 맨 아래로 내려 주려고 들고 있는다.
         private ChatTabViewModel? _openTab;
 
-        public AlertAndChat() : this(null) { }
+        public ChatWindow() : this(null) { }
 
         // 대시보드 말풍선처럼 다른 화면에서 학생을 집어 들어오면 그 대화를 열어 둔 채로 시작한다.
-        public AlertAndChat(ChatTabViewModel? openTab)
+        public ChatWindow(ChatTabViewModel? openTab)
         {
             InitializeComponent();
             DataContext = _ctx;

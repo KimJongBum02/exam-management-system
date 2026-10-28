@@ -46,7 +46,7 @@ namespace ProfessorUI.ViewModel
         public ICommand SendMessageCommand { get; }
 
         // 전체 공지 입력. 1:1 대화 입력(InputMessage)과 따로 둔다.
-        // 하나를 같이 쓰면, 알림·채팅 화면에서 학생과 대화하는 동안 공지 칸에 적은 글이 그 학생에게만 간다.
+        // 하나를 같이 쓰면, 채팅 화면에서 학생과 대화하는 동안 공지 칸에 적은 글이 그 학생에게만 간다.
         private string _noticeInput = string.Empty;
         public string NoticeInput
         {
@@ -74,16 +74,38 @@ namespace ProfessorUI.ViewModel
         // 셸은 여기에 새 메시지가 들어오는 것만 보고 작업표시줄을 깜빡인다.
         public ObservableCollection<ChatMessageModel> RecentMessages { get; } = new();
 
-        private int _unreadCount;
-        public int UnreadCount
+        // 상단 메뉴 배지에 보일, 안 읽은 학생 메시지 총수.
+        //
+        // 따로 세지 않고 대화 줄들의 합으로 낸다. 예전에는 받을 때 +1, 열 때 −1 로 직접 셌는데
+        // 빼는 자리를 하나라도 빠뜨리면 숫자가 남은 채 굳었다 — 학생이 명단에서 빠져 대화 줄이 사라지면
+        // (RemoveTabFor) 그 줄 몫이 영영 안 빠져서, 안 읽은 대화가 하나도 없는데 배지에 1 이 남았다.
+        // 합으로 내면 줄이 사라지든 읽히든 저절로 맞는다.
+        public int UnreadCount => Tabs.Sum(t => t.UnreadCount);
+
+        // 줄 하나의 안 읽음이 바뀌거나 줄이 생기고 사라지면 합도 다시 읽혀야 한다.
+        private void RefreshUnreadCount() => OnPropertyChanged(nameof(UnreadCount));
+
+        private void OnTabChanged(object? sender, PropertyChangedEventArgs e)
         {
-            get => _unreadCount;
-            private set { _unreadCount = value; OnPropertyChanged(); }
+            if (e.PropertyName == nameof(ChatTabViewModel.UnreadCount)) RefreshUnreadCount();
+        }
+
+        private void OnTabsChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems != null)
+                foreach (ChatTabViewModel tab in e.OldItems) tab.PropertyChanged -= OnTabChanged;
+            if (e.NewItems != null)
+                foreach (ChatTabViewModel tab in e.NewItems) tab.PropertyChanged += OnTabChanged;
+
+            RefreshUnreadCount();
         }
 
         public ChatViewModel()
         {
             _tabs = new ObservableCollection<ChatTabViewModel>();
+
+            // 배지는 줄들의 합이라, 줄이 생기고 사라지는 것과 줄마다의 안 읽음 변화를 모두 들어야 한다.
+            _tabs.CollectionChanged += OnTabsChanged;
 
             // 기본 전체 공지 탭 추가
             var globalTab = new ChatTabViewModel { TabName = "전체 공지 (Global)", SessionId = null };
@@ -97,7 +119,7 @@ namespace ProfessorUI.ViewModel
             _chat.NoticeAcknowledged += OnNoticeAcknowledged;
             _chat.ChatRead += OnChatRead;
 
-            // 들어온 학생마다 대화 줄을 미리 만든다. 알림·채팅 화면에서 말이 오가기 전이라도 학생을 골라 먼저 말을 건다.
+            // 들어온 학생마다 대화 줄을 미리 만든다. 채팅 화면에서 말이 오가기 전이라도 학생을 골라 먼저 말을 건다.
             foreach (var student in StudentStore.Instance.Students) AddTabFor(student);
             StudentStore.Instance.Students.CollectionChanged += (_, e) =>
             {
@@ -218,14 +240,14 @@ namespace ProfessorUI.ViewModel
             return tab;
         }
 
-        // 알림·채팅 화면에서 한 학생과의 대화를 연다. 그 학생 몫의 안 읽음은 상단 배지에서도 뺀다.
+        // 채팅 화면에서 한 학생과의 대화를 연다. 그 학생 몫의 안 읽음은 줄들의 합이라 배지에서도 함께 준다.
         public void OpenConversation(ChatTabViewModel tab)
         {
             // 다시 접속하면 세션이 바뀐다. 목록에서 미리 만든 줄을 고를 때도 지금 세션으로 맞춰야 메시지가 간다.
             var student = StudentStore.Instance.Students.FirstOrDefault(s => s.StudentId == tab.StudentId);
             if (!string.IsNullOrEmpty(student?.SessionId)) tab.SessionId = student.SessionId;
 
-            UnreadCount = Math.Max(0, UnreadCount - tab.UnreadCount);
+            // 전역 배지는 줄들의 합이라 여기서 따로 뺄 것이 없다 — 아래에서 이 줄이 0 이 되면 저절로 준다.
             SelectedTab = tab;
         }
 
@@ -251,11 +273,8 @@ namespace ProfessorUI.ViewModel
                 });
 
                 // 열어 둔 대화가 아니면 안 읽음으로 센다. 보고 있는 대화는 바로 읽은 것이다.
-                if (SelectedTab != tab)
-                {
-                    tab.UnreadCount++;
-                    UnreadCount++;
-                }
+                // 전역 배지는 줄들의 합이라 여기만 올리면 따라 오른다.
+                if (SelectedTab != tab) tab.UnreadCount++;
 
                 // 셸이 새 메시지 도착을 알아채는 목록. 최근 것이 위로 오게 넣는다.
                 RecentMessages.Insert(0, new ChatMessageModel

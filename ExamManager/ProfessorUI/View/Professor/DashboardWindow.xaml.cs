@@ -118,13 +118,13 @@ namespace ProfessorUI.View.Professor
         private void StartWizard_Click(object sender, RoutedEventArgs e)
             => MainWindow.From(this)?.Navigate(new ExamWizard(), 1);
 
-        // 학생 칸의 말풍선. 그 학생과의 1:1 대화를 열어 둔 채 알림·채팅 화면으로 넘어간다.
+        // 학생 칸의 말풍선. 그 학생과의 1:1 대화를 열어 둔 채 채팅 화면으로 넘어간다.
         private void Chat_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as FrameworkElement)?.DataContext is not StudentCardViewModel { Student: { } student }) return;
 
             var tab = _ctx.Chat.GetOrCreateTab(student.StudentId, student.Name, student.SessionId);
-            MainWindow.From(this)?.Navigate(new AlertAndChat(tab), 4);
+            MainWindow.From(this)?.Navigate(new ChatWindow(tab), 4);
         }
 
         // 학생이 언제 들어오고 다시 들어왔는지 쌓아 둔 기록을 띄운다.
