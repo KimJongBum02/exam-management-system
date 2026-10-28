@@ -124,7 +124,20 @@ namespace StudentUI.ViewModel
             {
                 NetworkService.Instance.Disconnect();
 
-                if (rejection == LoginResponsePayload.DuplicateStudentId)
+                if (rejection == LoginService.NoResponse)
+                {
+                    // 포트는 열려 있어 연결은 됐는데 교수 앱이 아니었다(그 포트를 다른 프로그램이 쓰는 경우).
+                    // 학번 탓이 아니므로 학번 칸에는 빨간 글씨를 띄우지 않는다.
+                    MessageBox.Show(
+                        $"{ip}:{port} 에 연결은 되었지만 교수 프로그램이 응답하지 않습니다.\n" +
+                        "다른 프로그램이 같은 포트를 쓰고 있을 수 있습니다.\n\n" +
+                        "교수님께 아래를 확인해 달라고 말씀드려 주세요.\n" +
+                        "  · 교수 프로그램이 켜져 있는지\n" +
+                        "  · 화면 위쪽이 '서버 활성화'인지\n" +
+                        "  · 거기 적힌 포트 번호가 맞는지 (다르면 [포트 변경]으로 바꿉니다)",
+                        "로그인 실패", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                else if (rejection == LoginResponsePayload.DuplicateStudentId)
                 {
                     NumberError = "이미 접속 중인 학번입니다.";
                     MessageBox.Show(

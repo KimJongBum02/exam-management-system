@@ -74,8 +74,9 @@ namespace StudentUI.Service
                     (string Ip, int Port) target = await ProfessorDiscovery.FindAsync(_lastIp) ?? (_lastIp, _lastPort);
                     if (!NetworkService.Instance.Connect(target.Ip, target.Port)) continue;
 
-                    // 회신 없이 3초가 지나도 승인으로 치므로, 그 사이 또 끊겼는지 연결 상태로 한 번 더 본다.
-                    // 그때의 끊김 알림은 이 루프가 도는 중이라 무시됐다.
+                    // 승인 회신을 못 받으면 LoginAsync 가 실패로 돌려준다 — 그 포트를 쓰는 다른 프로그램에
+                    // 붙은 경우가 여기서 걸러진다. 승인을 받았더라도 그 직후 또 끊겼을 수 있어
+                    // 연결 상태를 한 번 더 본다(그때의 끊김 알림은 이 루프가 도는 중이라 무시됐다).
                     string? rejection = await LoginService.LoginAsync(_student);
                     if (rejection == null && _enabled && NetworkService.Instance.IsConnected)
                     {
