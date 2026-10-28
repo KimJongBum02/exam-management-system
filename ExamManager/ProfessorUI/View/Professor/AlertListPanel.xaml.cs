@@ -7,7 +7,7 @@ using ProfessorUI.Common;
 
 namespace ProfessorUI.View.Professor
 {
-    // 부정행위 경고 목록 한 벌. 시험 관리 화면과 알림·채팅 화면에 같이 들어간다.
+    // 부정행위 경고 목록 한 벌. 지금은 시험 관리 화면에만 들어간다.
     public partial class AlertListPanel : UserControl
     {
         public AlertListPanel()

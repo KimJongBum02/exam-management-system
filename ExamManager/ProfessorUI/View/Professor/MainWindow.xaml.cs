@@ -23,7 +23,7 @@ namespace ProfessorUI.View.Professor
         private readonly MenuEntryViewModel _prep = new("시험 준비");
         private readonly MenuEntryViewModel _manage = new("시험 관리");
         // 수업 중에도 채팅·공지를 쓰므로 잠그지 않는다
-        private readonly MenuEntryViewModel _chat = new("알림·채팅");
+        private readonly MenuEntryViewModel _chat = new("채팅");
         private readonly MenuEntryViewModel _policy = new("프로그램 관리");
         private readonly MenuEntryViewModel _settle = new("시험 종료·답안 수집");
         // 시험 단계와 무관한 기능이라 잠그지 않는다
@@ -138,11 +138,14 @@ namespace ProfessorUI.View.Professor
 
         private void OnBadgeSourceChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => UpdateBadges();
 
-        // 알림·채팅: 안 읽은 학생 메시지 + 확인하지 않은 보안 경고.
+        // 채팅: 안 읽은 학생 메시지만 센다.
+        // 보안 경고를 여기 더하지 않는다 — 더했더니 채팅을 다 읽어도 숫자가 남아,
+        // 교수님이 "다 읽었는데 1 이 안 사라진다"고 하셨다. 숫자 하나가 두 가지를 뜻하면 무엇을
+        // 처리해야 하는지 알 수 없다. 경고는 시험 관리 화면의 '미확인 N' 이 맡는다.
         // 시험 종료·답안 수집: 답안을 걷었고 아직 승인하지 않은 학생(시험 중에 먼저 낸 학생 포함).
         private void UpdateBadges()
         {
-            _chat.BadgeCount = _ctx.Chat.UnreadCount + _ctx.Overview.UnreadAlertCount;
+            _chat.BadgeCount = _ctx.Chat.UnreadCount;
             _settle.BadgeCount = _ctx.Overview.ApprovalWaitingCount;
         }
 
@@ -248,7 +251,7 @@ namespace ProfessorUI.View.Professor
             1 => new ExamWizard(),
             2 => new ExamManagePage(),
             3 => new ExamEndWindow(),
-            4 => new AlertAndChat(),
+            4 => new ChatWindow(),
             5 => new ProgramManageWindow(),
             6 => new QuizTab(),
             7 => new ScreenMonitoring(),

@@ -9,9 +9,10 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <!-- 부정행위 경고 목록. 시험 관리 화면과 알림·채팅 화면이 같은 모양을 쓰도록 한 벌만 둔다.
+    <!-- 부정행위 경고 목록. 지금은 시험 관리 화면 한 곳에서만 쓴다(채팅 화면에서 뺐다).
+         한 벌로 둔 것은 다른 화면에 또 놓게 될 때를 위한 것이다.
          화면의 DataContext(UiContext)에서 Overview.Alerts 를 읽는다.
-         높이는 넣는 화면이 정한다 — 시험 관리는 옆 표와 같은 높이, 알림·채팅은 MaxHeight 로 몇 줄만.
+         높이는 넣는 화면이 정한다 — 시험 관리는 옆의 재배포 표와 같은 높이를 준다.
          넘치면 이 안에서 넘긴다 -->
     <Border x:Name="Frame" Style="{StaticResource Card}" Padding="0">
         <Grid>

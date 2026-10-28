@@ -44,12 +44,18 @@ namespace StudentUI.View.StudentExamView
             // 채팅창을 열어 둔 채로 새 말이 오면 맨 아래로 따라 내려간다.
             _chat.Messages.CollectionChanged += OnChatMessagesChanged;
 
+            // 열어 둔 채로 받은 말은 읽은 것으로 처리한다.
+            // 목록 변화(CollectionChanged)가 아니라 이 알림을 쓰는 이유: 목록에 넣은 **뒤에**
+            // 안 읽음 수를 올리므로, 목록 쪽에서 읽음 처리를 하면 곧바로 1 로 되올라간다.
+            _chat.MessageArrived += OnMessageArrivedWhileOpen;
+
             Closed += (_, _) =>
             {
                 _clock.Stop();
                 NetworkService.Instance.Connected -= OnConnected;
                 NetworkService.Instance.Disconnected -= OnDisconnected;
                 _chat.Messages.CollectionChanged -= OnChatMessagesChanged;
+                _chat.MessageArrived -= OnMessageArrivedWhileOpen;
             };
 
             // 처음에는 화면 오른쪽 위에 둔다. 겹치면 끌어서 옮기면 된다.
@@ -95,6 +101,17 @@ namespace StudentUI.View.StudentExamView
         {
             if (e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Add) return;
             ScrollChatToEnd();
+        }
+
+        // 채팅 패널을 펼쳐 둔 채로 말이 오면 바로 읽은 것으로 보고 교수에게 '읽음'을 돌려보낸다.
+        // 이게 없으면 학생이 채팅을 보고 있는데도 배지가 1, 2, 3 으로 쌓인다.
+        // 시험 화면에도 같은 처리가 있지만(StudentExamViewModel.OnChatMessageArrived) 그쪽은
+        // 주 창의 드로어만 본다 — 자유 모드에서는 주 창이 숨어 있어 이 창이 따로 챙겨야 한다.
+        //
+        // 창이 숨어 있으면(통제 · 시험 모드) 펼쳐만 두었을 뿐 보고 있는 것이 아니므로 세어 둔다.
+        private void OnMessageArrivedWhileOpen()
+        {
+            if (IsVisible && ChatPanel.Visibility == Visibility.Visible) _chat.MarkAsRead();
         }
 
         // 말풍선이 그려진 뒤라야 끝까지 내려간다(시험 화면의 채팅과 같은 이유로 Loaded 우선순위).

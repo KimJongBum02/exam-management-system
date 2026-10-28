@@ -77,7 +77,9 @@
         </UniformGrid>
 
         <!-- 보안 경고 | 재배포 대상.
-             채팅은 알림·채팅 화면에서 보므로 여기서는 이 둘만 반씩 크게 쓴다.
+             채팅은 채팅 화면에서 보므로 여기서는 이 둘만 반씩 크게 쓴다.
+             보안 경고를 볼 수 있는 곳은 이 화면뿐이다 — 경고는 시험이 시작된 뒤에만 쌓이고
+             이 메뉴도 그때 열리므로 못 보는 구간은 없다.
              두 칸의 높이를 맞추고, 경고가 쌓이거나 학생이 많으면 각자 안에서 넘긴다 -->
         <Grid Grid.Row="2" Height="560">
             <Grid.ColumnDefinitions>
@@ -86,7 +88,7 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- 왼쪽: 보안 경고. 목록은 알림·채팅 화면과 같은 것을 쓴다(AlertListPanel) -->
+            <!-- 왼쪽: 보안 경고 (AlertListPanel) -->
             <Grid Grid.Column="0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
