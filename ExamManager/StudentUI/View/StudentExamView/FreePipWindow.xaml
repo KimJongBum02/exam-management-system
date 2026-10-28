@@ -10,39 +10,299 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/StudentUI;component/FontSizes.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+
+            <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+            <!-- 알림·채팅 단추. 어두운 카드 위에 올라가므로 밝은 공용 단추 모양을 쓰지 않는다.
+                 누르는 느낌은 색이 아니라 흐려짐으로 준다 — 전송 단추(파랑)에도 같은 모양을 쓰기 때문이다. -->
+            <Style x:Key="PipButton" TargetType="Button">
+                <Setter Property="Background" Value="#1E293B"/>
+                <Setter Property="Foreground" Value="#94A3B8"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Height" Value="34"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FontSize" Value="{StaticResource FontSmall}"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Body" Background="{TemplateBinding Background}" CornerRadius="9">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Body" Property="Opacity" Value="0.8"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
         </ResourceDictionary>
     </Window.Resources>
 
-    <!-- 자유 시간 동안 바탕화면 위에 떠 있는 작은 창. 최소 정보(이름·학번·시각·연결)만 보여 준다.
-         몸통을 끌어서 옮길 수 있다(코드 비하인드) -->
+    <!-- 자유 시간 동안 바탕화면 위에 떠 있는 작은 창. 이름·학번·시각·연결과
+         교수의 알림·채팅을 보여 준다. 몸통을 끌어서 옮길 수 있다(코드 비하인드).
+
+         알림·채팅이 여기 붙은 이유: 자유 모드에서는 주 창(StudentExamWindow)이 숨고 이 창만 뜬다.
+         채팅과 공지는 그 주 창에 달려 있어 함께 가려지므로, 교수가 보낸 말도 공지도 학생에게 닿지 않았다.
+
+         폭을 묶어 둔 이유: 패널을 펼칠 때 카드 폭이 바뀌면 오른쪽 위에 붙여 둔 창이 화면 밖으로 밀려 나간다.
+         폭이 고정이면 아래로만 자란다(화면 아래로 넘치는 것은 코드 비하인드가 끌어올린다).
+
+         ── 색 ──  학생이 밝은 편집기 위에 이 창을 몇십 분씩 올려 두므로, 어두운 카드라야
+         '내 문서가 아니라 시스템 창'으로 갈라 보인다. 흰 바탕은 학생 앱에서 모달 몫이다(공지·퀴즈·제출 확인).
+
+           바탕  #0F172A 카드 · 펼침 패널 (경계는 테두리 #334155 로만 낸다)
+                 #1E293B 말풍선 · 단추 · 입력칸 (카드보다 한 칸 밝다)
+           글자  #F1F5F9 읽는 것 — 시계 · 이름 · 말풍선 글 · 입력
+                 #94A3B8 곁들이는 것 — 연결 상태 · 시각 · 이름표 · 빈 상태 · 전원 기호
+                 #EF4444 손을 올린 전원 기호 · 연결 끊김 점 (평소에는 쓰지 않는다)
+
+         두 단계로 줄인 이유: 예전에 가장 흐린 글자로 쓰던 #64748B 가 이 바탕 위에서 3.1~3.9:1 이라
+         기준(4.5:1)에 못 미쳤다. 강의실 모니터는 밝기가 제각각이라 그 글자는 실제로 안 보인다.
+         #F1F5F9 도 순백(#F8FAFC)에서 한 칸 내린 것이다 — 어두운 바탕 위 순백은 글자가 번져 보여 오래 보기 나쁘다.
+         값을 바꿀 때는 ExamTimerPipWindow 와 함께 바꿔야 두 PIP 가 한 식구로 남는다. -->
     <Border Background="#0F172A" CornerRadius="16" Padding="22,16" Margin="12"
-            BorderBrush="#334155" BorderThickness="1" MinWidth="240">
+            BorderBrush="#334155" BorderThickness="1" Width="320">
         <Border.Effect>
             <DropShadowEffect Color="#000000" Opacity="0.35" ShadowDepth="3" BlurRadius="18"/>
         </Border.Effect>
 
         <StackPanel>
-            <!-- 연결 상태 + 닫기 -->
+            <!-- 연결 상태 + 전원 -->
             <Grid>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Ellipse x:Name="ConnDot" Width="9" Height="9" Fill="#EF4444" VerticalAlignment="Center" Margin="0,0,7,0"/>
                     <TextBlock x:Name="ConnText" Text="서버 미연결" FontSize="{StaticResource FontSmall}"
                                Foreground="#94A3B8" VerticalAlignment="Center"/>
                 </StackPanel>
-                <Button Content="✕" Click="OnClose" HorizontalAlignment="Right" ToolTip="프로그램 종료"
-                        Background="Transparent" BorderThickness="0" Foreground="#64748B"
-                        FontSize="{StaticResource FontSmall}" FontWeight="Bold" Cursor="Hand" Padding="6,0,0,0"/>
+
+                <!-- 전원 — 이 PC 를 끈다. PC방 클라이언트와 같은 자리(카드 오른쪽 위)에 둔다.
+                     글꼴에 전원 기호(⏻)가 없는 PC 가 있어 글자 대신 선으로 그린다.
+                     평소에는 곁들임 색이고 손을 올려야 빨개진다 — 누르기 직전에만 '위험한 단추'로 보이면 된다. -->
+                <Button Click="OnPowerOff" HorizontalAlignment="Right" VerticalAlignment="Center"
+                        ToolTip="컴퓨터 종료" Cursor="Hand" Background="Transparent" BorderThickness="0">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Body" Background="Transparent" CornerRadius="8" Padding="6,4">
+                                <Path x:Name="Icon" Stroke="#94A3B8" StrokeThickness="1.8"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                      Data="M 8,1.6 L 8,8 M 4.11,5.11 A 5.5,5.5 0 1 0 11.89,5.11"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Icon" Property="Stroke" Value="#EF4444"/>
+                                    <Setter TargetName="Body" Property="Background" Value="#1E293B"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
             </Grid>
 
             <!-- 이름 · 학번 -->
             <TextBlock x:Name="InfoText" Text="학생" FontSize="{StaticResource FontLarge}" FontWeight="Bold"
-                       Foreground="#F8FAFC" Margin="0,10,0,0"/>
+                       Foreground="#F1F5F9" Margin="0,10,0,0"/>
 
             <!-- 현재 시각 -->
             <TextBlock x:Name="ClockText" Text="00:00:00" FontSize="34" FontWeight="Bold"
-                       Foreground="#F8FAFC" FontFamily="Consolas, Segoe UI" Margin="0,4,0,2"/>
+                       Foreground="#F1F5F9" FontFamily="Consolas, Segoe UI" Margin="0,4,0,2"/>
 
-            <TextBlock Text="자유 이용 중" FontSize="{StaticResource FontSmall}" Foreground="#64748B"/>
+            <TextBlock Text="자유 이용 중" FontSize="{StaticResource FontSmall}" Foreground="#94A3B8"/>
+
+            <!-- ══ 알림 · 채팅 ══ -->
+            <Border BorderBrush="#334155" BorderThickness="0,1,0,0" Margin="0,14,0,0" Padding="0,14,0,0">
+                <StackPanel>
+                    <!-- 좁은 카드라 한 번에 하나만 편다(코드 비하인드) -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0" Style="{StaticResource PipButton}" Click="OnToggleNotice">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🔔 알림" VerticalAlignment="Center"/>
+                                <Border Background="#EF4444" CornerRadius="9" Padding="6,1" Margin="6,0,0,0"
+                                        VerticalAlignment="Center"
+                                        Visibility="{Binding HasUnreadNotices, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="{Binding UnreadNoticeCount}" FontSize="{StaticResource FontTiny}"
+                                               FontWeight="Bold" Foreground="White"/>
+                                </Border>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Grid.Column="2" Style="{StaticResource PipButton}" Click="OnToggleChat">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="💬 채팅" VerticalAlignment="Center"/>
+                                <Border Background="#2563EB" CornerRadius="9" Padding="6,1" Margin="6,0,0,0"
+                                        VerticalAlignment="Center"
+                                        Visibility="{Binding HasUnreadMessages, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="{Binding UnreadCount}" FontSize="{StaticResource FontTiny}"
+                                               FontWeight="Bold" Foreground="White"/>
+                                </Border>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <!-- 알림 패널 — 교수가 보낸 공지 기록 -->
+                    <Border x:Name="NoticePanel" Visibility="Collapsed" Margin="0,10,0,0"
+                            Background="#0F172A" BorderBrush="#334155" BorderThickness="1" CornerRadius="10">
+                        <!-- 채팅 칸과 마찬가지로 높이를 고정한다. 두 패널을 번갈아 눌러도 카드가 들썩이지 않아야 한다.
+                             채팅 쪽은 아래에 입력칸(55)이 더 붙으므로, 여기가 그만큼 더 커야 두 패널의 키가 같아진다.
+                             355 = 채팅 칸 300 + 입력칸 55. -->
+                        <ScrollViewer Height="355" VerticalScrollBarVisibility="Auto" Padding="10">
+                            <Grid>
+                                <TextBlock Text="받은 공지가 없습니다." Foreground="#94A3B8"
+                                           FontSize="{StaticResource FontSmall}" HorizontalAlignment="Center"
+                                           VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <!-- 목록의 Count 를 직접 본다. 따로 둔 bool 을 보면 공지를 넣는 자리마다
+                                             손으로 알려 줘야 하고, 한 군데만 빠뜨려도 공지가 있는데 '없습니다'가 뜬다
+                                             (ObservableCollection 은 Count 변화를 스스로 알린다). 채팅 쪽도 같은 방식이다. -->
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Notices.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+
+                                <ItemsControl ItemsSource="{Binding Notices}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#1E293B" CornerRadius="8" Padding="12,10" Margin="0,0,0,8">
+                                                <StackPanel>
+                                                    <Grid Margin="0,0,0,4">
+                                                        <!-- 중요 공지는 교수가 내릴 때까지 상단에 붙어 있던 것이라 구분해 둔다 -->
+                                                        <TextBlock Text="중요 공지" FontSize="{StaticResource FontTiny}"
+                                                                   FontWeight="Bold" Foreground="#FBBF24" HorizontalAlignment="Left"
+                                                                   Visibility="{Binding IsImportant, Converter={StaticResource BoolToVis}}"/>
+                                                        <TextBlock Text="{Binding DisplayTime}" FontSize="{StaticResource FontTiny}"
+                                                                   Foreground="#94A3B8" HorizontalAlignment="Right"/>
+                                                    </Grid>
+                                                    <TextBlock Text="{Binding Message}" TextWrapping="Wrap"
+                                                               FontSize="{StaticResource FontSmall}" Foreground="#F1F5F9"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
+                        </ScrollViewer>
+                    </Border>
+
+                    <!-- 채팅 패널 — 시험 화면의 메신저와 같은 SharedChatViewModel 을 본다 -->
+                    <Border x:Name="ChatPanel" Visibility="Collapsed" Margin="0,10,0,0"
+                            Background="#0F172A" BorderBrush="#334155" BorderThickness="1" CornerRadius="10">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- 높이를 고정한다. 내용 크기에 맡기면 말이 한두 마디일 때 칸이 납작해져
+                                 대화를 하는 느낌이 나지 않고, 말이 올 때마다 떠 있는 창이 커졌다 작아졌다 한다.
+                                 300 은 한 줄짜리 말 다섯 마디가 들어가는 높이다
+                                 (말풍선 한 줄 38 + 줄 간격 6, 말하는 사람이 바뀌는 줄엔 이름표 20 이 더 붙는다). -->
+                            <ScrollViewer x:Name="ChatScroll" Grid.Row="0" Height="300"
+                                          VerticalScrollBarVisibility="Auto" Padding="10">
+                                <Grid>
+                                    <!-- 칸 높이를 고정했으므로 빈 문구는 가운데에 둔다(위에 붙으면 빈 자리가 더 커 보인다) -->
+                                    <TextBlock Text="교수님과 주고받은 말이 없습니다." Foreground="#94A3B8"
+                                               FontSize="{StaticResource FontSmall}" TextWrapping="Wrap"
+                                               TextAlignment="Center" HorizontalAlignment="Center"
+                                               VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Messages.Count}" Value="0">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+
+                                    <ItemsControl ItemsSource="{Binding Messages}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,3">
+                                                    <!-- 교수가 보낸 말 — 왼쪽. 같은 사람이 이어 말하면 이름을 다시 적지 않는다 -->
+                                                    <StackPanel x:Name="Theirs" HorizontalAlignment="Left" Margin="0,0,20,0">
+                                                        <TextBlock Text="교수님" FontSize="{StaticResource FontTiny}"
+                                                                   Foreground="#94A3B8" Margin="2,0,0,3"
+                                                                   Visibility="{Binding ShowSender, Converter={StaticResource BoolToVis}}"/>
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <!-- 말풍선이 더 넓으면 옆의 시각이 카드 밖으로 밀려 잘린다 -->
+                                                            <Border Background="#1E293B" CornerRadius="12,12,12,4" Padding="12,9" MaxWidth="170">
+                                                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap"
+                                                                           FontSize="{StaticResource FontSmall}" Foreground="#F1F5F9"/>
+                                                            </Border>
+                                                            <TextBlock Text="{Binding DisplayTime}" FontSize="{StaticResource FontTiny}"
+                                                                       Foreground="#94A3B8" VerticalAlignment="Bottom" Margin="6,0,0,2"/>
+                                                        </StackPanel>
+                                                    </StackPanel>
+
+                                                    <!-- 내가 보낸 말 — 오른쪽 -->
+                                                    <StackPanel x:Name="Mine" Orientation="Horizontal" HorizontalAlignment="Right"
+                                                                Margin="20,0,0,0" Visibility="Collapsed">
+                                                        <TextBlock Text="{Binding DisplayTime}" FontSize="{StaticResource FontTiny}"
+                                                                   Foreground="#94A3B8" VerticalAlignment="Bottom" Margin="0,0,6,2"/>
+                                                        <Border Background="#2563EB" CornerRadius="12,12,4,12" Padding="12,9" MaxWidth="170">
+                                                            <TextBlock Text="{Binding Message}" TextWrapping="Wrap"
+                                                                       FontSize="{StaticResource FontSmall}" Foreground="White"/>
+                                                        </Border>
+                                                    </StackPanel>
+                                                </Grid>
+                                                <DataTemplate.Triggers>
+                                                    <DataTrigger Binding="{Binding IsMine}" Value="True">
+                                                        <Setter TargetName="Theirs" Property="Visibility" Value="Collapsed"/>
+                                                        <Setter TargetName="Mine" Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </DataTemplate.Triggers>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </ScrollViewer>
+
+                            <!-- 입력칸. 다른 입력칸과 같이 한글 자판으로 시작한다 -->
+                            <Border Grid.Row="1" BorderBrush="#334155" BorderThickness="0,1,0,0" Padding="10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Border Grid.Column="0" Background="#1E293B" CornerRadius="17" Padding="14,0" Height="34">
+                                        <TextBox x:Name="ChatInput"
+                                                 Text="{Binding InputMessage, UpdateSourceTrigger=PropertyChanged}"
+                                                 InputMethod.PreferredImeState="On" InputMethod.PreferredImeConversionMode="Native"
+                                                 Background="Transparent" BorderThickness="0" CaretBrush="#F1F5F9"
+                                                 VerticalContentAlignment="Center" FontSize="{StaticResource FontSmall}"
+                                                 Foreground="#F1F5F9">
+                                            <TextBox.InputBindings>
+                                                <KeyBinding Key="Enter" Command="{Binding SendMessageCommand}"/>
+                                            </TextBox.InputBindings>
+                                        </TextBox>
+                                    </Border>
+
+                                    <Button Grid.Column="1" Style="{StaticResource PipButton}" Content="전송"
+                                            Background="#2563EB" Foreground="White" Width="52" Margin="8,0,0,0"
+                                            Command="{Binding SendMessageCommand}"/>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </Border>
 </Window>
