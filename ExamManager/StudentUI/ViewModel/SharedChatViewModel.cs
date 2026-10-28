@@ -88,6 +88,46 @@ namespace StudentUI.ViewModel
 
         public bool HasImportantNotice => _importantNotice.Length > 0;
 
+        // ── 받은 공지 기록 ──
+        // 전체 공지는 팝업으로 한 번 지나가고 중요 공지는 상단 한 줄로만 보인다. 둘 다 그 화면을
+        // 보고 있어야 읽히는데, 자유 모드에서는 시험 화면이 통째로 숨어 있어 읽을 길이 없다.
+        // 여기 쌓아 두면 자유 모드 PIP 의 알림 패널이 나중에라도 보여 줄 수 있다.
+        // 최근 것이 위로 오도록 앞에 넣는다.
+        // 비어 있는지는 화면이 Notices.Count 를 직접 본다 — 따로 bool 을 두면 넣고 비우는 자리마다
+        // 손으로 알려 줘야 하고, 한 군데만 빠뜨려도 공지가 있는데 '없습니다'가 뜬다.
+        public ObservableCollection<NoticeModel> Notices { get; } = new ObservableCollection<NoticeModel>();
+
+        // 알림 패널을 열어 보기 전까지 쌓인 공지 수. 버튼의 배지로 보인다.
+        private int _unreadNoticeCount;
+        public int UnreadNoticeCount
+        {
+            get => _unreadNoticeCount;
+            private set
+            {
+                _unreadNoticeCount = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasUnreadNotices));
+            }
+        }
+
+        public bool HasUnreadNotices => _unreadNoticeCount > 0;
+
+        public void MarkNoticesAsRead() => UnreadNoticeCount = 0;
+
+        // 화면 스레드에서만 부른다(ObservableCollection).
+        private void AddNotice(string message, bool important)
+        {
+            if (message.Length == 0) return;   // 중요 공지를 내린 것은 공지가 아니다
+
+            Notices.Insert(0, new NoticeModel
+            {
+                Message = message,
+                Timestamp = DateTime.Now,
+                IsImportant = important,
+            });
+            UnreadNoticeCount++;
+        }
+
         private SharedChatViewModel()
         {
             _messages = new ObservableCollection<ChatMessageModel>();
@@ -106,6 +146,8 @@ namespace StudentUI.ViewModel
             UnreadCount = 0;
             _unreadChatIds.Clear();
             ImportantNotice = string.Empty;
+            Notices.Clear();
+            UnreadNoticeCount = 0;
         }
 
         // 말하는 사람이 바뀌었는지. 바뀐 첫 줄에만 얼굴과 이름을 그린다.
@@ -168,6 +210,7 @@ namespace StudentUI.ViewModel
                 // 전체 공지는 채팅에 쌓지 않고 팝업으로 띄운다 — 채팅창을 열어 보지 않아도 읽게 된다.
                 if (isNotice)
                 {
+                    AddNotice(message, important: false);   // 팝업을 닫은 뒤에도 다시 읽을 수 있게 남긴다
                     NoticeArrived?.Invoke(message);
                     ExamManager.Shared.UiSignal.FlashTaskbar();
                     return;
@@ -203,6 +246,7 @@ namespace StudentUI.ViewModel
                 if (notice == ImportantNotice) return;
 
                 ImportantNotice = notice;
+                AddNotice(notice, important: true);   // 내린 공지(빈 문자열)는 AddNotice 가 걸러 낸다
                 if (notice.Length > 0) ExamManager.Shared.UiSignal.FlashTaskbar();
             });
         }
