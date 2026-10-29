@@ -38,6 +38,9 @@
     <!-- 지우는 링크처럼 작은 글씨로 위험을 알릴 때. AlertRed 보다 진해 작게 써도 읽힌다 (7.77:1) -->
     <SolidColorBrush x:Key="AlertStrong"   Color="#A31818"/>
 
+    <!-- 대화 말풍선. 검정보다 옅어 글이 빽빽해도 답답하지 않다 (흰 글씨 9.52:1) -->
+    <SolidColorBrush x:Key="BubbleDark"    Color="#3F4651"/>
+
     <conv:DoneTextConverter x:Key="DoneText"/>
     <SolidColorBrush x:Key="AlertSoft"     Color="#FCE6E6"/>
     <!-- 중요 공지(상단바 가운데). 학생 앱 상단의 중요 공지와 같은 색이다 -->
@@ -346,6 +349,22 @@
         <Setter Property="AcceptsReturn" Value="True"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
         <Setter Property="VerticalContentAlignment" Value="Top"/>
+    </Style>
+
+    <!-- 채팅 입력칸. 말풍선과 같은 곡률이라 주고받는 자리가 한 덩어리로 보인다.
+         NoteBox 는 메모·퀴즈 보기 칸도 함께 쓰고 있어 채팅용만 따로 둔다. -->
+    <Style x:Key="ChatInputBox" TargetType="TextBox" BasedOn="{StaticResource NoteBox}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border Background="White" CornerRadius="16"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- 체크박스도 테마 색을 벗겨내고 검은 네모로 통일한다 -->
