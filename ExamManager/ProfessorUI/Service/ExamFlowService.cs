@@ -91,8 +91,10 @@ namespace ProfessorUI.Service
                 ProcessListPayload.Encode(ProgramControlStore.WhiteList, ProgramControlStore.BlackList));
         }
 
-        // ── 학생 승인 ──
-        // 고른 학생을 승인하고 승인한 수를 돌려준다.
+        // ── 학생 확인 완료 처리 ──
+        // 고른 학생을 '확인 완료'로 기록하고 그 수를 돌려준다.
+        // **학생 PC 를 건드리지 않는다** — 흔적 삭제는 학생이 답안 회신을 받은 뒤 스스로 한다.
+        // 2026-09-22 교수님 지시로 여기 있던 PC 종료(셧다운)를 들어내고 기록만 남겼다.
         // 시험 흔적 삭제는 답안 회신을 받은 학생 쪽에서 이미 진행된다.
         public int ApproveStudents(IEnumerable<StudentStatusViewModel> students)
         {

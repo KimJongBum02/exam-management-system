@@ -61,17 +61,25 @@ namespace ProfessorUI.ViewModel
         public int ApprovedCount { get; private set; }
         public string CompletionRate { get; private set; } = "0%";
 
-        // 답안을 걷었고 아직 흔적 삭제를 승인하지 않은 학생. 시험 중에 먼저 낸 학생도 여기 든다.
+        // 답안을 걷었고 교수가 아직 확인 처리하지 않은 학생. 시험 중에 먼저 낸 학생도 여기 든다.
         // 시험 종료·답안 수집 메뉴 배지가 이 수를 보인다.
         public int ApprovalWaitingCount => CollectedCount - ApprovedCount;
+
+        // 지금 체크돼 있고 확인 처리할 수 있는 학생 수. 버튼에 "누르면 몇 명이 처리되는지"를 그대로 적는다.
+        // 체크(IsSelected)가 바뀌면 학생 줄이 알리고 Recount 가 돌아 이 값도 다시 읽힌다.
+        public int ApproveSelectedCount => Students.Count(s => s.IsSelected && s.CanApprove);
 
         // ── 화면에 그대로 나갈 문구 ──
         // 단위까지 붙여 둔다. 변환기를 두지 않기 위함이다.
         public string ConnectedText => $"{ConnectedCount} / {TotalCount}";
         public string CollectedText => $"{CollectedCount} / {TotalCount}";
         public string LastUpdatedText { get; private set; } = "-";
-        public string ApproveTargetText => $"흔적 삭제 ({CollectedCount}명)";
-        public string EndSummaryText => $"승인 완료 {ApprovedCount}명 · 미수집 {NotCollectedCount}명 · 정리 실패 {CleanupFailedCount}명";
+        // 이 버튼은 **지우지 않는다.** 흔적 삭제는 학생이 답안 회신을 받은 뒤 스스로 하고
+        // (AnswerSubmitService.CleanupExamFiles), 여기서는 교수가 그 결과를 확인했다고 기록만 한다.
+        // 예전 문구가 "흔적 삭제 (N명)"이라 누르면 지워지는 것처럼 읽혔고, N 도 체크와 무관한
+        // 수집 완료 인원이라 "2명 지운다"처럼 보이는데 체크를 안 하면 0명이 처리됐다.
+        public string ApproveTargetText => $"확인 완료 처리 ({ApproveSelectedCount}명)";
+        public string EndSummaryText => $"확인 완료 {ApprovedCount}명 · 미수집 {NotCollectedCount}명 · 정리 실패 {CleanupFailedCount}명";
 
         private void OnStudentsChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {

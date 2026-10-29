@@ -30,7 +30,50 @@ namespace ProfessorUI.View.Professor
                 student.IsSelected = selected && student.CanApprove;
         }
 
-        private void ShowSummary_Click(object sender, RoutedEventArgs e)
-            => MainWindow.From(this)?.Navigate(new ExamResultWindow(), 3);
+        // 모든 과정이 끝났으니 다음 시험을 위해 상태를 되돌린다.
+        // 단계가 Waiting 이 되면서 시험 관리 / 시험 종료·답안 수집 메뉴가 다시 잠긴다.
+        // (종료 완료 현황 화면에 있던 것을 이리로 옮겼다 — 그 화면은 없앴다)
+        private void RestartSession_Click(object sender, RoutedEventArgs e)
+        {
+            // 시험 종료·답안 수집은 먼저 낸 학생을 승인하려고 시험 중에도 열린다.
+            // 시험 중에 초기화하면 아직 푸는 학생들이 있는데 시험 단계가 대기로 돌아가므로 막는다.
+            if (ExamState.CurrentPhase < NetworkLib.ExamPhase.SubmitRequested)
+            {
+                MessageBox.Show("시험이 아직 진행 중입니다. 시험 관리 화면에서 시험을 종료한 뒤 초기화하십시오.",
+                    "새 시험 준비", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // 확인 완료로 처리하지 않은 학생이 남아 있으면 초기화하지 않는다.
+            // 초기화는 학생별 기록을 모두 지우므로, 남은 학생이 있으면 누가 남았는지 알 길이 사라진다.
+            // 특히 '흔적 삭제'가 오류인 학생을 못 보고 넘어가면 다음 사람이 앞사람 답안을 보게 된다.
+            int waiting = _ctx.Overview.Students.Count(s => s.CanApprove);
+            if (waiting > 0)
+            {
+                MessageBox.Show(
+                    $"아직 확인 완료로 처리하지 않은 학생이 {waiting}명 있습니다.\n" +
+                    "위 표에서 확인하고 모두 처리한 뒤에 초기화하십시오.",
+                    "새 시험 준비", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // 답안을 내지 않은 학생은 확인 처리 자체가 안 되므로 초기화를 막지는 않는다.
+            // 다만 그대로 지워지는 것이라 몇 명이 그런지 미리 알린다.
+            int notCollected = _ctx.Overview.Students.Count(s => !s.IsAnswerSubmitted);
+            string note = notCollected > 0
+                ? $"\n\n답안을 내지 않은 학생 {notCollected}명은 확인 처리할 수 없어 그대로 초기화됩니다."
+                : string.Empty;
+
+            var confirm = MessageBox.Show(
+                "시험 단계와 학생별 진행 상태를 초기화합니다.\n걷은 답안 파일은 그대로 남습니다." + note +
+                "\n계속하시겠습니까?",
+                "새 시험 준비", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (confirm != MessageBoxResult.Yes) return;
+
+            // 학생별 기록·경고·시험 단계 되돌리기는 ExamFlowService 가 맡는다.
+            ExamFlowService.Instance.ResetForNextExam();
+
+            MainWindow.From(this)?.Navigate(new DashboardWindow(), 0);
+        }
     }
 }
