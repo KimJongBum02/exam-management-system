@@ -15,9 +15,14 @@ namespace StudentUI.View.StudentExamView
         {
             InitializeComponent();
 
-            // 이 큰 창은 '시험' 상태일 때만 화면에 뜬다(시작 전=덮개, 시작 후=일반 작업 창).
-            // 자유·통제에서는 숨어 있고, 자유에서는 작은 PIP 창(FreePipWindow)이 대신 떠 있다.
+            // 이 큰 창은 '시험' 상태의 앞뒤에만 덮개로 뜬다(시작 전=대기, 끝난 뒤=종료 잠금).
+            // 시험이 도는 동안과 자유·통제에서는 숨어 있고, 자유에서는 작은 PIP 창(FreePipWindow)이 대신 떠 있다.
             // 로그인 직후 큰 창이 번쩍이지 않도록, 보이지 않게(최소화) 시작한다.
+            //
+            // ShowActivated 를 false 로 둔 채 이 창을 **최대화 상태로 보이게 하면 안 된다** —
+            // WPF 가 "ShowActivated가 false이고 WindowState가 Maximized로 설정되어 있으면 창을 표시할 수
+            // 없습니다"로 막고, 화면 스레드 예외라 학생 앱이 그대로 죽는다(2026-10-28 에 겪었다).
+            // 지금은 보이는 모습이 전부 덮개(WindowState.Normal + 직접 크기 지정)라 걸릴 일이 없다.
             ShowActivated = false;
             WindowState = WindowState.Minimized;
             Width = 1180; Height = 720;
@@ -31,6 +36,10 @@ namespace StudentUI.View.StudentExamView
             Closed += (_, _) => { _freePip?.Close(); _freePip = null; };
             // 로그인 직후 현재 상태(기본 자유)에 맞춰 화면을 잡는다.
             Loaded += (_, _) => UpdatePresentation();
+
+            // 답안을 내고 시험 파일 정리까지 끝나면 이 학생의 시험은 완전히 끝이다. 덮개를 걷고 앱을 닫는다.
+            Service.AnswerSubmitService.Instance.CleanupFinished += OnCleanupFinished;
+            Closed += (_, _) => Service.AnswerSubmitService.Instance.CleanupFinished -= OnCleanupFinished;
 
             // 교수의 채팅·공지가 오면 채팅 버튼을 깜빡인다.
             SharedChatViewModel.Instance.MessageArrived += OnMessageArrived;
@@ -140,11 +149,14 @@ namespace StudentUI.View.StudentExamView
         // 화면 전환에 의한 닫힘이면 true — 이때는 종료 확인창을 띄우지 않는다.
         public bool IsNavigating { get; set; }
 
+        // 제출·정리를 마치고 스스로 닫는 중. 이때도 종료 확인창을 묻지 않는다.
+        private bool _finishing;
+
         // 창을 닫으면 앱이 그대로 종료되고 수신한 시험 파일 상태도 사라지므로,
-        // 사용자가 직접 닫을 때만(전환이 아닐 때) 실수 방지 확인을 한 번 한다.
+        // 사용자가 직접 닫을 때만(전환도 아니고 마무리도 아닐 때) 실수 방지 확인을 한 번 한다.
         protected override void OnClosing(CancelEventArgs e)
         {
-            if (IsNavigating)
+            if (IsNavigating || _finishing)
             {
                 base.OnClosing(e);
                 return;
@@ -160,6 +172,50 @@ namespace StudentUI.View.StudentExamView
             base.OnClosing(e);
         }
 
+        // ── 제출·정리를 마친 뒤의 마무리 ──
+        // 몇 초 세고 덮개를 걷은 뒤 앱을 닫는다. 앱이 닫히면 키보드 잠금과 인터넷 차단도 함께 풀려
+        // (App.OnExit) 그 PC 가 자유로워진다.
+        private const int FarewellSeconds = 5;
+        private System.Windows.Threading.DispatcherTimer? _farewellTimer;
+        private int _farewellLeft;
+
+        // 제출을 끝낸 배경 작업에서 올라오므로 화면 스레드로 넘긴다.
+        private void OnCleanupFinished(bool cleaned) => UiThread.Post(() =>
+        {
+            // 파일을 지우지 못했으면 덮개를 걷지 않는다. 시험 파일이 남아 있어 교수가 그 자리를
+            // 확인해야 하는데, 앱을 닫아 버리면 다음 학생이 앞사람 답안을 그대로 보게 된다.
+            // 종료 화면의 상태 줄이 "교수님께 알려 주세요"로 남는다(AnswerSubmitService).
+            if (!cleaned || _farewellTimer != null) return;
+
+            FarewellBox.Visibility = Visibility.Visible;
+            _farewellLeft = FarewellSeconds;
+            ShowFarewellCount();
+
+            _farewellTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            _farewellTimer.Tick += OnFarewellTick;
+            _farewellTimer.Start();
+        });
+
+        private void OnFarewellTick(object? sender, EventArgs e)
+        {
+            _farewellLeft--;
+            if (_farewellLeft > 0) { ShowFarewellCount(); return; }
+
+            _farewellTimer!.Stop();
+            _farewellTimer.Tick -= OnFarewellTick;
+            _farewellTimer = null;
+
+            // 덮개부터 걷는다. 맨 위에 뜬 창을 띄워 둔 채로 끝내면 닫히는 동안 화면을 가린다.
+            _finishing = true;
+            Topmost = false;
+            Visibility = Visibility.Hidden;
+
+            Application.Current.Shutdown();
+        }
+
+        private void ShowFarewellCount()
+            => FarewellCount.Text = $"{_farewellLeft}초 뒤 프로그램이 닫힙니다. 수고하셨습니다.";
+
         private FreePipWindow? _freePip;
 
         private void OnClassModeChanged(ClassMode mode) => UpdatePresentation();
@@ -172,16 +228,24 @@ namespace StudentUI.View.StudentExamView
         }
 
         // 지금 상태 + 시험 진행 여부에 맞춰 큰 창의 모습을 정한다.
-        //   자유            → 숨김 + 작은 PIP 창
-        //   통제            → 숨김(서비스의 어두운 덮개가 가린다)
-        //   시험, 시작 전    → 전체화면 덮개(대기 화면, 파일은 받는다)
-        //   시험, 시작 후    → 일반 작업 창(작업표시줄·바탕화면 복귀, 파일 열고 제출)
+        //   자유             → 숨김 + 작은 PIP 창
+        //   통제             → 숨김(서비스의 어두운 덮개가 가린다)
+        //   시험, 시작 전     → 전체화면 덮개(대기 화면, 파일은 받는다)
+        //   시험, 진행 중     → 숨김 + 남은 시간·제출 PIP 만
+        //   시험, 끝난 뒤     → 전체화면 덮개(종료 잠금 화면에서 답안을 낸다)
         private void UpdatePresentation()
         {
             switch (Service.ClassControlService.Instance.CurrentMode)
             {
                 case ClassMode.Exam:
-                    if (ExamStarted()) PresentExamWorking();
+                    // 시험이 도는 동안에만 큰 창을 숨긴다. 그때 학생에게 필요한 것은 남은 시간과 제출뿐이고
+                    // 그 둘은 PIP 가 들고 있다(아래 wantPip). 큰 창까지 띄우면 시작하는 순간 덮개가
+                    // 전체 작업 창으로 바뀌어 바탕화면을 가리고, PIP 와 둘 다 떠 있게 된다.
+                    //
+                    // 앞뒤로는 덮개다 — 시작 전에는 대기 화면, 끝난 뒤에는 종료 잠금 화면(IsExamEnded)이
+                    // 덮개를 가득 채운다. 끝난 뒤를 덮개로 두어야 늦게 내는 학생이 [답안 제출]을 찾을 수 있고,
+                    // 시험이 끝난 PC 가 그대로 열린 바탕화면이 되지 않는다.
+                    if (Service.ExamTimeStore.Instance.IsRunning) PresentHidden();
                     else PresentCover();
                     break;
                 case ClassMode.Locked:
@@ -200,10 +264,6 @@ namespace StudentUI.View.StudentExamView
             else HideExamPip();
         }
 
-        // 교수가 '시험 시작'을 누른 뒤인지(진행 중이거나 이미 끝나 제출 대기인지).
-        private static bool ExamStarted()
-            => Service.ExamTimeStore.Instance.IsRunning || Service.ExamTimeStore.Instance.IsFinished;
-
         // 자유: 큰 창을 숨기고 작은 PIP 창만 띄운다.
         // 숨어 있는 동안 WindowState 를 Normal 로 정착시켜 둔다 — 덮개로 넘어갈 때
         // Minimized→Normal 복원이 비동기로 걸려 전체화면 크기를 덮어쓰는 것을 막는다.
@@ -215,7 +275,9 @@ namespace StudentUI.View.StudentExamView
             ShowFreePip();
         }
 
-        // 통제: 큰 창도 PIP 도 숨긴다. 화면은 서비스가 띄우는 어두운 덮개가 가린다.
+        // 큰 창도 자유 PIP 도 숨긴다. 두 자리에서 쓴다 —
+        //   통제: 화면은 서비스가 띄우는 어두운 덮개가 가린다.
+        //   시험 진행 중: 남은 시간·제출 PIP 만 남기고 바탕화면을 비워 준다.
         private void PresentHidden()
         {
             Topmost = false;
@@ -237,28 +299,6 @@ namespace StudentUI.View.StudentExamView
             Topmost = true;
             Visibility = Visibility.Visible;
             ApplyFullScreenBounds();        // 최대화 등에서 온 경우, 보인 뒤 복원 크기를 다시 덮어쓴다
-            Activate();
-        }
-
-        // 시험 진행: 일반 작업 창으로 되돌린다. 작업표시줄·바탕화면이 보여 학생이 파일을 열어 시험을 치르고,
-        // 창을 최소화했다가 다시 띄워 '답안 제출'을 누를 수 있다(기존 시험 흐름 그대로).
-        private void PresentExamWorking()
-        {
-            _freePip?.Hide();
-            Topmost = false;
-            WindowStyle = WindowStyle.SingleBorderWindow;
-            ResizeMode = ResizeMode.CanResize;
-
-            // 보이기 전에 ShowActivated 를 되돌린다.
-            // 이 창은 로그인 직후 번쩍이지 않으려고 ShowActivated=false 로 만들어지는데(생성자),
-            // WPF 는 그 상태인 창을 최대화한 채로 보이게 하는 것을 막는다
-            // ("ShowActivated가 false이고 WindowState가 Maximized로 설정되어 있으면 창을 표시할 수 없습니다").
-            // 화면 스레드에서 나는 예외라 그대로 학생 앱이 죽었다 — 시험 모드와 시험 시작이 모두 참이 되는
-            // 순간(여기로 오는 유일한 길)마다 터졌다. 시험 작업 창은 어차피 앞으로 나와야 하므로 true 로 둔다.
-            ShowActivated = true;
-
-            WindowState = WindowState.Maximized;
-            Visibility = Visibility.Visible;
             Activate();
         }
 

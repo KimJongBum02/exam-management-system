@@ -814,6 +814,20 @@
                         </Button.Resources>
                     </Button>
 
+                    <!-- 시험 파일 정리까지 끝난 뒤의 마무리 안내 + 남은 초.
+                         문구는 코드 비하인드가 넣는다(BeginFarewell). 정리에 실패하면 뜨지 않는다 —
+                         그때는 파일이 남아 있어 교수가 그 자리를 확인해야 하므로 덮개를 걷지 않는다. -->
+                    <Border x:Name="FarewellBox" Visibility="Collapsed"
+                            Background="#064E3B" CornerRadius="10" Padding="18,14" Margin="0,20,0,0">
+                        <StackPanel>
+                            <TextBlock Text="제출과 시험 파일 정리가 모두 끝났습니다."
+                                       TextAlignment="Center" Foreground="#D1FAE5"
+                                       FontSize="{StaticResource FontStrong}" FontWeight="Bold"/>
+                            <TextBlock x:Name="FarewellCount" TextAlignment="Center" Foreground="#6EE7B7"
+                                       FontSize="{StaticResource FontBody}" Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Border>
+
                     <!-- 하단 구분선 -->
                     <Rectangle Height="1" Fill="#334155" Margin="0,24,0,20"/>
 
