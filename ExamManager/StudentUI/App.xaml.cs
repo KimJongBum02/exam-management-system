@@ -196,7 +196,13 @@ namespace StudentUI
                 }
 
                 nextWindow.Closed += OnCurrentWindowClosed;
-                nextWindow.Show();
+
+                // 시험 창은 Show() 로 무조건 띄우지 않는다. 자유·통제·시험 중에는 숨어 있어야 하는데,
+                // 띄운 뒤 숨기면 내용을 그리기 전의 검은 창이 잠깐 보인다(StudentExamWindow.Present 참고).
+                if (nextWindow is StudentUI.View.StudentExamView.StudentExamWindow examWindowToShow)
+                    examWindowToShow.Present();
+                else
+                    nextWindow.Show();
             }
         }
 

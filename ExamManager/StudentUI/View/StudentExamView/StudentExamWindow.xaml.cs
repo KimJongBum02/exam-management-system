@@ -17,14 +17,13 @@ namespace StudentUI.View.StudentExamView
 
             // 이 큰 창은 '시험' 상태의 앞뒤에만 덮개로 뜬다(시작 전=대기, 끝난 뒤=종료 잠금).
             // 시험이 도는 동안과 자유·통제에서는 숨어 있고, 자유에서는 작은 PIP 창(FreePipWindow)이 대신 떠 있다.
-            // 로그인 직후 큰 창이 번쩍이지 않도록, 보이지 않게(최소화) 시작한다.
+            // 숨어 있어야 할 때는 이 창을 아예 띄우지 않는다 — App 이 Show() 대신 Present() 를 부른다.
             //
             // ShowActivated 를 false 로 둔 채 이 창을 **최대화 상태로 보이게 하면 안 된다** —
             // WPF 가 "ShowActivated가 false이고 WindowState가 Maximized로 설정되어 있으면 창을 표시할 수
             // 없습니다"로 막고, 화면 스레드 예외라 학생 앱이 그대로 죽는다(2026-10-28 에 겪었다).
             // 지금은 보이는 모습이 전부 덮개(WindowState.Normal + 직접 크기 지정)라 걸릴 일이 없다.
             ShowActivated = false;
-            WindowState = WindowState.Minimized;
             Width = 1180; Height = 720;
 
             // 상태 전환(자유·통제·시험) + 시험 시작/종료에 따라 덮개·작업창·숨김·PIP 을 전환한다.
@@ -34,8 +33,6 @@ namespace StudentUI.View.StudentExamView
             Closed += (_, _) => Service.ExamTimeStore.Instance.PropertyChanged -= OnExamTimeChanged;
             // 자유 PIP 창도 큰 창이 닫힐 때 함께 정리한다.
             Closed += (_, _) => { _freePip?.Close(); _freePip = null; };
-            // 로그인 직후 현재 상태(기본 자유)에 맞춰 화면을 잡는다.
-            Loaded += (_, _) => UpdatePresentation();
 
             // 답안을 내고 시험 파일 정리까지 끝나면 이 학생의 시험은 완전히 끝이다. 덮개를 걷고 앱을 닫는다.
             Service.AnswerSubmitService.Instance.CleanupFinished += OnCleanupFinished;
@@ -227,6 +224,14 @@ namespace StudentUI.View.StudentExamView
                 UpdatePresentation();
         }
 
+        // 로그인 직후 App 이 Show() 대신 이것을 부른다. 지금 상태에 맞는 모습만 띄운다.
+        //
+        // Show() 를 부르면 WPF 가 실제 창을 만들어 화면에 올린다. 그 뒤에 숨겨도 이미 늦어,
+        // 내용을 그리기 전의 검은 창이 0.2초쯤 떴다 사라졌다(2026-10-29 사용자가 발견).
+        // 숨길 창은 만들지 않는 것이 유일하게 확실한 방법이다. 덮개가 필요해지면 PresentCover 가
+        // 그때 띄운다 — WPF 에서 Visibility 를 Visible 로 주는 것은 Show() 를 부르는 것과 같다.
+        public void Present() => UpdatePresentation();
+
         // 지금 상태 + 시험 진행 여부에 맞춰 큰 창의 모습을 정한다.
         //   자유             → 숨김 + 작은 PIP 창
         //   통제             → 숨김(서비스의 어두운 덮개가 가린다)
@@ -265,12 +270,10 @@ namespace StudentUI.View.StudentExamView
         }
 
         // 자유: 큰 창을 숨기고 작은 PIP 창만 띄운다.
-        // 숨어 있는 동안 WindowState 를 Normal 로 정착시켜 둔다 — 덮개로 넘어갈 때
-        // Minimized→Normal 복원이 비동기로 걸려 전체화면 크기를 덮어쓰는 것을 막는다.
+        // 아직 한 번도 뜬 적이 없으면 Visibility 를 Hidden 으로 두는 것만으로 창이 만들어지지 않는다.
         private void PresentFree()
         {
             Topmost = false;
-            WindowState = WindowState.Normal;
             Visibility = Visibility.Hidden;
             ShowFreePip();
         }
@@ -281,7 +284,6 @@ namespace StudentUI.View.StudentExamView
         private void PresentHidden()
         {
             Topmost = false;
-            WindowState = WindowState.Normal;
             Visibility = Visibility.Hidden;
             _freePip?.Hide();
         }
