@@ -126,7 +126,14 @@ namespace StudentUI.ViewModel
                 IsImportant = important,
             });
             UnreadNoticeCount++;
+            NoticeAdded?.Invoke();
         }
+
+        // 공지가 하나 쌓였다. 알림 패널을 펼쳐 둔 화면이 바로 읽음 처리하는 데 쓴다.
+        // 안 읽음 수를 올린 **뒤에** 알린다 — 먼저 알리면 읽음 처리가 곧바로 1 로 되올라간다.
+        // 전체 공지와 중요 공지 둘 다 AddNotice 를 거치므로 여기 한 곳이면 된다.
+        // 이미 화면 스레드에서 불린다(AddNotice 는 UiThread.Post 안에서만 쓴다).
+        public event Action? NoticeAdded;
 
         private SharedChatViewModel()
         {

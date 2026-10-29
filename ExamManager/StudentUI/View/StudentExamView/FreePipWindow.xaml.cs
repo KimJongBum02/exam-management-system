@@ -48,12 +48,14 @@ namespace StudentUI.View.StudentExamView
             // 목록 변화(CollectionChanged)가 아니라 이 알림을 쓰는 이유: 목록에 넣은 **뒤에**
             // 안 읽음 수를 올리므로, 목록 쪽에서 읽음 처리를 하면 곧바로 1 로 되올라간다.
             _chat.MessageArrived += OnMessageArrivedWhileOpen;
+            _chat.NoticeAdded += OnNoticeAddedWhileOpen;
 
             Closed += (_, _) =>
             {
                 _clock.Stop();
                 NetworkService.Instance.Connected -= OnConnected;
                 NetworkService.Instance.Disconnected -= OnDisconnected;
+                _chat.NoticeAdded -= OnNoticeAddedWhileOpen;
                 _chat.Messages.CollectionChanged -= OnChatMessagesChanged;
                 _chat.MessageArrived -= OnMessageArrivedWhileOpen;
             };
@@ -112,6 +114,13 @@ namespace StudentUI.View.StudentExamView
         private void OnMessageArrivedWhileOpen()
         {
             if (IsVisible && ChatPanel.Visibility == Visibility.Visible) _chat.MarkAsRead();
+        }
+
+        // 알림 패널도 같다 — 펼쳐 둔 채로 공지가 오면 바로 읽은 것으로 본다.
+        // 채팅과 달리 교수에게 돌려보낼 '읽음'은 없다(공지 수신 회신은 받는 즉시 따로 나간다).
+        private void OnNoticeAddedWhileOpen()
+        {
+            if (IsVisible && NoticePanel.Visibility == Visibility.Visible) _chat.MarkNoticesAsRead();
         }
 
         // 말풍선이 그려진 뒤라야 끝까지 내려간다(시험 화면의 채팅과 같은 이유로 Loaded 우선순위).
