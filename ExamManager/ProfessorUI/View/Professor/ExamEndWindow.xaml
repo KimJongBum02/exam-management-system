@@ -18,15 +18,16 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 제목과 종료 완료 현황 버튼을 한 줄에 둔다 (마지막 갱신·서버 상태는 상단바에 있다) -->
+        <!-- 제목 (마지막 갱신·서버 상태는 상단바에 있다).
+             [종료 완료 현황 보기]로 따로 넘어가던 화면은 없앴다 — 거기서만 보이던 '흔적 삭제'는
+             아래 표의 칸으로, [처음 화면으로]는 이 화면 맨 아래로 옮겼다. 한 화면에서 끝낸다. -->
         <Grid Grid.Row="0" Margin="0,0,0,18">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock Text="시험 종료 및 답안 수집" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
             </StackPanel>
-            <Button Content="종료 완료 현황 보기" Style="{StaticResource SecondaryButton}"
-                    HorizontalAlignment="Right" Click="ShowSummary_Click"/>
         </Grid>
 
         <!-- KPI 5종 -->
@@ -87,10 +88,10 @@
         <ListView Grid.Row="4" x:Name="CollectTable" Style="{StaticResource FlatTable}" Height="360" Margin="0,0,0,12">
             <ListView.View>
                 <GridView ColumnHeaderContainerStyle="{StaticResource TableHeader}">
-                    <GridViewColumn Header="승인 대상" Width="90">
+                    <GridViewColumn Header="확인 대상" Width="90">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
-                                <!-- 미수집·이미 승인한 학생은 고를 수 없게 막는다. 줄은 남겨 수집 현황은 계속 보이게 한다 -->
+                                <!-- 미수집·이미 처리한 학생은 고를 수 없게 막는다. 줄은 남겨 수집 현황은 계속 보이게 한다 -->
                                 <CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding CanApprove}"
                                           Style="{StaticResource CellCheck}"/>
                             </DataTemplate>
@@ -114,6 +115,13 @@
                     <GridViewColumn Header="수집 상태" Width="130">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate><TextBlock Text="{Binding CollectText}" Style="{StaticResource CellStatus}"/></DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <!-- 흔적 삭제. 답안을 걷은 뒤 학생 PC 에 시험 파일이 남았는지다 — '오류'면 그 자리에 가 봐야 한다.
+                         수집 바로 옆에 둔다(수집 → 흔적 삭제 순서로 읽힌다) -->
+                    <GridViewColumn Header="흔적 삭제" Width="130">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate><TextBlock Text="{Binding CleanupText}" Style="{StaticResource CellStatus}"/></DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
                     <GridViewColumn Header="제출 시각" Width="190">
@@ -143,14 +151,27 @@
                     HorizontalAlignment="Right" Command="{Binding ExamEnd.ApproveSelectedCommand}"/>
         </Grid>
 
-        <!-- 승인 조건 -->
-        <Border Grid.Row="6" Style="{StaticResource Card}">
+        <!-- 확인 완료 처리 안내. 이 버튼이 지우는 버튼이 아니라는 것을 여기서 못 박는다 -->
+        <Border Grid.Row="6" Style="{StaticResource Card}" Margin="0,0,0,24">
             <StackPanel>
-                <TextBlock Text="승인 조건 안내" Style="{StaticResource FieldLabel}" Margin="0,0,0,14"/>
+                <TextBlock Text="확인 완료 처리 안내" Style="{StaticResource FieldLabel}" Margin="0,0,0,14"/>
                 <TextBlock Style="{StaticResource Body}" Margin="0,0,0,10"
-                           Text="승인은 답안 수집이 끝난 학생에게만 적용되며, 시험 중에 먼저 제출한 학생도 바로 승인할 수 있습니다. 시험 흔적은 학생이 답안 회신을 받은 뒤 스스로 지웁니다."/>
+                           Text="[확인 완료 처리]는 학생 PC 를 건드리지 않습니다. 시험 흔적은 학생이 답안 회신을 받은 뒤 스스로 지우며, 그 결과가 위 표의 '흔적 삭제' 칸에 나옵니다. 이 버튼은 교수가 그 결과를 확인했다고 기록만 남깁니다."/>
+                <TextBlock Style="{StaticResource Body}" Margin="0,0,0,10"
+                           Text="기록을 남겨야 왼쪽 메뉴의 빨간 숫자가 내려가고, 아래 [처음 화면으로]가 열립니다. 답안 수집이 끝난 학생만 고를 수 있으며, 시험 중에 먼저 제출한 학생도 바로 처리할 수 있습니다. 이 작업은 되돌릴 수 없습니다."/>
                 <TextBlock Style="{StaticResource Body}"
-                           Text="미수집 학생은 선택해도 승인 대상에서 제외됩니다. 이 작업은 되돌릴 수 없습니다."/>
+                           Text="표의 '흔적 삭제'가 오류면 답안은 받았지만 학생 PC 에 시험 파일이 남아 있다는 뜻입니다. 다음 사람이 앉기 전에 그 자리에서 직접 확인해 주세요."/>
+            </StackPanel>
+        </Border>
+
+        <!-- 다음 시험 준비. 모든 일이 끝난 뒤 누르는 마무리라 맨 아래 오른쪽에 둔다 -->
+        <Border Grid.Row="7" Style="{StaticResource Card}" Background="{StaticResource BgSubtle}">
+            <StackPanel>
+                <TextBlock Text="다음 시험 준비" Style="{StaticResource FieldLabel}" Margin="0,0,0,10"/>
+                <TextBlock Style="{StaticResource Body}" Margin="0,0,0,18"
+                           Text="모든 학생을 확인 완료로 처리한 뒤에 초기화할 수 있습니다. 처음 화면으로 돌아가면 시험 단계와 학생별 진행 상태가 초기화되며, 걷은 답안 파일은 지워지지 않습니다."/>
+                <Button Content="처음 화면으로 (새 시험 준비)" Style="{StaticResource PrimaryButton}"
+                        HorizontalAlignment="Right" Click="RestartSession_Click"/>
             </StackPanel>
         </Border>
     </Grid>

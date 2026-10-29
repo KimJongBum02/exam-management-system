@@ -28,7 +28,10 @@ namespace ProfessorUI.ViewModel
         public ExamEndViewModel()
         {
             EndExamCommand = new UiCommand(ExecuteEndExam, canExecute: o => IsContainerEnabled && !IsExamEnded);
-            ApproveSelectedCommand = new UiCommand(ExecuteApproveSelected);
+            // 고른 학생이 없으면 누를 수 없다. 누를 수 있는데 아무 일도 안 일어나면 고장으로 보인다.
+            ApproveSelectedCommand = new UiCommand(
+                ExecuteApproveSelected,
+                canExecute: o => Students.Any(s => s.IsSelected && s.CanApprove));
             RecollectCommand = new UiCommand(ExecuteRecollect, canExecute: o => IsExamEnded);
 
             ExamState.StateChanged += () =>
@@ -76,22 +79,28 @@ namespace ProfessorUI.ViewModel
                 result.Offline.Count > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
         }
 
-        // [흔적 삭제] 버튼.
-        // 승인은 ExamFlowService 가 맡고, 여기서는 대상 고르기와 결과 안내만 한다.
+        // [확인 완료 처리] 버튼.
+        // **지우는 버튼이 아니다** — 흔적 삭제는 학생이 답안 회신을 받은 뒤 스스로 한다
+        // (AnswerSubmitService.CleanupExamFiles). 여기서는 교수가 그 학생의 수집·정리 결과를
+        // 확인했다고 기록만 남긴다. 그 기록이 왼쪽 메뉴 배지와 [처음 화면으로] 잠금의 근거가 된다.
         private void ExecuteApproveSelected(object obj)
         {
             var targets = Students.Where(s => s.IsSelected && s.IsAnswerSubmitted && !s.IsApproved).ToList();
 
+            // 버튼이 비활성이라 보통은 여기까지 오지 않는다. 다시 묻는 시점이 어긋나 눌린 경우만 막는다.
             if (!targets.Any())
             {
-                MessageBox.Show("승인할 대상이 선택되지 않았거나, 수집 완료된 항목이 없습니다.", "알림", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("확인 처리할 학생이 선택되지 않았습니다. 표에서 학생을 고른 뒤 눌러 주세요.",
+                                "알림", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
             int approved = ExamFlowService.Instance.ApproveStudents(targets);
 
-            // 표의 비고 칸만 바뀌어서는 승인이 됐는지 알아채기 어렵다. 결과를 창으로 알린다.
-            MessageBox.Show($"{approved}명을 승인했습니다.", "승인 완료", MessageBoxButton.OK, MessageBoxImage.Information);
+            // 표의 비고 칸만 바뀌어서는 처리됐는지 알아채기 어렵다. 결과를 창으로 알린다.
+            MessageBox.Show($"{approved}명을 확인 완료로 처리했습니다.\n" +
+                            "학생 PC 의 시험 파일은 학생이 답안을 낼 때 이미 지워졌습니다.",
+                            "확인 완료", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         // 승인이 끝났다고 해서 상태를 초기화하지 않는다.
