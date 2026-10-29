@@ -243,42 +243,62 @@
                                         <!-- 누가 한 말인지는 자리로 가른다 — 상대는 왼쪽, 내 말은 오른쪽.
                                              줄 전체를 늘려 두고 그 안의 묶음만 한쪽으로 붙인다. -->
                                         <Grid Margin="0,0,0,14">
-                                            <StackPanel x:Name="Column" HorizontalAlignment="Left" MaxWidth="440">
-                                                <Grid Margin="4,0,4,5">
-                                                    <TextBlock x:Name="Sender" Text="{Binding SenderName}"
-                                                               FontSize="{StaticResource FontSmall}"
-                                                               Foreground="{StaticResource TextSecondary}"/>
-                                                    <TextBlock x:Name="Time" Text="{Binding DisplayTime}" Style="{StaticResource Caption}"
-                                                               HorizontalAlignment="Right" Margin="12,0,0,0"/>
+                                            <StackPanel x:Name="Column" HorizontalAlignment="Left">
+                                                <!-- 이름만 한 줄로 둔다.
+                                                     시각을 이름과 같은 줄에 좌·우로 붙이면 그 줄의 폭이 말풍선을 따라가,
+                                                     말이 길면 둘 사이가 벌어지고 짧으면 겹친다. 시각은 말풍선 옆으로 보냈다. -->
+                                                <TextBlock x:Name="Sender" Text="{Binding SenderName}"
+                                                           HorizontalAlignment="Left" Margin="4,0,4,5"
+                                                           FontSize="{StaticResource FontSmall}"
+                                                           Foreground="{StaticResource TextSecondary}"/>
+
+                                                <!-- 말풍선과 그 끝에 붙는 시각·읽음. 학생 화면의 채팅과 같은 모양이다.
+                                                     폭이 자리를 따라 변하지 않도록 둘 다 Auto 칸에 담고,
+                                                     내 말일 때는 칸 번호만 바꿔 시각을 바깥쪽(왼쪽)으로 보낸다. -->
+                                                <Grid x:Name="BubbleRow" HorizontalAlignment="Left">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <!-- 꼬리 쪽 모서리만 덜 둥글려 말하는 쪽을 가리킨다.
+                                                         긴 말은 여기서 접힌다 — 폭 제한을 묶음이 아니라 말풍선에 걸어야
+                                                         옆의 시각이 밀려 나가지 않는다.
+                                                         390 인 이유: 옆에 붙는 시각·읽음(약 50)까지 합쳐 한 줄이 440 을 넘지 않아야
+                                                         오른쪽 스크롤바에 닿지 않는다 -->
+                                                    <Border x:Name="Bubble" Grid.Column="0" MaxWidth="390"
+                                                            Background="{StaticResource BubbleDark}"
+                                                            CornerRadius="16,16,16,5" Padding="15,11">
+                                                        <TextBlock Text="{Binding Message}" FontSize="{StaticResource FontBody}"
+                                                                   Foreground="White" TextWrapping="Wrap" LineHeight="23"/>
+                                                    </Border>
+
+                                                    <!-- 읽음은 내가 보낸 1:1 메시지에만 값이 있다. 나머지는 빈 줄이라 자리를 차지하지 않는다 -->
+                                                    <StackPanel x:Name="Meta" Grid.Column="1"
+                                                                VerticalAlignment="Bottom" Margin="7,0,0,3">
+                                                        <TextBlock x:Name="ReadState" Text="{Binding ReadStateText}"
+                                                                   HorizontalAlignment="Left" Style="{StaticResource Caption}"/>
+                                                        <TextBlock x:Name="Time" Text="{Binding DisplayTime}"
+                                                                   HorizontalAlignment="Left" Style="{StaticResource Caption}"/>
+                                                    </StackPanel>
                                                 </Grid>
-
-                                                <!-- 꼬리 쪽 모서리만 덜 둥글려 말하는 쪽을 가리킨다 -->
-                                                <Border x:Name="Bubble" Background="{StaticResource BubbleDark}"
-                                                        CornerRadius="16,16,16,5" Padding="15,11">
-                                                    <TextBlock Text="{Binding Message}" FontSize="{StaticResource FontBody}"
-                                                               Foreground="White" TextWrapping="Wrap" LineHeight="23"/>
-                                                </Border>
-
-                                                <!-- 내가 보낸 1:1 메시지에만 값이 있다. 나머지는 빈 줄이라 보이지 않는다 -->
-                                                <TextBlock x:Name="ReadState" Text="{Binding ReadStateText}"
-                                                           Style="{StaticResource Caption}"
-                                                           HorizontalAlignment="Right" Margin="0,4,4,0"/>
                                             </StackPanel>
                                         </Grid>
 
                                         <DataTemplate.Triggers>
                                             <DataTrigger Binding="{Binding IsMine}" Value="True">
                                                 <Setter TargetName="Column" Property="HorizontalAlignment" Value="Right"/>
+                                                <Setter TargetName="BubbleRow" Property="HorizontalAlignment" Value="Right"/>
                                                 <Setter TargetName="Bubble" Property="Background" Value="{StaticResource BtnPrimary}"/>
                                                 <Setter TargetName="Bubble" Property="CornerRadius" Value="16,16,5,16"/>
                                                 <!-- 말풍선이 오른쪽에 붙으므로 이름도 그쪽 끝으로 보내고,
-                                                     시각과 읽음 표시는 반대쪽인 왼쪽에 둔다 -->
+                                                     시각·읽음은 말풍선 바깥쪽인 왼쪽에 붙인다 -->
                                                 <Setter TargetName="Sender" Property="HorizontalAlignment" Value="Right"/>
-                                                <Setter TargetName="Sender" Property="Margin" Value="12,0,0,0"/>
-                                                <Setter TargetName="Time" Property="HorizontalAlignment" Value="Left"/>
-                                                <Setter TargetName="Time" Property="Margin" Value="0,0,12,0"/>
-                                                <Setter TargetName="ReadState" Property="HorizontalAlignment" Value="Left"/>
-                                                <Setter TargetName="ReadState" Property="Margin" Value="4,4,0,0"/>
+                                                <Setter TargetName="Bubble" Property="Grid.Column" Value="1"/>
+                                                <Setter TargetName="Meta" Property="Grid.Column" Value="0"/>
+                                                <Setter TargetName="Meta" Property="Margin" Value="0,0,7,3"/>
+                                                <Setter TargetName="ReadState" Property="HorizontalAlignment" Value="Right"/>
+                                                <Setter TargetName="Time" Property="HorizontalAlignment" Value="Right"/>
                                             </DataTrigger>
                                         </DataTemplate.Triggers>
                                     </DataTemplate>
