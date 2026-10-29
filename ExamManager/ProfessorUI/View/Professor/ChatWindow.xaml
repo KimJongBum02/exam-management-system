@@ -233,30 +233,61 @@
                             Click="CloseConversation_Click"/>
                     <TextBlock x:Name="ConversationTitle" Style="{StaticResource SectionTitle}"/>
                     <Border Style="{StaticResource Card}" Padding="16">
-                        <ScrollViewer x:Name="ConversationScroll" Height="420" VerticalScrollBarVisibility="Auto">
+                        <!-- 가로 스크롤을 막아야 한다. 열어 두면 줄이 가로로 끝없이 늘어나,
+                                 오른쪽에 붙인 내 말풍선이 보이는 자리 밖으로 밀려난다 -->
+                        <ScrollViewer x:Name="ConversationScroll" Height="420" VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
                             <ItemsControl x:Name="MessageList">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <StackPanel Margin="0,0,0,14">
-                                            <Grid Margin="0,0,0,4">
-                                                <TextBlock Text="{Binding SenderName}" FontSize="{StaticResource FontBody}"
-                                                           Foreground="{StaticResource TextPrimary}"/>
-                                                <TextBlock Text="{Binding DisplayTime}" Style="{StaticResource Caption}"
-                                                           HorizontalAlignment="Right"/>
-                                            </Grid>
-                                            <TextBlock Text="{Binding Message}" Style="{StaticResource Body}"
-                                                       Foreground="{StaticResource TextSecondary}"/>
-                                            <!-- 내가 보낸 1:1 메시지에만 값이 있다. 나머지는 빈 줄이라 보이지 않는다 -->
-                                            <TextBlock Text="{Binding ReadStateText}" Style="{StaticResource Caption}"
-                                                       HorizontalAlignment="Right" Margin="0,3,0,0"/>
-                                        </StackPanel>
+                                        <!-- 누가 한 말인지는 자리로 가른다 — 상대는 왼쪽, 내 말은 오른쪽.
+                                             줄 전체를 늘려 두고 그 안의 묶음만 한쪽으로 붙인다. -->
+                                        <Grid Margin="0,0,0,14">
+                                            <StackPanel x:Name="Column" HorizontalAlignment="Left" MaxWidth="440">
+                                                <Grid Margin="4,0,4,5">
+                                                    <TextBlock x:Name="Sender" Text="{Binding SenderName}"
+                                                               FontSize="{StaticResource FontSmall}"
+                                                               Foreground="{StaticResource TextSecondary}"/>
+                                                    <TextBlock x:Name="Time" Text="{Binding DisplayTime}" Style="{StaticResource Caption}"
+                                                               HorizontalAlignment="Right" Margin="12,0,0,0"/>
+                                                </Grid>
+
+                                                <!-- 꼬리 쪽 모서리만 덜 둥글려 말하는 쪽을 가리킨다 -->
+                                                <Border x:Name="Bubble" Background="{StaticResource BubbleDark}"
+                                                        CornerRadius="16,16,16,5" Padding="15,11">
+                                                    <TextBlock Text="{Binding Message}" FontSize="{StaticResource FontBody}"
+                                                               Foreground="White" TextWrapping="Wrap" LineHeight="23"/>
+                                                </Border>
+
+                                                <!-- 내가 보낸 1:1 메시지에만 값이 있다. 나머지는 빈 줄이라 보이지 않는다 -->
+                                                <TextBlock x:Name="ReadState" Text="{Binding ReadStateText}"
+                                                           Style="{StaticResource Caption}"
+                                                           HorizontalAlignment="Right" Margin="0,4,4,0"/>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding IsMine}" Value="True">
+                                                <Setter TargetName="Column" Property="HorizontalAlignment" Value="Right"/>
+                                                <Setter TargetName="Bubble" Property="Background" Value="{StaticResource BtnPrimary}"/>
+                                                <Setter TargetName="Bubble" Property="CornerRadius" Value="16,16,5,16"/>
+                                                <!-- 말풍선이 오른쪽에 붙으므로 이름도 그쪽 끝으로 보내고,
+                                                     시각과 읽음 표시는 반대쪽인 왼쪽에 둔다 -->
+                                                <Setter TargetName="Sender" Property="HorizontalAlignment" Value="Right"/>
+                                                <Setter TargetName="Sender" Property="Margin" Value="12,0,0,0"/>
+                                                <Setter TargetName="Time" Property="HorizontalAlignment" Value="Left"/>
+                                                <Setter TargetName="Time" Property="Margin" Value="0,0,12,0"/>
+                                                <Setter TargetName="ReadState" Property="HorizontalAlignment" Value="Left"/>
+                                                <Setter TargetName="ReadState" Property="Margin" Value="4,4,0,0"/>
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </ScrollViewer>
                     </Border>
                     <!-- 학생에게 보내는 말은 늘 한글이라 칸에 들어오는 순간 한글 자판으로 바꾼다(한영키를 먼저 누르지 않아도 되게) -->
-                    <TextBox x:Name="MessageBox" Height="72" Style="{StaticResource NoteBox}" Margin="0,14,0,0"
+                    <TextBox x:Name="MessageBox" Height="72" Style="{StaticResource ChatInputBox}" Margin="0,14,0,0"
                              InputMethod.PreferredImeState="On" InputMethod.PreferredImeConversionMode="Native"
                              Text="{Binding Chat.InputMessage, UpdateSourceTrigger=PropertyChanged}"
                              PreviewKeyDown="MessageBox_PreviewKeyDown"/>
