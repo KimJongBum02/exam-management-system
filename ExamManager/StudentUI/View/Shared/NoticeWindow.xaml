@@ -25,8 +25,8 @@
                        Margin="0,0,0,14"/>
 
             <!-- 공지 본문. 길어질 수 있어 남는 공간을 다 쓴다 -->
-            <TextBlock Grid.Row="1" x:Name="NoticeText" FontSize="16" Foreground="#1E293B"
-                       TextWrapping="Wrap" LineHeight="26" VerticalAlignment="Center"/>
+            <TextBox Grid.Row="1" x:Name="NoticeText" Style="{StaticResource SelectableText}"
+                     FontSize="16" Foreground="#1E293B" VerticalAlignment="Center"/>
 
             <Button Grid.Row="2" Content="확인" Click="Confirm_Click"
                     HorizontalAlignment="Center" Margin="0,20,0,0"
