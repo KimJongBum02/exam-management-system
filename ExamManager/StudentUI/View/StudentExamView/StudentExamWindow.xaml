@@ -647,8 +647,8 @@
                                                         <StackPanel Orientation="Horizontal">
                                                             <Border Background="White" BorderBrush="#E2E8F0" BorderThickness="1"
                                                                     CornerRadius="14,14,14,4" Padding="14,10" MaxWidth="230">
-                                                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap"
-                                                                           FontSize="{StaticResource FontBody}" Foreground="#1E293B" LineHeight="22"/>
+                                                                <TextBox Text="{Binding Message}" Style="{StaticResource SelectableText}"
+                                                                         FontSize="{StaticResource FontBody}" Foreground="#1E293B"/>
                                                             </Border>
                                                             <TextBlock Text="{Binding DisplayTime}" FontSize="{StaticResource FontTiny}" Foreground="#94A3B8"
                                                                        VerticalAlignment="Bottom" Margin="7,0,0,2"/>
@@ -662,8 +662,8 @@
                                                     <TextBlock Text="{Binding DisplayTime}" FontSize="{StaticResource FontTiny}" Foreground="#94A3B8"
                                                                VerticalAlignment="Bottom" Margin="0,0,7,2"/>
                                                     <Border Background="#2563EB" CornerRadius="14,14,4,14" Padding="14,10" MaxWidth="230">
-                                                        <TextBlock Text="{Binding Message}" TextWrapping="Wrap"
-                                                                   FontSize="{StaticResource FontBody}" Foreground="White" LineHeight="22"/>
+                                                        <TextBox Text="{Binding Message}" Style="{StaticResource SelectableTextOnDark}"
+                                                                 FontSize="{StaticResource FontBody}" Foreground="White"/>
                                                     </Border>
                                                 </StackPanel>
                                             </Grid>

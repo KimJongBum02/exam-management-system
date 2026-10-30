@@ -54,6 +54,119 @@
             </Setter>
         </Style>
 
+        <!-- 보기만 하는 글이지만 드래그로 골라 복사할 수 있어야 하는 자리(채팅 말풍선·공지).
+             교수가 공지·채팅으로 명령어를 보내 주면 학생이 실습 도구에 붙여넣어야 하기 때문이다.
+             WPF 의 TextBlock 은 글 선택을 지원하지 않아서, 읽기 전용 TextBox 를 글처럼 보이게 만들어 쓴다
+             틀(테두리·바탕)을 전부 없애 겉보기는 TextBlock 과 같게 만든다.
+             스크롤바를 Disabled 로 막아 내부 스크롤이 생기지 않게 한다 — 그래야 마우스 휠이
+             이 글에서 멈추지 않고 바깥 대화 목록으로 그대로 흘러간다.
+             글자 크기·색은 쓰는 자리에서 정한다(말풍선은 흰 글씨, 공지는 검은 글씨라 한 벌로 묶을 수 없다). -->
+        <Style x:Key="SelectableText" TargetType="TextBox">
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <ScrollViewer x:Name="PART_ContentHost" Focusable="False"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      VerticalScrollBarVisibility="Disabled"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 어두운 바탕 위 흰 글씨용. 기본 선택 색은 파랑이라 파란 말풍선 위에서 고른 데가 안 보인다 -->
+        <Style x:Key="SelectableTextOnDark" TargetType="TextBox" BasedOn="{StaticResource SelectableText}">
+            <Setter Property="SelectionBrush" Value="White"/>
+            <Setter Property="SelectionOpacity" Value="0.35"/>
+        </Style>
+
+        <!-- 윈도우 기본 스크롤바는 화살표 단추가 달린 회색 막대라 두 앱 어디에도 어울리지 않는다.
+             단추를 없애고 얇고 둥근 막대만 남긴다. 트랙은 비워 둬 내용이 가려지지 않게 한다.
+
+             색은 쓰는 자리에서 갈아 끼울 수 있도록 ScrollBar 의 빈 속성에 얹었다 —
+               Foreground  = 평소 막대 색
+               BorderBrush = 마우스를 올리거나 끌 때 색
+             스크롤바에는 글자도 테두리도 없어 둘 다 쓰이지 않는 자리다. 어두운 칸에서는
+             이 둘만 바꿔 쓰면 된다(FreePipWindow 처럼). Style 로 준 값은 물려받은 값보다 세므로,
+             Foreground 가 위에서 내려오는 칸 안에서도 막대가 엉뚱한 색이 되지 않는다. -->
+        <Style x:Key="ScrollTrackButton" TargetType="RepeatButton">
+            <!-- 막대 위·아래의 빈 자리. 보이지 않지만 눌러서 한 쪽씩 넘길 수 있어야 한다 -->
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border Background="Transparent"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ScrollBar">
+            <Setter Property="Foreground" Value="#CBD5E1"/>
+            <Setter Property="BorderBrush" Value="#94A3B8"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Width" Value="12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Border Background="{TemplateBinding Background}">
+                            <Track x:Name="PART_Track" IsDirectionReversed="True"
+                                   Orientation="{TemplateBinding Orientation}">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Style="{StaticResource ScrollTrackButton}"
+                                                  Command="ScrollBar.PageUpCommand"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <!-- 내용이 아주 길어도 막대가 실처럼 얇아지지 않게 최소 높이를 둔다 -->
+                                    <Thumb MinHeight="30">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Border x:Name="Bar" CornerRadius="3" Margin="3,2"
+                                                        Background="{Binding Foreground,
+                                                                    RelativeSource={RelativeSource AncestorType=ScrollBar}}"/>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Bar" Property="Background"
+                                                                Value="{Binding BorderBrush,
+                                                                       RelativeSource={RelativeSource AncestorType=ScrollBar}}"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsDragging" Value="True">
+                                                        <Setter TargetName="Bar" Property="Background"
+                                                                Value="{Binding BorderBrush,
+                                                                       RelativeSource={RelativeSource AncestorType=ScrollBar}}"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Style="{StaticResource ScrollTrackButton}"
+                                                  Command="ScrollBar.PageDownCommand"/>
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <!-- 가로 막대는 지금 쓰는 곳이 없지만, 생기더라도 거꾸로 움직이지 않게 해 둔다 -->
+                            <Trigger Property="Orientation" Value="Horizontal">
+                                <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="Orientation" Value="Horizontal">
+                    <Setter Property="Width" Value="Auto"/>
+                    <Setter Property="Height" Value="12"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- 스크롤 영역도 클릭하면 포커스를 받아 점선 사각형이 생긴다 -->
         <Style TargetType="ScrollViewer">
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>

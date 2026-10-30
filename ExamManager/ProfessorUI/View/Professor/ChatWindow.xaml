@@ -177,7 +177,9 @@
                                             <TextBlock Text="{Binding ReceiptText}" FontSize="{StaticResource FontSmall}"
                                                        Foreground="{StaticResource TextSecondary}" Margin="14,0,0,0"/>
                                         </StackPanel>
-                                        <TextBlock Text="{Binding Text}" Style="{StaticResource Body}"/>
+                                        <!-- Body 스타일은 TextBlock 전용이라 그 값(글자 크기·색)을 여기 적는다 -->
+                                        <TextBox Text="{Binding Text}" Style="{StaticResource SelectableText}"
+                                                 FontSize="{StaticResource FontBody}" Foreground="{StaticResource TextPrimary}"/>
                                         <TextBlock x:Name="Missing" Text="{Binding MissingText}" Style="{StaticResource Caption}"
                                                    TextWrapping="Wrap" Margin="0,8,0,0"/>
                                     </StackPanel>
@@ -269,8 +271,8 @@
                                                     <Border x:Name="Bubble" Grid.Column="0" MaxWidth="390"
                                                             Background="{StaticResource BubbleDark}"
                                                             CornerRadius="16,16,16,5" Padding="15,11">
-                                                        <TextBlock Text="{Binding Message}" FontSize="{StaticResource FontBody}"
-                                                                   Foreground="White" TextWrapping="Wrap" LineHeight="23"/>
+                                                        <TextBox Text="{Binding Message}" Style="{StaticResource SelectableTextOnDark}"
+                                                                 FontSize="{StaticResource FontBody}" Foreground="White"/>
                                                     </Border>
 
                                                     <!-- 읽음은 내가 보낸 1:1 메시지에만 값이 있다. 나머지는 빈 줄이라 자리를 차지하지 않는다 -->

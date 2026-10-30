@@ -14,6 +14,14 @@
 
             <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
+            <!-- 이 창은 어두운 카드라 App.xaml 의 밝은 스크롤 막대가 바탕에 묻히지 않고 튄다.
+                 막대 색 두 개만 갈아 끼운다(모양은 그대로) — 평소에는 경계와 같은 #334155 로 조용히,
+                 손을 올리면 곁들이는 글자색 #94A3B8 로 또렷해진다. 둘 다 위에 적어 둔 이 창의 색이다. -->
+            <Style TargetType="ScrollBar" BasedOn="{StaticResource {x:Type ScrollBar}}">
+                <Setter Property="Foreground" Value="#334155"/>
+                <Setter Property="BorderBrush" Value="#94A3B8"/>
+            </Style>
+
             <!-- 알림·채팅 단추. 어두운 카드 위에 올라가므로 밝은 공용 단추 모양을 쓰지 않는다.
                  누르는 느낌은 색이 아니라 흐려짐으로 준다 — 전송 단추(파랑)에도 같은 모양을 쓰기 때문이다. -->
             <Style x:Key="PipButton" TargetType="Button">
@@ -192,8 +200,8 @@
                                                         <TextBlock Text="{Binding DisplayTime}" FontSize="{StaticResource FontTiny}"
                                                                    Foreground="#94A3B8" HorizontalAlignment="Right"/>
                                                     </Grid>
-                                                    <TextBlock Text="{Binding Message}" TextWrapping="Wrap"
-                                                               FontSize="{StaticResource FontSmall}" Foreground="#F1F5F9"/>
+                                                    <TextBox Text="{Binding Message}" Style="{StaticResource SelectableTextOnDark}"
+                                                             FontSize="{StaticResource FontSmall}" Foreground="#F1F5F9"/>
                                                 </StackPanel>
                                             </Border>
                                         </DataTemplate>
@@ -248,8 +256,8 @@
                                                         <StackPanel Orientation="Horizontal">
                                                             <!-- 말풍선이 더 넓으면 옆의 시각이 카드 밖으로 밀려 잘린다 -->
                                                             <Border Background="#1E293B" CornerRadius="12,12,12,4" Padding="12,9" MaxWidth="170">
-                                                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap"
-                                                                           FontSize="{StaticResource FontSmall}" Foreground="#F1F5F9"/>
+                                                                <TextBox Text="{Binding Message}" Style="{StaticResource SelectableTextOnDark}"
+                                                                         FontSize="{StaticResource FontSmall}" Foreground="#F1F5F9"/>
                                                             </Border>
                                                             <TextBlock Text="{Binding DisplayTime}" FontSize="{StaticResource FontTiny}"
                                                                        Foreground="#94A3B8" VerticalAlignment="Bottom" Margin="6,0,0,2"/>
