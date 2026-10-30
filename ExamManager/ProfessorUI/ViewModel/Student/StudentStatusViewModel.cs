@@ -87,8 +87,13 @@ namespace ProfessorUI.ViewModel
             set { _isConnected = value; OnPropertyChanged(); OnPropertyChanged(nameof(ConnectionText)); }
         }
 
-        // 표에 그대로 나갈 접속 상태 문구
-        public string ConnectionText => _isConnected ? "접속 중" : "미접속";
+        // 표에 그대로 나갈 접속 상태 문구.
+        // 끊긴 학생을 둘로 나눈다 — 치르고 나간 학생과 아예 들어오지 않은 학생.
+        // 둘 다 '미접속'으로 적으면 시험을 끝까지 치른 학생이 응시하지 않은 것처럼 보인다.
+        // 응시 기준은 시험 로그의 출석과 같다(HasEverStarted 는 접속이 끊겨도 남는다).
+        public string ConnectionText => _isConnected ? "접속 중"
+                                     : HasEverStarted || IsAnswerSubmitted ? "응시 후 종료"
+                                     : "미접속";
 
         // 마지막으로 접속한 시각. 다시 접속하면 그때로 바뀐다.
         //
@@ -146,7 +151,14 @@ namespace ProfessorUI.ViewModel
         // 이 시험에서 한 번이라도 시험을 시작했는지. 접속이 끊겨도 남는다.
         // 시험 로그의 출석 여부는 "지금 접속해 있는가"가 아니라 "응시했는가"를 봐야 하므로,
         // 끊길 때 지워지는 HasExamStarted 와 따로 둔다.
-        public bool HasEverStarted { get; set; }
+        private bool _hasEverStarted;
+        public bool HasEverStarted
+        {
+            get => _hasEverStarted;
+            // 접속 상태 문구가 이 값으로 갈리므로 같이 알린다.
+            // 새 시험 준비로 되돌릴 때(ExamFlowService.ResetForNextExam) 표가 '미접속'으로 돌아가야 한다.
+            set { _hasEverStarted = value; OnPropertyChanged(); OnPropertyChanged(nameof(ConnectionText)); }
+        }
 
         public void ClearMonitorStatus()
         {
@@ -210,6 +222,7 @@ namespace ProfessorUI.ViewModel
                 OnPropertyChanged(nameof(CollectText));
                 OnPropertyChanged(nameof(CleanupText));
                 OnPropertyChanged(nameof(CanApprove));
+                OnPropertyChanged(nameof(ConnectionText));
             }
         }
 
