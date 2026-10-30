@@ -9,7 +9,34 @@ namespace ProfessorUI.View.Professor
 {
     public partial class DetailMonitoring : Window
     {
+        // 상세 보기는 한 번에 한 창만 띄운다. 학생마다 창이 쌓이면 어느 창이 지금 보고 있는
+        // 학생인지 알 수 없고, 창마다 고화질 화면을 요청해 그만큼 네트워크를 더 쓴다.
+        private static DetailMonitoring? _open;
+
         private readonly StudentScreenViewModel _item;
+
+        /// <summary>그 학생의 상세 보기를 띄운다. 이미 다른 학생의 창이 떠 있으면 그 창을 갈아 끼운다.</summary>
+        public static void ShowSingle(StudentScreenViewModel item, Window? owner)
+        {
+            var previous = _open;
+
+            // 같은 학생이면 떠 있는 창을 그대로 앞으로 가져온다.
+            // 다시 만들면 받아 둔 화면이 사라져 '대기 중…'부터 다시 시작한다.
+            if (previous != null && previous._item == item)
+            {
+                if (previous.WindowState == WindowState.Minimized) previous.WindowState = WindowState.Normal;
+                previous.Activate();
+                return;
+            }
+
+            var window = new DetailMonitoring(item) { Owner = owner };
+            _open = window;
+            window.Show();
+
+            // 옛 창은 새 창을 띄운 뒤에 닫는다. 먼저 닫으면 그 창이 교수 주 창을 앞으로 올려
+            // (아래 포커스 되돌리기) 새 창이 그 뒤에 깔린다.
+            previous?.Close();
+        }
 
         public DetailMonitoring(StudentScreenViewModel item)
         {
@@ -52,6 +79,8 @@ namespace ProfessorUI.View.Professor
             _item.PropertyChanged += Item_PropertyChanged;
             Closed += (_, _) =>
             {
+                if (_open == this) _open = null;
+
                 _item.PropertyChanged -= Item_PropertyChanged;
                 // 2. 창을 닫을 때 기본 썸네일(320x180) 모드로 복귀 요청
                 NetworkService.Instance.SendToSession(_item.SessionId, PacketType.ScreenQualityMode, new byte[] { 0 });
@@ -82,10 +111,18 @@ namespace ProfessorUI.View.Professor
             }
             else if (e.PropertyName == nameof(StudentScreenViewModel.IsConnected))
             {
+                // 학생이 PC 를 끄거나 앱을 닫으면 이 창에는 멈춘 그림만 남는다. 더 보여 줄 것이 없으니 닫는다.
+                // 따로 알리지 않는다 — 뒤에 있는 화면 모니터링 타일이 바로 '미접속' 검은 칸이 되고,
+                // 원격 제어 중이었다면 그 창이 같은 알림을 받아 이유까지 띄운다.
+                if (!_item.IsConnected)
+                {
+                    Dispatcher.Invoke(Close);
+                    return;
+                }
+
                 // 명단 학생의 칸은 끊겨도 남아 있다가 다시 접속하면 같은 칸에 붙는다(ScreenBoardViewModel).
                 // 이 창을 열어 둔 채 다시 들어왔으면 고화질을 다시 요청한다. 새 접속은 기본 화질로 시작한다.
-                if (_item.IsConnected)
-                    NetworkService.Instance.SendToSession(_item.SessionId, PacketType.ScreenQualityMode, new byte[] { 1 });
+                NetworkService.Instance.SendToSession(_item.SessionId, PacketType.ScreenQualityMode, new byte[] { 1 });
                 Dispatcher.Invoke(UpdateKeyboardLockButton);
             }
         }

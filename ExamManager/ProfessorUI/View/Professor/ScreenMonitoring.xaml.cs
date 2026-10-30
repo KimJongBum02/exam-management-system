@@ -12,17 +12,11 @@ namespace ProfessorUI.View.Professor
             DataContext = ScreenBoardViewModel.Instance;
         }
 
-        // 타일 클릭 → 상세 보기 창 열기
+        // 타일 클릭 → 상세 보기 창 열기. 한 번에 한 창만 띄우고, 다른 학생이면 그 창을 갈아 끼운다.
         private void Tile_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.Tag is StudentScreenViewModel item)
-            {
-                var detail = new DetailMonitoring(item)
-                {
-                    Owner = Window.GetWindow(this)
-                };
-                detail.Show();
-            }
+                DetailMonitoring.ShowSingle(item, Window.GetWindow(this));
         }
 
         // 전체 키보드 잠금 토글 버튼 클릭
