@@ -64,6 +64,11 @@ namespace ProfessorUI.Service
             NetworkService.Instance.SendToSession(sessionId, PacketType.RemoteControlStart, Array.Empty<byte>());
         }
 
+        /// <summary>한/영·한자 키를 그 학생 PC 에서 누르게 한다. 화면 스레드에서 호출한다.</summary>
+        public void SendImeKey(string sessionId, bool hanja)
+            => NetworkService.Instance.SendToSession(sessionId, PacketType.RemoteControlImeKey,
+                                                    new byte[] { (byte)(hanja ? 1 : 0) });
+
         /// <summary>그 학생의 공유 세션을 닫게 한다. 창을 닫을 때 부른다.</summary>
         public void Stop(string sessionId)
         {

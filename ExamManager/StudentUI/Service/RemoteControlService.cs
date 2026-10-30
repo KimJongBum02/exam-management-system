@@ -2,6 +2,7 @@ using ExamManager.Shared;
 using System.Collections;
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Threading;
 using NetworkLib;
@@ -36,6 +37,10 @@ namespace StudentUI.Service
         // CTRL_LEVEL (Windows SDK rdpencomapi.idl): 1=NONE, 2=VIEW, 3=INTERACTIVE, 4·5=요청 상태.
         // 2 를 넣으면 '보기 전용'이라 화면만 가고 입력이 안 들어간다(2026-10-27 실기에서 겪었다).
         private const int ControlLevelInteractive = 3;
+
+        // 한/영(0x15)·한자(0x19). 교수 PC 에서 누른 것은 그 PC 의 IME 가 먹어서 여기까지 오지 못한다.
+        // 그래서 교수 앱이 패킷으로 알려 주고, 이 PC 에서 직접 눌러 준다.
+        private const ushort VkHangul = 0x15, VkHanja = 0x19;
 
         // 조작 권한 주기를 몇 번까지 조용히 재시도할지. 300ms × 10 = 3초.
         private const int GrantFailureLimit = 10;
@@ -72,6 +77,12 @@ namespace StudentUI.Service
             // 네이티브 수신 스레드에서 올라온다. 창과 COM 은 화면 스레드에서만 다룬다.
             if (type == PacketType.RemoteControlStart) UiThread.Post(BeginSafely);
             else if (type == PacketType.RemoteControlStop) UiThread.Post(EndSafely);
+            else if (type == PacketType.RemoteControlImeKey && payloadLen >= 1)
+            {
+                // 수신 버퍼는 이 콜백이 끝나면 사라지므로 넘기기 전에 읽는다.
+                bool hanja = Marshal.ReadByte(payload) == 1;
+                UiThread.Post(() => PressImeKey(hanja));
+            }
         }
 
         /// <summary>어느 스레드에서 불러도 된다. 원격을 끄고 공유 세션·방화벽 규칙을 되돌린다.</summary>
@@ -231,6 +242,58 @@ namespace StudentUI.Service
             _grantTimer?.Stop();
             ReportFailure($"교수 PC 에 조작 권한을 주지 못했습니다. 화면만 보이고 입력은 들어가지 않습니다.\n({problem})");
         }
+
+        // ── 한/영 · 한자 ─────────────────────────────────────────────────
+        // 화면 스레드에서만 부른다. 지금 포커스를 가진 창의 IME 에 그 키를 눌러 준다.
+        private void PressImeKey(bool hanja)
+        {
+            // 원격 중이 아니면 건드리지 않는다. 남의 PC 한글 상태를 멋대로 바꾸는 일이 되기 때문이다.
+            if (_session == null) return;
+
+            ushort vk = hanja ? VkHanja : VkHangul;
+            var keys = new INPUT[2];
+            keys[0].type = InputKeyboard;
+            keys[0].ki.wVk = vk;
+            keys[1].type = InputKeyboard;
+            keys[1].ki.wVk = vk;
+            keys[1].ki.dwFlags = KeyEventKeyUp;
+
+            // 한/영은 원래 누름만 있고 뗌이 없는 키지만, 누름만 넣으면 눌린 채로 보는 앱이 있다.
+            // 짝으로 넣어 둔다 — IME 는 누름에서 전환하므로 결과는 같다.
+            if (SendInput((uint)keys.Length, keys, Marshal.SizeOf<INPUT>()) != 0) return;
+
+            // 교수는 '한/영을 보냈습니다'를 보고 기다리는 중이다. 안 먹었으면 그 사실을 알려야 한다.
+            ReportFailure($"학생 PC 에서 {(hanja ? "한자" : "한/영")} 키를 누르지 못했습니다. " +
+                          "교수 PC 에서 오른쪽 Alt 로 바꿔 보세요.",
+                          new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error()));
+        }
+
+        private const uint InputKeyboard = 1;
+        private const uint KeyEventKeyUp = 2;
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct INPUT
+        {
+            public uint type;
+            public KEYBDINPUT ki;
+
+            // INPUT 의 공용체 크기는 가장 큰 MOUSEINPUT 에 맞춰져 있다. 키보드만 쓰더라도
+            // 구조체 크기가 같아야 SendInput 이 받아 준다 — 그 차이를 메우는 자리다.
+            private readonly long _unionPad;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct KEYBDINPUT
+        {
+            public ushort wVk;
+            public ushort wScan;
+            public uint dwFlags;
+            public uint time;
+            public IntPtr dwExtraInfo;
+        }
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern uint SendInput(uint cInputs, INPUT[] pInputs, int cbSize);
 
         // ── 종료 ─────────────────────────────────────────────────────────
         // 화면 스레드에서만 부른다. 여러 번 불려도 안전하다.

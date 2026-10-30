@@ -57,6 +57,8 @@ enum class PacketType : uint32_t
                                     // 형식은 NetworkInterop.cs 의 RemoteControlPayload, 네이티브는 그대로 전달한다
     RemoteControlStop        = 74,  // 교수 → 특정 학생. 원격 제어 종료 (payload 없음)
     RemoteControlFailed      = 75,  // 학생 → 교수. 원격 제어를 하지 못한 이유 (UTF-8 문자열, 교수 화면에 그대로 띄운다)
+    RemoteControlImeKey      = 76,  // 교수 → 특정 학생. 한/영·한자 키 (payload = uint8_t, 0=한/영, 1=한자)
+                                    // IME 키는 스캔코드가 표준 밖이라 화면 공유로는 전달되지 않는다
 
     // 퀴즈 (50~59)
     QuizQuestion             = 50,   // 가변 길이 페이로드
