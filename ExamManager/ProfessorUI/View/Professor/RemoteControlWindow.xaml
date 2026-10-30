@@ -23,7 +23,8 @@
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <TextBlock x:Name="NameText" FontSize="{StaticResource FontBody}"
                                FontWeight="Bold" Foreground="#F1F5F9"/>
-                    <TextBlock Text="이 창 안을 클릭·입력하면 학생 PC 가 그대로 조작됩니다. 학생 화면에는 안내가 떠 있습니다."
+                    <TextBlock x:Name="HintText"
+                               Text="이 창 안을 클릭·입력하면 학생 PC 가 그대로 조작됩니다. 한/영·한자 키도 전달됩니다. 학생 화면에는 안내가 떠 있습니다."
                                FontSize="{StaticResource FontTiny}" Foreground="#94A3B8" Margin="0,3,0,0"/>
                 </StackPanel>
 

@@ -52,6 +52,7 @@ namespace NetworkLib
         RemoteControlInvitation = 73,  // 학생 → 교수. 화면 공유 접속 문자열 + 암호 (RemoteControlPayload)
         RemoteControlStop       = 74,  // 교수 → 특정 학생. 원격 제어 종료 (payload 없음)
         RemoteControlFailed     = 75,  // 학생 → 교수. 원격 제어를 하지 못한 이유 (UTF-8 문자열)
+        RemoteControlImeKey     = 76,  // 교수 → 특정 학생. 한/영·한자 키 (payload = 1 byte, 0=한/영, 1=한자)
 
         CommandAck              = 100,
     }
