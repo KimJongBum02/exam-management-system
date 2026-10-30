@@ -64,10 +64,21 @@ namespace ProfessorUI.View.Professor
         {
             if (_current != null)
             {
-                MessageBox.Show($"이미 {_currentName} 학생을 원격 제어하고 있습니다.\n한 번에 한 명만 조작할 수 있습니다.",
+                // 같은 학생이면 떠 있는 창을 그대로 앞으로 가져온다. 끊고 다시 붙일 이유가 없다.
+                if (_current._item == item)
+                {
+                    _current.Activate();
+                    return;
+                }
+
+                // 한 번에 한 명만 조작하므로, 다른 학생으로 넘어가려면 지금 것을 끊어야 한다.
+                // 끊기 전에 알린다 — 교수가 모르는 사이에 앞 학생의 원격이 끊기면 안 된다.
+                MessageBox.Show($"기존 학생의 원격 제어는 종료됩니다.\n\n{_currentName} → {item.DisplayName}",
                                 "원격 제어", MessageBoxButton.OK, MessageBoxImage.Information);
-                _current.Activate();
-                return;
+
+                // 창을 닫으면 그 안에서 화면 공유 끊기와 학생 쪽 정리까지 한다(Closed).
+                try { _current.Close(); }
+                catch (Exception ex) { Debug.WriteLine($"[RemoteControl] 앞 학생의 창을 닫지 못했습니다: {ex.Message}"); }
             }
             if (_requesting)                  // 답을 기다리는 중에 또 누른 경우
             {

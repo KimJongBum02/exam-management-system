@@ -113,9 +113,13 @@ namespace ProfessorUI.ViewModel
             var item = Students.FirstOrDefault(s => s.SessionId == sessionId);
             if (item == null) return;
 
+            // 끊겼다는 것을 먼저 알린다. 이 알림을 받아 상세 보기·원격 제어 창이 스스로 닫힌다.
+            // 예전에는 명단에 없는 학생의 타일을 지우기만 해서 SessionId 가 그대로 남았고,
+            // 두 창은 학생이 끊긴 줄 모른 채 멈춘 화면을 계속 띄웠다(명단을 쓰지 않으면 모든 학생이 이 경로다).
+            item.Disconnect();
+
             // 명단 학생은 자리를 남기고 검은 칸으로 되돌린다. 빠진 자리가 그대로 보여야 한다.
-            if (StudentExcelStore.Find(item.StudentId) != null) item.Disconnect();
-            else Students.Remove(item);
+            if (StudentExcelStore.Find(item.StudentId) == null) Students.Remove(item);
             NotifyCount();
         }
 
