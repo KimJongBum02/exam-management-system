@@ -12,17 +12,13 @@ namespace ProfessorUI.ViewModel
     // 명단을 불러오지 않았으면 Roster 는 늘 비어 있고, 예전처럼 접속한 학생만 칸이 된다.
     public class StudentCardViewModel : UiBinding
     {
-        public StudentCardViewModel(RosterEntry? roster, int rosterIndex, StudentStatusViewModel? student)
+        public StudentCardViewModel(RosterEntry? roster, StudentStatusViewModel? student)
         {
             Roster = roster;
-            RosterIndex = rosterIndex;
             if (student != null) Attach(student);
         }
 
         public RosterEntry? Roster { get; }
-
-        // 엑셀에서 몇 번째 줄인지. 명단에 없는 학생은 int.MaxValue 라 명단 학생 뒤에 놓인다.
-        public int RosterIndex { get; }
 
         // 접속한 적이 있는 학생. 명단 학생이 아직 접속하지 않았으면 null 이다.
         public StudentStatusViewModel? Student { get; private set; }
@@ -30,7 +26,6 @@ namespace ProfessorUI.ViewModel
 
         public string StudentId => Roster?.StudentId ?? Student!.StudentId;
         public string Name => Roster?.Name ?? Student!.Name;
-        public string Ip => Student?.Ip ?? string.Empty;
 
         public bool IsConnected => Student?.IsConnected == true;
         public bool IsAnswerSubmitted => Student?.IsAnswerSubmitted == true;
@@ -69,7 +64,7 @@ namespace ProfessorUI.ViewModel
         {
             Student = student;
             student.PropertyChanged += OnStudentChanged;
-            Raise(nameof(Student), nameof(HasStudent), nameof(Ip), nameof(IsConnected), nameof(ConnectionText),
+            Raise(nameof(Student), nameof(HasStudent), nameof(IsConnected), nameof(ConnectionText),
                   nameof(Status), nameof(LastConnectedText), nameof(IsNotInRoster), nameof(IsNameMismatch),
                   nameof(HasWarning), nameof(WarningText), nameof(IsShown));
         }
@@ -104,9 +99,6 @@ namespace ProfessorUI.ViewModel
                     break;
                 case nameof(StudentStatusViewModel.LastConnectedText):
                     Raise(nameof(LastConnectedText));
-                    break;
-                case nameof(StudentStatusViewModel.Ip):
-                    Raise(nameof(Ip));
                     break;
             }
         }

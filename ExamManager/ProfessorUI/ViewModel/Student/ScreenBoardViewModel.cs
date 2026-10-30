@@ -1,7 +1,7 @@
 // ScreenBoardViewModel.cs
 // 화면 모니터링 페이지의 ViewModel.
 // 접속 중인 학생 목록과 각 학생의 최신 화면 이미지를 관리합니다.
-// 수강생 명단을 불러오면 명단 순서대로 검은 칸을 미리 깔고, 학생이 접속하면 그 칸에 화면이 뜹니다.
+// 수강생 명단을 불러오면 검은 칸을 미리 깔고, 학생이 접속하면 그 칸에 화면이 뜹니다. 타일은 늘 학번 순입니다.
 using System.Collections.ObjectModel;
 using NetworkLib;
 using ProfessorUI.Service;
@@ -95,7 +95,13 @@ namespace ProfessorUI.ViewModel
                     newStudent.IsKeyboardLocked = true;
                     NetworkService.Instance.SendToSession(sessionId, PacketType.LockKeyboard, new byte[] { 1 });
                 }
-                Students.Add(newStudent);
+                // 명단에 없는 학생도 학번 순 자리에 넣는다. 접속한 순서대로 뒤에 붙이면
+                // 같은 학생이 대시보드와 이 화면에서 다른 자리에 있게 된다.
+                int at = 0;
+                while (at < Students.Count && string.CompareOrdinal(Students[at].StudentId, studentId) < 0)
+                    at++;
+
+                Students.Insert(at, newStudent);
             }
             NotifyCount();
         }
@@ -122,18 +128,19 @@ namespace ProfessorUI.ViewModel
         }
 
         // ── 명단 적용 ───────────────────────────────────────────────────────
-        // 명단 순서대로 칸을 다시 깐다. 이미 접속해 있는 학생의 칸은 받아 둔 화면째 그 자리로 옮기고,
-        // 명단에 없는 접속 학생은 뒤에 붙인다. 열려 있는 상세 보기 창도 같은 칸을 보므로 그대로 이어진다.
+        // 명단 자리와 접속 학생을 합쳐 학번 순으로 칸을 다시 깐다. 이미 접속해 있는 학생의 칸은
+        // 받아 둔 화면째 제 학번 자리로 옮긴다. 열려 있는 상세 보기 창도 같은 칸을 보므로 그대로 이어진다.
         private void ApplyRoster()
         {
             var connected = Students.Where(s => s.IsConnected).ToList();
             Students.Clear();
 
-            foreach (var entry in StudentExcelStore.Entries)
-                Students.Add(connected.FirstOrDefault(s => s.StudentId == entry.StudentId)
-                             ?? new StudentScreenViewModel(entry.StudentId, entry.Name));
+            var seats = StudentExcelStore.Entries
+                .Select(entry => connected.FirstOrDefault(s => s.StudentId == entry.StudentId)
+                                 ?? new StudentScreenViewModel(entry.StudentId, entry.Name))
+                .Concat(connected.Where(s => StudentExcelStore.Find(s.StudentId) == null));
 
-            foreach (var tile in connected.Where(s => StudentExcelStore.Find(s.StudentId) == null))
+            foreach (var tile in seats.OrderBy(s => s.StudentId, StringComparer.Ordinal))
                 Students.Add(tile);
 
             NotifyCount();

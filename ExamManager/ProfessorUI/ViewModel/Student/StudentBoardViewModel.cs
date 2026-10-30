@@ -41,7 +41,7 @@ namespace ProfessorUI.ViewModel
             }
         }
 
-        // 명단 학생은 엑셀 순서대로, 명단에 없는 학생은 그 뒤에 둔다. 명단이 없으면 모두 뒤쪽 무리라 예전처럼 IP 순이 된다.
+        // 칸을 다시 만든다. 담는 순서는 상관없다 — 화면이 학번 순으로 줄 세워 보여 준다(DashboardWindow.CardOrder).
         private void Rebuild()
         {
             foreach (var card in Cards)
@@ -52,12 +52,11 @@ namespace ProfessorUI.ViewModel
             Cards.Clear();
 
             var students = StudentStore.Instance.Students;
-            var roster = StudentExcelStore.Entries;
-            for (int i = 0; i < roster.Count; i++)
-                Add(new StudentCardViewModel(roster[i], i, students.FirstOrDefault(s => s.StudentId == roster[i].StudentId)));
+            foreach (var entry in StudentExcelStore.Entries)
+                Add(new StudentCardViewModel(entry, students.FirstOrDefault(s => s.StudentId == entry.StudentId)));
 
             foreach (var student in students.Where(s => StudentExcelStore.Find(s.StudentId) == null))
-                Add(new StudentCardViewModel(null, int.MaxValue, student));
+                Add(new StudentCardViewModel(null, student));
 
             NotifySummary();
         }
@@ -82,7 +81,7 @@ namespace ProfessorUI.ViewModel
                 {
                     var rosterCard = Cards.FirstOrDefault(c => c.Roster != null && !c.HasStudent && c.StudentId == student.StudentId);
                     if (rosterCard != null) rosterCard.Attach(student);
-                    else Add(new StudentCardViewModel(null, int.MaxValue, student));
+                    else Add(new StudentCardViewModel(null, student));
                 }
 
             NotifySummary();
