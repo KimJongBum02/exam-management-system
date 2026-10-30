@@ -8,7 +8,7 @@ namespace ProfessorUI.Service
         // ⭐ 싱글톤 인스턴스 (어디서나 접근 가능)
         public static StudentStore Instance { get; } = new StudentStore();
 
-        // ⭐ 단 하나의 학생 리스트 원본 (실제 접속한 학생만 채워짐)
+        // ⭐ 단 하나의 학생 리스트 원본 (실제 접속한 학생만 채워짐, 늘 학번 순)
         public ObservableCollection<StudentStatusViewModel> Students { get; }
 
         // 특정 학생이 파일 수신 완료 응답을 보냈을 때 알림 (배포 화면 갱신용) — 인자: 학번
@@ -40,7 +40,13 @@ namespace ProfessorUI.Service
             }
             else
             {
-                Students.Add(new StudentStatusViewModel
+                // 접속한 순서가 아니라 학번 순 자리에 넣는다. 이 목록을 그대로 쓰는
+                // 배포 표·재배포 표·답안 수집 표가 모두 학번 순으로 보이게 하려는 것이다.
+                int at = 0;
+                while (at < Students.Count && string.CompareOrdinal(Students[at].StudentId, studentId) < 0)
+                    at++;
+
+                Students.Insert(at, new StudentStatusViewModel
                 {
                     SessionId = sessionId,
                     StudentId = studentId,

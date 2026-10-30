@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Net;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -23,16 +22,14 @@ namespace ProfessorUI.View.Professor
             InitializeComponent();
             DataContext = _ctx;
 
-            // 수강생 명단을 불러왔으면 엑셀 순서대로, 아니면 IP 순으로 둔다(CardOrder).
+            // 늘 학번 순으로 둔다(CardOrder). 학생이 접속하면 그 칸이 제 학번 자리에 저절로 끼어든다.
             // 같은 칸 목록을 다른 화면도 쓸 수 있어 원본은 그대로 두고 이 화면의 보기만 줄 세운다.
-            // 다시 접속해 IP 가 바뀌면 그 자리로 옮겨 가고, 명단에 없는 학생 칸은 접속이 끊기면 빠진다(IsShown).
+            // 명단에 없는 학생 칸은 접속이 끊기면 빠진다(IsShown).
             _cards = new ListCollectionView(_ctx.Board.Cards)
             {
                 CustomSort = new CardOrder(),
                 Filter = item => ((StudentCardViewModel)item).IsShown,
             };
-            _cards.IsLiveSorting = true;
-            _cards.LiveSortingProperties.Add(nameof(StudentCardViewModel.Ip));
             _cards.IsLiveFiltering = true;
             _cards.LiveFilteringProperties.Add(nameof(StudentCardViewModel.IsShown));
             StudentCards.ItemsSource = _cards;
@@ -54,29 +51,13 @@ namespace ProfessorUI.View.Professor
             };
         }
 
-        // 명단 학생은 엑셀 순서(RosterIndex)대로 앞에, 명단에 없는 학생은 그 뒤에 IP 순으로 둔다.
-        // 명단을 불러오지 않았으면 모두 뒤쪽 무리라 예전처럼 IP 순이다.
-        // 강의실 PC 는 자리마다 IP 가 1씩 늘어나므로 IP 순으로 두면 칸 배치가 좌석 배치와 같아진다.
-        // IP 를 숫자로 비교한다. 문자열로 비교하면 192.168.0.10 이 192.168.0.9 보다 앞에 온다.
-        // IP 를 모르는 학생은 뒤로, IP 가 같으면 학번순으로 둔다.
+        // 학번 순 하나로만 줄 세운다. 명단 순서도 IP 순서도 접속 순서도 보지 않는다 —
+        // 교수가 어느 화면(화면 모니터링·배포 표·답안 수집)을 봐도 학생이 같은 자리에 있어야 찾기 쉽다.
+        // 학번은 문자 그대로 비교한다(CompareOrdinal). 학번 길이가 같으면 숫자 순서와 같아진다.
         private sealed class CardOrder : IComparer
         {
             public int Compare(object? x, object? y)
-            {
-                var a = (StudentCardViewModel)x!;
-                var b = (StudentCardViewModel)y!;
-                int byRoster = a.RosterIndex.CompareTo(b.RosterIndex);
-                if (byRoster != 0) return byRoster;
-                int byIp = Key(a.Ip).CompareTo(Key(b.Ip));
-                return byIp != 0 ? byIp : string.CompareOrdinal(a.StudentId, b.StudentId);
-            }
-
-            private static ulong Key(string ip)
-            {
-                if (!IPAddress.TryParse(ip, out IPAddress? address) || address.GetAddressBytes() is not { Length: 4 } bytes)
-                    return ulong.MaxValue;
-                return (ulong)bytes[0] << 24 | (ulong)bytes[1] << 16 | (ulong)bytes[2] << 8 | bytes[3];
-            }
+                => string.CompareOrdinal(((StudentCardViewModel)x!).StudentId, ((StudentCardViewModel)y!).StudentId);
         }
 
         // 새로 생긴 칸을 구독한다. 명단을 새로 불러오면 칸이 통째로 바뀌는데(비운 뒤 하나씩 더함),
