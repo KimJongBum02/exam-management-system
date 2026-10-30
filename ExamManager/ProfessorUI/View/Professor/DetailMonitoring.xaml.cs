@@ -33,6 +33,21 @@ namespace ProfessorUI.View.Professor
             // 1. 해당 학생에게만 고화질(1920x1080 FHD) 화면 캡처 전송 요청
             NetworkService.Instance.SendToSession(_item.SessionId, PacketType.ScreenQualityMode, new byte[] { 1 });
 
+            // 이 창을 닫을 때 교수 주 창을 앞으로 올린다.
+            //
+            // 윈도우는 소유 창(Owner)을 자동으로 올려 주지 않는다 — 소유 창이 지정돼 있어도,
+            // Z 순서상 다른 프로그램의 창이 교수 주 창보다 위에 있으면 그 창이 앞으로 온다.
+            // 그러면 교수는 학생 화면을 한 번 볼 때마다 교수 앱을 다시 앞으로 끌어와야 한다.
+            //
+            // 올리는 시점이 중요하다. 포커스를 다른 프로그램에 한 번 넘기고 나면 윈도우가
+            // Activate(SetForegroundWindow)를 막아 버려(포커스 잠금) 교수 앱은 스스로 앞으로 올 수 없다.
+            // 그래서 아직 우리 앱이 포커스를 쥐고 있는 '닫는 순간'에 올린다.
+            //
+            // IsActive 로 거르는 이유: 사용자가 일부러 다른 프로그램으로 간 뒤에 이 창이 닫히는 경우
+            // (학생이 끊겨 자동으로 닫히는 경우도 있다) 남의 화면 위로 교수 앱을 밀어 올리면 안 된다.
+            bool wasActive = false;
+            Closing += (_, _) => wasActive = IsActive;
+
             // 새 화면 및 상태 변경 자동 갱신
             _item.PropertyChanged += Item_PropertyChanged;
             Closed += (_, _) =>
@@ -40,6 +55,8 @@ namespace ProfessorUI.View.Professor
                 _item.PropertyChanged -= Item_PropertyChanged;
                 // 2. 창을 닫을 때 기본 썸네일(320x180) 모드로 복귀 요청
                 NetworkService.Instance.SendToSession(_item.SessionId, PacketType.ScreenQualityMode, new byte[] { 0 });
+
+                if (wasActive && Owner is { IsLoaded: true } owner) owner.Activate();
             };
         }
 
