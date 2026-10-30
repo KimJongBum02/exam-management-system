@@ -107,7 +107,8 @@
                             <DataTemplate><TextBlock Text="{Binding Name}" Style="{StaticResource Cell}"/></DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    <GridViewColumn Header="접속 상태" Width="130">
+                    <!-- '응시 후 종료'가 … 으로 잘리지 않을 만큼 넓게 잡는다 (폭은 칸끼리의 비율로만 쓰인다) -->
+                    <GridViewColumn Header="접속 상태" Width="170">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate><TextBlock Text="{Binding ConnectionText}" Style="{StaticResource Cell}"/></DataTemplate>
                         </GridViewColumn.CellTemplate>
