@@ -7,7 +7,6 @@ using ExamManager.Shared;
 using NetworkLib;
 using StudentUI.Model;
 using StudentUI.Service;
-using StudentUI.ViewModel;
 
 namespace StudentUI.View.StudentExamView
 {
@@ -18,16 +17,9 @@ namespace StudentUI.View.StudentExamView
     {
         private readonly DispatcherTimer _clock;
 
-        // 알림·채팅이 보는 곳. 시험 화면의 메신저와 같은 객체라 양쪽이 같은 대화를 본다.
-        private readonly SharedChatViewModel _chat = SharedChatViewModel.Instance;
-
         public FreePipWindow(Student student)
         {
             InitializeComponent();
-
-            // 알림·채팅 칸이 이 뷰모델을 바인딩한다. 아래 InfoText·ClockText 처럼 코드에서 직접
-            // 넣는 값들과는 겹치지 않는다.
-            DataContext = _chat;
 
             InfoText.Text = $"{student.StudentName} · {student.StudentNumber}".Trim(' ', '·');
 
@@ -41,23 +33,11 @@ namespace StudentUI.View.StudentExamView
             NetworkService.Instance.Connected += OnConnected;
             NetworkService.Instance.Disconnected += OnDisconnected;
 
-            // 채팅창을 열어 둔 채로 새 말이 오면 맨 아래로 따라 내려간다.
-            _chat.Messages.CollectionChanged += OnChatMessagesChanged;
-
-            // 열어 둔 채로 받은 말은 읽은 것으로 처리한다.
-            // 목록 변화(CollectionChanged)가 아니라 이 알림을 쓰는 이유: 목록에 넣은 **뒤에**
-            // 안 읽음 수를 올리므로, 목록 쪽에서 읽음 처리를 하면 곧바로 1 로 되올라간다.
-            _chat.MessageArrived += OnMessageArrivedWhileOpen;
-            _chat.NoticeAdded += OnNoticeAddedWhileOpen;
-
             Closed += (_, _) =>
             {
                 _clock.Stop();
                 NetworkService.Instance.Connected -= OnConnected;
                 NetworkService.Instance.Disconnected -= OnDisconnected;
-                _chat.NoticeAdded -= OnNoticeAddedWhileOpen;
-                _chat.Messages.CollectionChanged -= OnChatMessagesChanged;
-                _chat.MessageArrived -= OnMessageArrivedWhileOpen;
             };
 
             // 처음에는 화면 오른쪽 위에 둔다. 겹치면 끌어서 옮기면 된다.
@@ -71,61 +51,6 @@ namespace StudentUI.View.StudentExamView
             // 펼친 패널이 화면 밖으로 나가 보이지 않으므로, 넘치는 만큼 끌어올린다.
             SizeChanged += (_, _) => KeepOnScreen();
         }
-
-        // ── 알림 · 채팅 ──
-        // 카드가 좁아 한 번에 하나만 편다. 편 쪽은 읽은 것으로 처리해 배지를 지운다.
-        private void OnToggleNotice(object sender, RoutedEventArgs e)
-        {
-            bool open = NoticePanel.Visibility != Visibility.Visible;
-            NoticePanel.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-            ChatPanel.Visibility = Visibility.Collapsed;
-
-            if (open) _chat.MarkNoticesAsRead();
-        }
-
-        private void OnToggleChat(object sender, RoutedEventArgs e)
-        {
-            bool open = ChatPanel.Visibility != Visibility.Visible;
-            ChatPanel.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-            NoticePanel.Visibility = Visibility.Collapsed;
-
-            if (!open) return;
-
-            // 열어 본 시점에 교수에게 '읽음'을 돌려보낸다(SharedChatViewModel 참고).
-            _chat.MarkAsRead();
-            ScrollChatToEnd();
-
-            // 펼친 패널이 그려진 뒤라야 입력칸이 포커스를 받는다.
-            Dispatcher.BeginInvoke(new Action(() => ChatInput.Focus()), DispatcherPriority.Loaded);
-        }
-
-        private void OnChatMessagesChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-        {
-            if (e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Add) return;
-            ScrollChatToEnd();
-        }
-
-        // 채팅 패널을 펼쳐 둔 채로 말이 오면 바로 읽은 것으로 보고 교수에게 '읽음'을 돌려보낸다.
-        // 이게 없으면 학생이 채팅을 보고 있는데도 배지가 1, 2, 3 으로 쌓인다.
-        // 시험 화면에도 같은 처리가 있지만(StudentExamViewModel.OnChatMessageArrived) 그쪽은
-        // 주 창의 드로어만 본다 — 자유 모드에서는 주 창이 숨어 있어 이 창이 따로 챙겨야 한다.
-        //
-        // 창이 숨어 있으면(통제 · 시험 모드) 펼쳐만 두었을 뿐 보고 있는 것이 아니므로 세어 둔다.
-        private void OnMessageArrivedWhileOpen()
-        {
-            if (IsVisible && ChatPanel.Visibility == Visibility.Visible) _chat.MarkAsRead();
-        }
-
-        // 알림 패널도 같다 — 펼쳐 둔 채로 공지가 오면 바로 읽은 것으로 본다.
-        // 채팅과 달리 교수에게 돌려보낼 '읽음'은 없다(공지 수신 회신은 받는 즉시 따로 나간다).
-        private void OnNoticeAddedWhileOpen()
-        {
-            if (IsVisible && NoticePanel.Visibility == Visibility.Visible) _chat.MarkNoticesAsRead();
-        }
-
-        // 말풍선이 그려진 뒤라야 끝까지 내려간다(시험 화면의 채팅과 같은 이유로 Loaded 우선순위).
-        private void ScrollChatToEnd()
-            => Dispatcher.BeginInvoke(new Action(() => ChatScroll.ScrollToEnd()), DispatcherPriority.Loaded);
 
         // 카드 아래쪽이 작업 영역 밖으로 나가면 그만큼 끌어올린다.
         // 화면보다 카드가 길어지는 경우는 없으므로 위로 밀려 잘릴 일은 없다.

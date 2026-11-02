@@ -143,7 +143,10 @@ namespace ProfessorUI.View.Professor
                 RemoteControlWindow.CloseIfOpen("상태를 바꾸려면 원격 제어를 먼저 끊어야 합니다.");
 
             if (!_item.IsConnected) return;
-            NetworkService.Instance.SendToSession(_item.SessionId, PacketType.ClassModeChange, new byte[] { (byte)mode });
+
+            // 이 학생만 따로 지정한 것도 기억해 둔다. 기억하지 않으면 그 학생이 재접속할 때
+            // 전체 상태가 덮어 보내져, 교수가 따로 맞춰 둔 것이 조용히 풀린다.
+            ClassModeState.SendTo(_item.SessionId, _item.StudentId, mode);
         }
 
         private void KeyboardLock_Click(object sender, RoutedEventArgs e)

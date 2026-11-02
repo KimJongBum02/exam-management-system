@@ -284,28 +284,42 @@ void FileTransferReceiver::HandleStart(
     std::string tempPath = tempDir
         + "NL_" + SanitizeFileName(transferId) + "_" + SanitizeFileName(fileName);
 
-    FileReceiveContext ctx;
-    ctx.transferId      = transferId;
-    ctx.senderId        = senderId;
-    ctx.fileName        = fileName;
-    ctx.tempPath        = tempPath;
-    ctx.sha256Hash      = FixedToString(p->sha256Hash,      sizeof(p->sha256Hash));
-    ctx.archivePassword = FixedToString(p->archivePassword, sizeof(p->archivePassword));
-    ctx.totalSize       = p->totalSize;
-    ctx.totalChunks     = p->totalChunks;
-    ctx.receivedChunks  = 0;
+    auto ctx = std::make_shared<FileReceiveContext>();
+    ctx->transferId      = transferId;
+    ctx->senderId        = senderId;
+    ctx->fileName        = fileName;
+    ctx->tempPath        = tempPath;
+    ctx->sha256Hash      = FixedToString(p->sha256Hash,      sizeof(p->sha256Hash));
+    ctx->archivePassword = FixedToString(p->archivePassword, sizeof(p->archivePassword));
+    ctx->totalSize       = p->totalSize;
+    ctx->totalChunks     = p->totalChunks;
+    ctx->receivedChunks  = 0;
 
     // 임시 파일 생성
-    ctx.hFile = OpenFileUtf8(tempPath, GENERIC_WRITE, 0,
-                            CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL);
-    if (ctx.hFile == INVALID_HANDLE_VALUE)
+    ctx->hFile = OpenFileUtf8(tempPath, GENERIC_WRITE, 0,
+                             CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL);
+    if (ctx->hFile == INVALID_HANDLE_VALUE)
     {
         if (onFileError) onFileError(transferId, "임시 파일 생성 실패: " + tempPath);
         return;
     }
 
-    std::lock_guard<std::mutex> lock(contextsMutex_);
-    contexts_[transferId] = std::move(ctx);
+    // 같은 번호의 기록이 이미 있으면 그 핸들이 닫히지 않은 채 버려진다. 먼저 치운다.
+    // 번호는 GUID 라 실제로 겹칠 일은 없지만, 겹쳤을 때 핸들이 새는 쪽으로 두지 않는다.
+    std::shared_ptr<FileReceiveContext> replaced;
+    {
+        std::lock_guard<std::mutex> lock(contextsMutex_);
+        auto it = contexts_.find(transferId);
+        if (it != contexts_.end()) replaced = std::move(it->second);
+        contexts_[transferId] = std::move(ctx);
+    }
+
+    if (replaced)
+    {
+        std::lock_guard<std::mutex> lock(replaced->writeMutex);
+        if (replaced->hFile != INVALID_HANDLE_VALUE) CloseHandle(replaced->hFile);
+        replaced->hFile = INVALID_HANDLE_VALUE;
+    }
 }
 
 void FileTransferReceiver::HandleChunk(const uint8_t* payload, uint32_t payloadLen)
@@ -319,23 +333,44 @@ void FileTransferReceiver::HandleChunk(const uint8_t* payload, uint32_t payloadL
 
     std::string transferId = FixedToString(hdr->transferId, sizeof(hdr->transferId));
 
-    std::lock_guard<std::mutex> lock(contextsMutex_);
-    auto it = contexts_.find(transferId);
-    if (it == contexts_.end()) return;
+    // 찾을 때만 공용 자물쇠를 잡고 바로 놓는다.
+    //
+    // 예전에는 이 자물쇠를 쥔 채로 디스크 쓰기와 진행률 콜백(C# 으로 넘어간다)까지 했다.
+    // 그러면 받는 학생이 몇 명이든 조각 쓰기가 한 줄로 선다 — 30명이 100MB 씩 내면
+    // 48,000번의 쓰기가 차례를 기다린다. 그렇게 느려지면 학생 쪽 60초 정지 판정과
+    // 10초 보내기 제한을 동시에 끌어당겨, 멀쩡한 전송이 '끊겼습니다'로 끝난다.
+    std::shared_ptr<FileReceiveContext> ctx;
+    {
+        std::lock_guard<std::mutex> lock(contextsMutex_);
+        auto it = contexts_.find(transferId);
+        if (it == contexts_.end()) return;
+        ctx = it->second;
+    }
 
-    FileReceiveContext& ctx = it->second;
-    DWORD written = 0;
-    if (!WriteFile(ctx.hFile, data, dataSize, &written, nullptr))
+    uint32_t done    = 0;
+    bool     written = false;
+    {
+        // 쓰는 동안은 이 전송의 자물쇠만 잡는다. 다른 학생은 기다리지 않는다.
+        std::lock_guard<std::mutex> lock(ctx->writeMutex);
+        if (ctx->hFile == INVALID_HANDLE_VALUE) return;   // 그사이 연결이 끊겨 치워졌다
+
+        DWORD wrote = 0;
+        written = WriteFile(ctx->hFile, data, dataSize, &wrote, nullptr) != FALSE;
+        if (written) done = ++ctx->receivedChunks;
+    }
+
+    // 치우는 일과 콜백은 모두 자물쇠 밖에서 한다.
+    // AbortTransfer 는 두 자물쇠를 다시 잡고, 콜백은 C# 으로 넘어가 얼마나 걸릴지 알 수 없다.
+    if (!written)
     {
         AbortTransfer(transferId, "청크 파일 쓰기 실패");
         return;
     }
 
-    ctx.receivedChunks++;
-    if (onFileProgress && ctx.totalChunks > 0)
+    if (onFileProgress && ctx->totalChunks > 0)
     {
-        int pct = static_cast<int>(ctx.receivedChunks * 100ULL / ctx.totalChunks);
-        onFileProgress(ctx.transferId, ctx.fileName, pct < 99 ? pct : 99);
+        int pct = static_cast<int>(done * 100ULL / ctx->totalChunks);
+        onFileProgress(ctx->transferId, ctx->fileName, pct < 99 ? pct : 99);
     }
 }
 
@@ -344,53 +379,114 @@ void FileTransferReceiver::HandleComplete(const uint8_t* payload, uint32_t paylo
     if (payloadLen < sizeof(FileTransferCompletePayload)) return;
     const auto* p = reinterpret_cast<const FileTransferCompletePayload*>(payload);
 
-    std::lock_guard<std::mutex> lock(contextsMutex_);
-    auto it = contexts_.find(FixedToString(p->transferId, sizeof(p->transferId)));
-    if (it == contexts_.end()) return;
+    // 받던 기록만 잠금 안에서 꺼내고 바로 놓는다.
+    //
+    // 아래의 SHA-256 검사와 수신 완료 콜백은 가볍지 않다 — 교수 앱은 그 콜백 안에서
+    // 답안 묶음을 복사하고 7za 로 풀어 본 뒤에야 돌아온다(AnswerCollectService).
+    // 잠금을 쥔 채로 하면 30명이 동시에 답안을 낼 때 한 명씩만 처리되고, 그동안 다른 학생들의
+    // 청크 쓰기(HandleChunk)까지 같은 잠금에서 멈춘다. 전송이 멈춘 것으로 보여
+    // 학생 쪽이 '전송이 끊겼습니다'로 판정할 수 있다(진행률 60초 정지 기준).
+    //
+    // 기록을 꺼낸 뒤에는 이 전송을 아는 것이 이 함수뿐이라 잠금 없이 다뤄도 안전하다.
+    std::shared_ptr<FileReceiveContext> ctx;
+    {
+        std::lock_guard<std::mutex> lock(contextsMutex_);
+        auto it = contexts_.find(FixedToString(p->transferId, sizeof(p->transferId)));
+        if (it == contexts_.end()) return;
 
-    FileReceiveContext ctx = std::move(it->second);
-    contexts_.erase(it);
+        ctx = std::move(it->second);
+        contexts_.erase(it);
+    }
 
-    // 파일 핸들 닫기
-    CloseHandle(ctx.hFile);
-    ctx.hFile = INVALID_HANDLE_VALUE;
+    // 파일 핸들 닫기. 끊김 처리(AbortBySender)가 같은 핸들을 닫으러 올 수 있어 자물쇠 안에서 한다.
+    {
+        std::lock_guard<std::mutex> lock(ctx->writeMutex);
+        if (ctx->hFile == INVALID_HANDLE_VALUE) return;   // 이미 치워진 전송
+        CloseHandle(ctx->hFile);
+        ctx->hFile = INVALID_HANDLE_VALUE;
+    }
 
     // SHA-256 검증
-    std::string computedHash = ComputeSHA256(ctx.tempPath);
-    if (_stricmp(computedHash.c_str(), ctx.sha256Hash.c_str()) != 0)
+    std::string computedHash = ComputeSHA256(ctx->tempPath);
+    if (_stricmp(computedHash.c_str(), ctx->sha256Hash.c_str()) != 0)
     {
-        DeleteFileW(Utf8ToWide(ctx.tempPath).c_str());
-        if (onFileError) onFileError(ctx.transferId, "SHA-256 불일치 — 파일 손상");
+        DeleteFileW(Utf8ToWide(ctx->tempPath).c_str());
+        if (onFileError) onFileError(ctx->transferId, "SHA-256 불일치 — 파일 손상");
         return;
     }
 
     // 수신 완료 이벤트
-    if (onFileProgress) onFileProgress(ctx.transferId, ctx.fileName, 100);
+    if (onFileProgress) onFileProgress(ctx->transferId, ctx->fileName, 100);
 
     LARGE_INTEGER fileSize{};
-    HANDLE hTmp = OpenFileUtf8(ctx.tempPath, GENERIC_READ, FILE_SHARE_READ,
+    HANDLE hTmp = OpenFileUtf8(ctx->tempPath, GENERIC_READ, FILE_SHARE_READ,
                               OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
     if (hTmp != INVALID_HANDLE_VALUE) { GetFileSizeEx(hTmp, &fileSize); CloseHandle(hTmp); }
 
     if (onFileReceived)
-        onFileReceived(ctx.transferId, ctx.senderId, ctx.fileName,
-                       ctx.tempPath, fileSize.QuadPart, ctx.archivePassword);
+        onFileReceived(ctx->transferId, ctx->senderId, ctx->fileName,
+                       ctx->tempPath, fileSize.QuadPart, ctx->archivePassword);
 }
 
 void FileTransferReceiver::AbortTransfer(const std::string& transferId, const std::string& reason)
 {
-    // 반드시 contextsMutex_ 를 보유한 상태에서 호출해야 합니다
-    auto it = contexts_.find(transferId);
-    if (it == contexts_.end()) return;
-
-    FileReceiveContext& ctx = it->second;
-    if (ctx.hFile != INVALID_HANDLE_VALUE)
+    std::shared_ptr<FileReceiveContext> ctx;
     {
-        CloseHandle(ctx.hFile);
-        ctx.hFile = INVALID_HANDLE_VALUE;
+        std::lock_guard<std::mutex> lock(contextsMutex_);
+        auto it = contexts_.find(transferId);
+        if (it == contexts_.end()) return;
+
+        ctx = std::move(it->second);
+        contexts_.erase(it);
     }
-    DeleteFileW(Utf8ToWide(ctx.tempPath).c_str());
-    contexts_.erase(it);
+
+    {
+        std::lock_guard<std::mutex> lock(ctx->writeMutex);
+        if (ctx->hFile != INVALID_HANDLE_VALUE)
+        {
+            CloseHandle(ctx->hFile);
+            ctx->hFile = INVALID_HANDLE_VALUE;
+        }
+    }
+    DeleteFileW(Utf8ToWide(ctx->tempPath).c_str());
 
     if (onFileError) onFileError(transferId, reason);
+}
+
+// 연결이 끊긴 쪽이 받던 중이던 전송을 모두 치운다.
+//
+// 전에는 끊겨도 받던 기록이 그대로 남아, 열린 파일 핸들과 반쯤 받은 임시 파일이 쌓였다.
+// 재제출은 새 번호로 돌아 동작에는 지장이 없었지만, 끊김이 반복되면 계속 늘어나기만 했다.
+//
+// 알림(onFileError)은 보내지 않는다. 이 전송의 주인은 방금 끊긴 연결이라 전할 곳이 없고,
+// 교수 화면에는 '연결 끊김'이 이미 따로 뜬다.
+void FileTransferReceiver::AbortBySender(const std::string& senderId)
+{
+    std::vector<std::shared_ptr<FileReceiveContext>> dropped;
+    {
+        std::lock_guard<std::mutex> lock(contextsMutex_);
+        for (auto it = contexts_.begin(); it != contexts_.end(); )
+        {
+            if (it->second->senderId == senderId)
+            {
+                dropped.push_back(std::move(it->second));
+                it = contexts_.erase(it);
+            }
+            else ++it;
+        }
+    }
+
+    // 핸들을 닫는 일은 공용 자물쇠 밖에서 한다 — 다른 학생의 조각 쓰기를 세우지 않기 위해서다.
+    for (auto& ctx : dropped)
+    {
+        {
+            std::lock_guard<std::mutex> lock(ctx->writeMutex);
+            if (ctx->hFile != INVALID_HANDLE_VALUE)
+            {
+                CloseHandle(ctx->hFile);
+                ctx->hFile = INVALID_HANDLE_VALUE;
+            }
+        }
+        DeleteFileW(Utf8ToWide(ctx->tempPath).c_str());
+    }
 }

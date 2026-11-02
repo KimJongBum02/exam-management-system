@@ -29,7 +29,11 @@ namespace ProfessorUI.ViewModel
 
         public bool IsConnected => Student?.IsConnected == true;
         public bool IsAnswerSubmitted => Student?.IsAnswerSubmitted == true;
-        public string ConnectionText => IsConnected ? "접속 중" : "미접속";
+        // 접속 상태 문구는 학생 쪽 한 곳에서만 만든다(StudentStatusViewModel.ConnectionText).
+        // 여기서 따로 계산했더니 '응시 후 종료'가 붙을 때 한쪽만 고쳐져, 같은 학생이
+        // 대시보드에서는 '미접속'인데 답안 수집 표에서는 '응시 후 종료'로 보였다.
+        // 아직 접속한 적 없는 명단 학생은 Student 가 없어 '미접속'이다.
+        public string ConnectionText => Student?.ConnectionText ?? "미접속";
         public string Status => Student?.Status ?? "접속 전";
 
         // 마지막으로 접속한 시각. 아직 접속하지 않은 명단 학생은 학생 쪽 기본 문구와 같게 둔다.
@@ -87,6 +91,13 @@ namespace ProfessorUI.ViewModel
                 case nameof(StudentStatusViewModel.IsAnswerSubmitted):
                     Raise(nameof(IsAnswerSubmitted), nameof(IsShown));
                     break;
+                // 문구는 학생 쪽에서 만들므로 그 이름이 올라올 때 그대로 넘긴다.
+                // 어떤 값이 문구를 바꾸는지 여기서 따라 적으면 규칙이 늘 때마다 또 빠뜨린다.
+                case nameof(StudentStatusViewModel.ConnectionText):
+                    Raise(nameof(ConnectionText));
+                    break;
+                // 응시했는지는 접속이 끊겨도 남는다. 칸을 계속 보일지가 이 값에 달려 있다(IsActive).
+                case nameof(StudentStatusViewModel.HasEverStarted):
                 case nameof(StudentStatusViewModel.HasExamStarted):
                 case nameof(StudentStatusViewModel.IsFileReceived):
                     Raise(nameof(IsShown));

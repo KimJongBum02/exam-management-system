@@ -11,9 +11,32 @@ namespace ProfessorUI
     {
         private bool _shuttingDown;
 
+        // 화면 예외를 알리는 창은 한 번만 띄운다. 배치·렌더링에서 나는 예외는 화면을 그릴 때마다
+        // 되풀이되므로, 그대로 두면 확인창이 끝없이 쌓여 교수가 아무것도 누르지 못한다.
+        private bool _crashNoticeShown;
+
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+
+            // 예외가 나면 이유를 반드시 남긴다. 교수 앱이 말없이 사라지면 서버가 닫혀
+            // 학생 전원이 한꺼번에 끊기는데, 무엇 때문이었는지 알 길이 없는 것이 가장 나쁘다.
+            // (학생 앱은 전부터 바탕화면 crash.log 를 남겼고, 교수 앱에는 그물이 아예 없었다)
+            RegisterCrashLog();
+
+            // 교수 앱은 한 번만 뜬다. 두 번째는 서버를 열기 전에 돌려보낸다.
+            // 네이티브가 포트를 독점으로 열게 바꿨으므로(ProfessorServer::Start) 두 번째는
+            // 어차피 서버를 열지 못하는데, 그 상태로 화면이 떠 있으면 교수가 어느 창이 진짜인지
+            // 알 수 없다. 여기서 아예 막고 이유를 알려 준다.
+            if (AlreadyRunning())
+            {
+                MessageBox.Show("시험 운영 프로그램이 이미 실행 중입니다.\n\n" +
+                                "작업 표시줄에서 먼저 켜 둔 창을 찾아 주세요.\n" +
+                                "두 번 띄우면 학생 접속을 받는 쪽과 교수가 보는 쪽이 어긋날 수 있습니다.",
+                                "이미 실행 중", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Shutdown();
+                return;
+            }
             // 모든 창의 글꼴을 App.xaml 의 AppFont 로 정한다. 창을 만들기 전에 불러야 한다.
             ExamManager.Shared.UiFont.Apply((System.Windows.Media.FontFamily)Resources["AppFont"]);
             // 키보드 포커스 점선 사각형을 앱 전체에서 끈다.
@@ -39,6 +62,11 @@ namespace ProfessorUI
                     ViewModel.ScreenBoardViewModel.Instance.AddStudent(sid, studentId, name, ip);
                     // 늦게 들어오거나 다시 접속한 학생도 상단에 같은 중요 공지를 보게 한다.
                     Service.ChatService.Instance.SendImportantNoticeTo(sid);
+
+                    // 학생 PC 상태(자유 · 통제 · 시험)도 다시 걸어 준다.
+                    // 학생 앱은 연결이 끊기는 순간 잠금과 덮개를 스스로 푼다. 다시 알려 주지 않으면
+                    // 랜선이 한 번 흔들린 학생만 자유 상태로 남아 감시 공백이 생긴다(ClassModeState).
+                    Service.ClassModeState.SendOnConnect(sid, studentId);
                 });
 
             network.StudentDisconnected += (sid, studentId, name, reason) =>
@@ -121,6 +149,49 @@ namespace ProfessorUI
 
             // 교수 화면의 주 창. 왼쪽 메뉴로 안쪽 화면만 갈아 끼운다.
             new View.Professor.MainWindow().Show();
+        }
+
+        // 프로그램이 도는 동안 들고 있는 표식. 프로세스가 끝나면 윈도우가 거둬 간다.
+        // 필드로 둬야 가비지 수집이 중간에 가져가지 않는다.
+        private static Mutex? _onlyOne;
+
+        // 이미 떠 있으면 true.
+        // Local\ 로 둔다 — 로그인한 사용자 안에서만 본다. 강의실 PC 는 교수 한 사람이 쓰므로
+        // 그걸로 충분하고, Global\ 로 두면 다른 사용자로 로그인한 교수가 띄울 수 없게 된다.
+        private static bool AlreadyRunning()
+        {
+            _onlyOne = new Mutex(initiallyOwned: true, @"Local\ExamManager.ProfessorUI", out bool mine);
+            return !mine;
+        }
+
+        // 처리되지 않은 예외를 바탕화면 crash.log 에 남긴다.
+        //
+        // 학생 앱과 정책이 일부러 다르다. 학생 앱은 상태가 깨진 채 시험을 이어 가지 않도록 그냥 끝내지만,
+        // 교수 앱은 강의실 전체의 서버다. 화면 쪽 예외 하나로 끝내면 치르고 있는 학생 전원이 끊긴다.
+        // 서버와 네이티브 수신 스레드는 화면과 따로 도므로, 화면에서 난 예외는 적어 두고 계속 연다.
+        private void RegisterCrashLog()
+        {
+            DispatcherUnhandledException += (_, e) =>
+            {
+                ExamManager.Shared.CrashLog.Write("화면 스레드", e.Exception);
+
+                // 서버를 닫지 않는다. 교수 화면 일부가 어긋나는 것이 학생 전원 끊김보다 낫다.
+                e.Handled = true;
+
+                // 조용히 넘기지는 않는다 — 교수가 모르면 어긋난 화면을 그대로 믿고 시험을 진행한다.
+                if (_crashNoticeShown) return;
+                _crashNoticeShown = true;
+                MessageBox.Show(
+                    "화면 처리 중 오류가 발생했습니다.\n학생 접속과 서버는 그대로 열려 있습니다.\n\n" +
+                    "화면이 이상해 보이면 시험을 마친 뒤 프로그램을 다시 켜 주시고,\n" +
+                    "바탕화면의 crash.log 를 함께 보내 주세요.",
+                    "오류", MessageBoxButton.OK, MessageBoxImage.Warning);
+            };
+
+            // 네이티브 수신 스레드나 배경 작업에서 터진 예외. 여기서는 프로세스가 내려가는 것을 막을 수 없다.
+            // 적어 두는 것만으로도 "교수 앱이 그냥 사라졌다"에서 벗어난다.
+            AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+                ExamManager.Shared.CrashLog.Write("배경 스레드", e.ExceptionObject as Exception);
         }
 
         // 네이티브 스레드에서 올라온 콜백을 UI 스레드로 안전하게 넘긴다.

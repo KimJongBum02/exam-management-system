@@ -50,6 +50,14 @@ bool StudentClient::Connect(const std::string& serverIp, int port)
     ::setsockopt(sock_, IPPROTO_TCP, TCP_NODELAY,
         reinterpret_cast<const char*>(&nodelay), sizeof(nodelay));
 
+    // SO_SNDTIMEO — 보내기가 영원히 막히지 않게 한다.
+    // 교수 PC 가 멈추거나 랜선이 빠지면 TCP 가 반쯤 열린 채 남는데, 타임아웃이 없으면
+    // 화면 캡처를 보내던 스레드가 몇 분을 멈춘다. 실패는 false 로 돌아가고,
+    // 받기 쪽이 끊김을 알아채면 자동 재연결이 돈다.
+    int sendTimeoutMs = SEND_TIMEOUT_MS;
+    ::setsockopt(sock_, SOL_SOCKET, SO_SNDTIMEO,
+        reinterpret_cast<const char*>(&sendTimeoutMs), sizeof(sendTimeoutMs));
+
     connected_ = true;
 
     if (onConnected) onConnected(serverIp.c_str(), port);
@@ -89,10 +97,22 @@ void StudentClient::Disconnect()
 bool StudentClient::IsConnected() const { return connected_; }
 
 // ─── 패킷 전송 ─────────────────────────────────────────────────────
+// 보내기가 실패하면 이 연결을 버린다.
+//
+// 보내기에는 10초 제한(SEND_TIMEOUT_MS)이 걸려 있는데, 제한에 걸린 send 는 이미 일부 바이트를
+// 내보낸 뒤에 실패로 돌아온다. 그 순간 이 연결의 패킷 경계는 어긋나 있다 —
+// 그대로 쓰면 교수 쪽이 파일 조각 중간을 헤더로 읽는다. 그러면 이 학생의 전송은 전부 실패하고,
+// 15초 뒤 하트비트 만료로 끊길 때까지 다시 내도 계속 실패한다. 하필 가장 바쁜 순간에 그렇게 된다.
+//
+// 끊어 버리면 이미 있는 자동 재연결(ReconnectService, 3초 간격)이 깨끗한 새 연결을 만들어 주고
+// 재제출이 정상 흐름에서 돈다. 교수 쪽은 같은 판단을 이미 하고 있다(ClientSession::Send → sendFailed).
 bool StudentClient::SendPacket(PacketType type, const void* payload, uint32_t payloadLen)
 {
     if (!connected_ || sock_ == INVALID_SOCKET) return false;
-    return ::SendPacket(sock_, sendMutex_, type, payload, payloadLen);
+
+    bool sent = ::SendPacket(sock_, sendMutex_, type, payload, payloadLen);
+    if (!sent) HandleDisconnect(static_cast<int>(DisconnectReason::NetworkError));
+    return sent;
 }
 
 // ─── 파일 전송 ─────────────────────────────────────────────────────
@@ -102,12 +122,18 @@ bool StudentClient::SendFile(const std::string& filePath, const std::string& pas
 
     std::thread([this, filePath, password]()
         {
-            FileTransferSender::SendFile(
+            bool sent = FileTransferSender::SendFile(
                 sock_, sendMutex_, filePath, password,
                 [this](const std::string& tid, const std::string& fn, int pct)
                 { if (onFileProgress) onFileProgress(tid.c_str(), fn.c_str(), pct); },
                 [this](const std::string& tid, const std::string& msg)
                 { if (onFileError) onFileError(tid.c_str(), msg.c_str()); });
+
+            // 조각을 보내다 실패했으면 이 연결의 패킷 경계가 어긋나 있다(SendPacket 설명 참고).
+            // 답안 전송이야말로 어긋난 연결로 다시 시도하면 안 되는 자리라 여기서도 끊는다.
+            // 파일을 열지 못한 경우처럼 한 바이트도 안 나간 실패까지 끊게 되지만,
+            // 그때 끊는 비용은 재연결 몇 초이고 안 끊었을 때의 비용은 제출 실패다.
+            if (!sent) HandleDisconnect(static_cast<int>(DisconnectReason::NetworkError));
         }).detach();
 
     return true;
@@ -176,16 +202,22 @@ void StudentClient::HeartbeatLoop()
 }
 
 // ─── 예기치 않은 연결 끊김 ─────────────────────────────────────────
+// 이제 받기 스레드 말고 보내는 쪽(하트비트·화면 캡처·답안 전송)에서도 불린다.
+// 두 스레드가 동시에 들어와도 한 번만 지나가게 한다 — 둘 다 통과하면 소켓을 두 번 닫고,
+// 그사이 새 연결이 같은 번호를 받았으면 엉뚱한 연결을 닫는다.
 void StudentClient::HandleDisconnect(int reason)
 {
-    if (!connected_) return;
-    connected_ = false;
+    if (!connected_.exchange(false)) return;
 
     if (sock_ != INVALID_SOCKET)
     {
         ::closesocket(sock_);
         sock_ = INVALID_SOCKET;
     }
+
+    // 시험 파일을 받던 중에 끊겼으면 그 기록을 치운다. 안 치우면 열린 핸들과
+    // 반쯤 받은 임시 파일이 남아, 다시 받을 때 그 파일을 지우지도 못한다.
+    fileReceiver_.AbortBySender("server");
 
     if (onDisconnected) onDisconnected(reason);
 }

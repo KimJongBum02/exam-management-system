@@ -24,6 +24,17 @@ public:
     std::atomic<uint32_t>       status{ 0 };   // StudentStatus
     // 로그인을 거절한 세션. 하트비트 감시가 닫는다 (ProfessorServer::HandleLogin 참고)
     std::atomic<bool>           loginRejected{ false };
+    // 보내기가 실패한(타임아웃 포함) 세션. 여기서 바로 닫지 않고 하트비트 감시에 맡긴다 —
+    // Send 는 sessionsMutex_ 를 쥔 SendToSession 안에서 불릴 수 있어, 그 자리에서 닫으면
+    // 세션을 지우려고 같은 잠금을 다시 잡다 멈춘다 (loginRejected 와 같은 방식).
+    std::atomic<bool>           sendFailed{ false };
+    // 받은 답안을 저장하는 중인 세션. 하트비트 감시가 건너뛴다.
+    //
+    // 저장(복사 + 7za 해제)은 이 세션의 수신 스레드에서 그대로 돌고, 하트비트 시각은
+    // 그 수신 루프 안에서만 갱신된다. 그래서 저장이 15초를 넘기면 학생은 멀쩡히 보내고 있는데도
+    // 감시 스레드가 '응답 없음'으로 보고 세션을 닫아 버린다 — 확인 회신을 보내기 전에 끊기므로
+    // 교수 PC 에는 답안이 저장됐는데 학생 화면에는 '제출 실패'가 뜬다. 학생은 다시 내고 부하는 더 는다.
+    std::atomic<bool>           busy{ false };
     std::chrono::steady_clock::time_point lastHeartbeat;
 
     // ── 소켓 ──────────────────────────────────────────────────────

@@ -161,7 +161,8 @@ namespace ProfessorUI.View.Professor
             if (mode != ClassMode.Free)
                 RemoteControlWindow.CloseIfOpen("상태를 바꾸려면 원격 제어를 먼저 끊어야 합니다.");
 
-            NetworkService.Instance.Broadcast(PacketType.ClassModeChange, new byte[] { (byte)mode });
+            // 보내는 것만으로는 부족하다. 끊겼다 돌아온 학생에게 다시 알려 줘야 하므로 상태를 기억해 둔다.
+            ClassModeState.Broadcast(mode);
 
             // 지금 어느 상태인지 활성 버튼을 굵게 하여 표시한다.
             FreeModeButton.FontWeight   = mode == ClassMode.Free   ? FontWeights.Bold : FontWeights.Normal;

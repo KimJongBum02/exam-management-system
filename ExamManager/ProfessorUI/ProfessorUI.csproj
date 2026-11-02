@@ -42,6 +42,8 @@
     <Compile Include="..\Shared\HeaderBarPanel.cs" Link="HeaderBarPanel.cs" />
     <!-- 네이티브·배경 스레드에서 화면으로 넘길 때 거치는 한 곳 -->
     <Compile Include="..\Shared\UiThread.cs" Link="UiThread.cs" />
+    <!-- 예외가 난 이유를 바탕화면 crash.log 에 남긴다 -->
+    <Compile Include="..\Shared\CrashLog.cs" Link="CrashLog.cs" />
     <!-- 읽기 전용 파일까지 지우는 폴더 삭제 -->
     <Compile Include="..\Shared\FileSystem.cs" Link="FileSystem.cs" />
     <!-- 버튼·단축키를 ViewModel 에 잇는 다리 -->

@@ -54,18 +54,27 @@ namespace ProfessorUI.Service
 
             if (success)
                 AnswerCollected?.Invoke(studentId, savedPath!);
+
+            // 네이티브가 임시 폴더에 받아 둔 원본은 저장이 끝나면 쓸모가 없다.
+            // 지우지 않으면 시험 한 번에 학생 수만큼(재제출까지 더해) 쌓여 교수 PC 디스크를 채우고,
+            // 디스크가 차면 그다음부터 저장이 실패한다 — 늦게 내는 학생부터 당한다.
+            // 저장에 실패했을 때만 남긴다. 그때는 이것이 받은 답안의 유일한 사본이다.
+            // 회신을 보낸 뒤에 지운다 — 삭제가 늦어져도 학생이 기다리는 시간은 늘지 않는다.
+            if (success)
+                try { File.Delete(tempPath); } catch (Exception) { }
         }
 
         // 세션 ID로 학번과 이름을 찾는다. 못 찾으면 세션 ID를 학번 자리에 쓴다 —
         // 누구인지 몰라도 파일은 반드시 남겨야 하기 때문이다.
+        //
+        // 목록을 직접 훑지 않고 StudentStore 에 맡긴다. 이 함수는 네이티브 수신 스레드에서 불리는데
+        // 그 목록은 화면 스레드가 넣고 빼므로, 훑는 도중 바뀌면 열거가 깨져 예외가 난다.
+        // 그 예외는 네이티브 콜백 위로 올라가 교수 앱을 통째로 죽인다(StudentStore.Gate 참고).
         private static (string StudentId, string Name) ResolveStudent(string sessionId)
         {
-            foreach (var student in StudentStore.Instance.Students)
-            {
-                if (student.SessionId == sessionId && student.StudentId.Length > 0)
-                    return (student.StudentId, student.Name);
-            }
-            return (sessionId, "");
+            return StudentStore.Instance.TryResolveBySession(sessionId, out string studentId, out string name)
+                ? (studentId, name)
+                : (sessionId, "");
         }
 
         // 네이티브가 임시 폴더에 받아 둔 답안을 학생별 폴더로 풀어 둔다.
