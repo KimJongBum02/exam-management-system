@@ -26,6 +26,18 @@ namespace StudentUI.View.StudentExamView
                 Left = SystemParameters.WorkArea.Right - ActualWidth - 16;
                 Top = SystemParameters.WorkArea.Top + 16;
             };
+
+            // 알림·채팅 칸을 펼치면 카드가 아래로 자란다. 학생이 카드를 화면 아래쪽에 끌어다 놓았으면
+            // 펼친 칸이 화면 밖으로 나가 보이지 않으므로, 넘치는 만큼 끌어올린다(자유 PIP 와 같다).
+            SizeChanged += (_, _) => KeepOnScreen();
+        }
+
+        // 카드 아래쪽이 작업 영역 밖으로 나가면 그만큼 끌어올린다.
+        // 화면보다 카드가 길어지는 경우는 없으므로 위로 밀려 잘릴 일은 없다.
+        private void KeepOnScreen()
+        {
+            double overflow = Top + ActualHeight - SystemParameters.WorkArea.Bottom;
+            if (overflow > 0) Top -= overflow;
         }
 
         // 제목줄이 없는 창이라 몸통을 끌어서 옮긴다.
@@ -34,7 +46,5 @@ namespace StudentUI.View.StudentExamView
             base.OnMouseLeftButtonDown(e);
             DragMove();
         }
-
-        private void OnClose(object sender, RoutedEventArgs e) => Close();
     }
 }

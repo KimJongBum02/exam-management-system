@@ -42,6 +42,10 @@ namespace StudentUI.Service
         private DispatcherTimer? _timer;
         private bool _running;
 
+        // 캡처 한 장이 끝나기 전에 다음 차례가 오면 건너뛴다.
+        // 쌓아 두면 느린 PC 에서 캡처 작업이 밀려 늘어난다 — 그때 필요한 것은 최신 한 장뿐이다.
+        private int _capturing;
+
         private ScreenCaptureService() { }
 
         // ── GDI P/Invoke ─────────────────────────────────────────────────────
@@ -74,7 +78,7 @@ namespace StudentUI.Service
             {
                 Interval = TimeSpan.FromSeconds(IntervalSeconds)
             };
-            _timer.Tick += (_, _) => CaptureAndSend();
+            _timer.Tick += (_, _) => CaptureAndSendAsync();
             _timer.Start();
         }
 
@@ -107,7 +111,7 @@ namespace StudentUI.Service
                 ThumbWidth  = HighWidth;
                 ThumbHeight = HighHeight;
                 JpegQuality = HighQuality;
-                CaptureAndSend(); // 교수가 창을 열었을 때 바로 고화질 프레임 1회 즉시 전송
+                CaptureAndSendAsync(); // 교수가 창을 열었을 때 바로 고화질 프레임 1회 즉시 전송
             }
             else
             {
@@ -118,19 +122,42 @@ namespace StudentUI.Service
         }
 
         // ── 핵심 로직 ─────────────────────────────────────────────────────────
-        private void CaptureAndSend()
+        // 캡처·축소·JPEG 인코딩·전송을 배경 스레드에서 한다. 화면 스레드에서 하면 안 된다 —
+        // 이 PC 에서 실측한 한 장 값이 썸네일 56ms · 고화질 68ms 고, 강의실 PC 는 더 느리다.
+        // 시험·통제 중에는 저수준 키보드·마우스 훅이 화면 스레드에 걸려 있어서(ClassControlService)
+        // 그동안 학생의 키 입력이 그만큼 밀리고, 윈도우의 훅 응답 한계(기본 300ms)를 넘기면
+        // 운영체제가 훅을 조용히 떼어 버린다 — 탈출키 차단이 말없이 풀린다는 뜻이다.
+        // 게다가 전송은 블로킹이라, 교수 PC 가 느릴 때 화면 스레드가 그 안에서 멈추면
+        // 학생 PC 의 키보드·마우스가 함께 얼어붙는다(고화질 한 장이 약 300KB).
+        //
+        // 여기서 만드는 WPF 이미지 객체는 이 스레드 안에서만 쓰고 버리므로 화면과 엉키지 않는다.
+        private void CaptureAndSendAsync()
         {
             if (!NetworkService.Instance.IsConnected) return;
 
-            try
+            // 앞 장이 아직 안 끝났으면 이번 차례는 건너뛴다.
+            if (Interlocked.CompareExchange(ref _capturing, 1, 0) != 0) return;
+
+            // 값은 여기서 읽어 둔다. 배경에서 읽으면 그사이 교수가 화질을 바꿔
+            // 크기와 품질이 서로 다른 조합으로 섞일 수 있다.
+            int width = ThumbWidth, height = ThumbHeight, quality = JpegQuality;
+
+            Task.Run(() =>
             {
-                byte[] jpeg = CaptureScreenJpeg(ThumbWidth, ThumbHeight, JpegQuality);
-                NetworkService.Instance.SendPacket(PacketType.ScreenCapture, jpeg);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[ScreenCapture] 오류: {ex.Message}");
-            }
+                try
+                {
+                    byte[] jpeg = CaptureScreenJpeg(width, height, quality);
+                    NetworkService.Instance.SendPacket(PacketType.ScreenCapture, jpeg);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ScreenCapture] 오류: {ex.Message}");
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _capturing, 0);
+                }
+            });
         }
 
         /// <summary>전체 화면을 캡처해 지정 크기로 축소한 뒤 JPEG 바이트 배열로 반환합니다.</summary>

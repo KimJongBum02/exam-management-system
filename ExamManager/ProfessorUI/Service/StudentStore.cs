@@ -11,6 +11,14 @@ namespace ProfessorUI.Service
         // ⭐ 단 하나의 학생 리스트 원본 (실제 접속한 학생만 채워짐, 늘 학번 순)
         public ObservableCollection<StudentStatusViewModel> Students { get; }
 
+        // 이 목록은 화면 스레드가 넣고 뺀다. 그런데 답안을 받아 저장하는 쪽(AnswerCollectService)은
+        // 네이티브 수신 스레드에서 이 목록을 훑어 누구 답안인지 찾는다.
+        // 훑는 도중에 다른 학생이 접속하거나 끊기면 열거가 깨져 예외가 나는데, 그 예외는
+        // 네이티브 콜백 위로 올라가 교수 앱을 통째로 죽인다 — 학생 전원이 한꺼번에 끊긴다.
+        // 넣고 빼는 자리와 밖에서 훑는 자리를 이 자물쇠 하나로 묶는다.
+        // 화면 스레드끼리의 읽기(데이터 바인딩)는 서로 읽기만 하므로 묶지 않아도 된다.
+        private static readonly object Gate = new object();
+
         // 특정 학생이 파일 수신 완료 응답을 보냈을 때 알림 (배포 화면 갱신용) — 인자: 학번
         public event Action<string>? FileReceivedConfirmed;
 
@@ -46,16 +54,19 @@ namespace ProfessorUI.Service
                 while (at < Students.Count && string.CompareOrdinal(Students[at].StudentId, studentId) < 0)
                     at++;
 
-                Students.Insert(at, new StudentStatusViewModel
+                lock (Gate)
                 {
-                    SessionId = sessionId,
-                    StudentId = studentId,
-                    Name = name,
-                    Ip = ip,
-                    Status = "대기",
-                    IsConnected = true,
-                    LastConnectedAt = DateTime.Now
-                });
+                    Students.Insert(at, new StudentStatusViewModel
+                    {
+                        SessionId = sessionId,
+                        StudentId = studentId,
+                        Name = name,
+                        Ip = ip,
+                        Status = "대기",
+                        IsConnected = true,
+                        LastConnectedAt = DateTime.Now
+                    });
+                }
             }
 
             // 접속 기록은 따로 쌓는다. 위 목록은 한 학생에 한 줄이라
@@ -96,7 +107,32 @@ namespace ProfessorUI.Service
             // 명단에 있는 학번도 남긴다 — 빠진 자리가 그대로 보여야 한다.
             // 몇 번 들어왔다 나갔는지는 접속 기록(ConnectionLogStore)에 그대로 남는다.
             if (StudentExcelStore.Find(student.StudentId) == null && !StudentCardViewModel.IsActive(student))
-                Students.Remove(student);
+            {
+                lock (Gate) { Students.Remove(student); }
+            }
+        }
+
+        // 세션 번호로 학번과 이름을 찾는다. 답안을 받아 저장하는 쪽이 네이티브 수신 스레드에서 부르므로
+        // 넣고 빼는 자리와 같은 자물쇠로 묶는다(Gate 설명 참고).
+        // 못 찾으면 false — 부르는 쪽이 세션 번호라도 써서 파일은 반드시 남기게 한다.
+        public bool TryResolveBySession(string sessionId, out string studentId, out string name)
+        {
+            lock (Gate)
+            {
+                foreach (var student in Students)
+                {
+                    if (student.SessionId == sessionId && student.StudentId.Length > 0)
+                    {
+                        studentId = student.StudentId;
+                        name = student.Name;
+                        return true;
+                    }
+                }
+            }
+
+            studentId = string.Empty;
+            name = string.Empty;
+            return false;
         }
 
         // 파일 수신 완료 응답 처리: 해당 학번 학생을 '수신완료'로 표시

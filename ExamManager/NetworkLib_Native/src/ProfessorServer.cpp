@@ -32,10 +32,17 @@ bool ProfessorServer::Start()
     listenSock_ = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (listenSock_ == INVALID_SOCKET) return false;
 
-    // SO_REUSEADDR — 빠른 재시작 시 포트 재사용
-    int opt = 1;
-    ::setsockopt(listenSock_, SOL_SOCKET, SO_REUSEADDR,
-        reinterpret_cast<const char*>(&opt), sizeof(opt));
+    // SO_EXCLUSIVEADDRUSE — 이 포트를 독점한다.
+    //
+    // 전에는 SO_REUSEADDR 였는데, 그러면 같은 포트를 듣는 소켓이 하나 더 생길 수 있다.
+    // 교수 앱을 두 번 실행하면 두 프로세스가 모두 9000 번을 듣고(실측) 둘 다 상단바에
+    // '서버 활성화'를 띄우는데, 어느 쪽이 접속을 받는지는 운영체제가 정한다.
+    // 학생이 보이지 않는 쪽에 붙으면 교수 화면은 빈 채로 남고, 둘 다 진짜 교수 앱이라
+    // 학생 쪽 로그인 검사(회신이 없으면 실패)에도 걸리지 않는다.
+    // 독점으로 열면 두 번째가 bind 에서 걸러져 '서버를 열지 못했습니다'로 알려 준다.
+    int exclusive = 1;
+    ::setsockopt(listenSock_, SOL_SOCKET, SO_EXCLUSIVEADDRUSE,
+        reinterpret_cast<const char*>(&exclusive), sizeof(exclusive));
 
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
@@ -112,6 +119,17 @@ void ProfessorServer::AcceptLoop()
         ::setsockopt(clientSock, IPPROTO_TCP, TCP_NODELAY,
             reinterpret_cast<const char*>(&nodelay), sizeof(nodelay));
 
+        // SO_SNDTIMEO — 보내기가 영원히 막히지 않게 한다.
+        //
+        // 학생 PC 가 최대절전으로 들어가거나 전원이 끊기면 TCP 가 반쯤 열린 채 남는다.
+        // 그 학생의 받기 창이 가득 차면 send 가 커널 안에서 멈추는데, 타임아웃이 없으면
+        // 재전송이 끝날 때까지 몇 분을 기다린다. 전체 전송(Broadcast)은 세션을 하나씩 돌며
+        // 보내므로, 그런 학생 한 명이 교수 화면 스레드를 그만큼 묶어 버린다.
+        // 실패하면 그 세션만 끊는다(Send → sendFailed → 하트비트 감시가 닫는다).
+        int sendTimeoutMs = SEND_TIMEOUT_MS;
+        ::setsockopt(clientSock, SOL_SOCKET, SO_SNDTIMEO,
+            reinterpret_cast<const char*>(&sendTimeoutMs), sizeof(sendTimeoutMs));
+
         // 클라이언트 IP:포트 문자열
         char ipBuf[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &clientAddr.sin_addr, ipBuf, sizeof(ipBuf));
@@ -159,7 +177,14 @@ void ProfessorServer::HeartbeatLoop()
             // 로그인을 거절한 세션도 여기서 닫는다 (HandleLogin 참고)
             if (s->loginRejected)
                 s->Close(static_cast<int>(DisconnectReason::ClientDisconnected));
-            else if (s->IsHeartbeatExpired(15))
+            // 보내기가 실패했으면 패킷 경계가 어긋나 있다. 더 쓸 수 없는 연결이라 닫는다.
+            // 교수 화면에는 '연결 끊김'으로 보이고, 학생 앱은 스스로 다시 붙는다.
+            else if (s->sendFailed)
+                s->Close(static_cast<int>(DisconnectReason::NetworkError));
+            // 답안을 저장하는 중인 세션은 건너뛴다. 저장이 이 세션의 수신 스레드를 묶고 있어
+            // 하트비트를 못 읽을 뿐, 학생은 멀쩡하다. 여기서 닫으면 확인 회신을 보내기 전에 끊겨
+            // 교수 PC 에는 답안이 있는데 학생은 '제출 실패'를 받는다 (ClientSession::busy 참고).
+            else if (!s->busy && s->IsHeartbeatExpired(15))
                 s->Close(static_cast<int>(DisconnectReason::HeartbeatTimeout));
         }
     }

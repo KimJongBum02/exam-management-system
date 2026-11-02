@@ -1,19 +1,22 @@
 using System.IO;
 using System.Text;
 
-namespace StudentUI.Service
+namespace ExamManager.Shared
 {
-    // 학생 앱이 왜 죽었는지 파일로 남긴다.
+    // 앱이 왜 죽었는지(또는 어디서 예외가 났는지) 파일로 남긴다. 교수·학생 앱이 함께 쓴다.
     //
-    // 학생 PC 는 교수가 들여다볼 수 없고, 앱이 죽으면 화면도 함께 사라진다. 남기지 않으면
-    // "시험 시작을 눌렀더니 학생 앱이 사라졌다"는 말만 남고 원인을 좁힐 길이 없다.
+    // 남기지 않으면 "시험 시작을 눌렀더니 앱이 사라졌다"는 말만 남고 원인을 좁힐 길이 없다.
+    // 학생 PC 는 교수가 들여다볼 수 없고, 교수 앱이 죽으면 서버가 닫혀 학생 전원이 끊기는데
+    // 정작 이유가 한 줄도 안 남는 것이 가장 나쁘다.
     //
-    // 두는 곳은 바탕화면이다. 숨은 폴더에 있으면 강의실에서 학생에게 경로를 불러 주며 찾게 해야 하는데,
+    // 두는 곳은 바탕화면이다. 숨은 폴더에 있으면 강의실에서 경로를 불러 주며 찾게 해야 하는데,
     // 바탕화면에 있으면 "바탕화면의 crash.log 보내 주세요" 한마디로 끝난다.
     // 시험 파일을 바탕화면에 두는 것과 같은 방식이다(ExamFileStore.ExtractFolder).
     // 설치 폴더에는 두지 않는다 — 읽기 전용인 강의실 PC 가 있다.
     // 다시 켜도 지우지 않고 뒤에 덧붙인다(같은 PC 에서 여러 번 죽는 것을 보려면 필요하다).
-    internal static class CrashLog
+    //
+    // 한 PC 에서 교수·학생을 함께 띄우면 두 앱이 같은 파일에 쓴다. 그래서 줄머리에 앱 이름을 적는다.
+    public static class CrashLog
     {
         private static readonly string LogPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "crash.log");
@@ -24,8 +27,10 @@ namespace StudentUI.Service
         {
             try
             {
+                string app = Path.GetFileNameWithoutExtension(Environment.ProcessPath) ?? "알 수 없는 앱";
+
                 var text = new StringBuilder();
-                text.AppendLine($"───── {DateTime.Now:yyyy-MM-dd HH:mm:ss} · {where} ─────");
+                text.AppendLine($"───── {DateTime.Now:yyyy-MM-dd HH:mm:ss} · {app} · {where} ─────");
                 // ToString 하나에 예외 종류 · 메시지 · 스택 · 안쪽 예외까지 다 들어 있다.
                 text.AppendLine(ex?.ToString() ?? "예외 객체가 없다 (네이티브에서 끝났을 수 있다)");
                 text.AppendLine();

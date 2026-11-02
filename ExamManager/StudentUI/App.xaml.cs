@@ -232,7 +232,7 @@ namespace StudentUI
             // 학생 앱이 왜 사라졌는지 알 길이 자체가 없었다(CrashLog 참고).
             DispatcherUnhandledException += (_, e) =>
             {
-                Service.CrashLog.Write("화면 스레드", e.Exception);
+                ExamManager.Shared.CrashLog.Write("화면 스레드", e.Exception);
                 RestoreSafely();
             };
 
@@ -241,7 +241,7 @@ namespace StudentUI
             // try/catch 가 한 군데도 없어, 처리기 하나가 던지면 이 경로로 앱이 통째로 끝난다.
             AppDomain.CurrentDomain.UnhandledException += (_, e) =>
             {
-                Service.CrashLog.Write("배경 스레드", e.ExceptionObject as Exception);
+                ExamManager.Shared.CrashLog.Write("배경 스레드", e.ExceptionObject as Exception);
                 RestoreSafely();
             };
 

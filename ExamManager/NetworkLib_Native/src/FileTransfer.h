@@ -74,6 +74,13 @@ struct FileReceiveContext
     uint32_t    totalChunks{ 0 };
     uint32_t    receivedChunks{ 0 };
     HANDLE      hFile{ INVALID_HANDLE_VALUE };
+
+    // 이 전송 하나의 파일 쓰기만 묶는다.
+    //
+    // 평소에는 한 전송을 한 수신 스레드만 다루므로 이 자물쇠를 기다리는 일이 없다.
+    // 그래도 두는 이유는 AbortBySender 때문이다 — 그쪽은 하트비트 감시 스레드에서 불려 와
+    // 이 핸들을 닫는데, 바로 그때 수신 스레드가 같은 핸들에 쓰고 있을 수 있다.
+    std::mutex  writeMutex;
 };
 
 class FileTransferReceiver
@@ -88,9 +95,16 @@ public:
     void HandleChunk   (const uint8_t* payload, uint32_t payloadLen);
     void HandleComplete(const uint8_t* payload, uint32_t payloadLen);
 
+    // 연결이 끊긴 쪽이 받던 중이던 전송을 모두 치웁니다 (연결을 닫을 때 호출).
+    // 치우지 않으면 열린 파일 핸들과 반쯤 받은 임시 파일이 그대로 남습니다.
+    void AbortBySender(const std::string& senderId);
+
 private:
     std::mutex contextsMutex_;
-    std::map<std::string, FileReceiveContext> contexts_;  // transferId → context
+    // shared_ptr 로 담는 이유: 찾을 때만 이 자물쇠를 잡고, 파일 쓰기는 자물쇠를 놓은 뒤에 한다.
+    // 값으로 담으면 쓰는 동안 자물쇠를 쥐고 있어야 해서 학생 전원의 조각 쓰기가 한 줄로 선다.
+    std::map<std::string, std::shared_ptr<FileReceiveContext>> contexts_;  // transferId → context
 
+    // 받던 기록을 지우고 임시 파일을 버린다. 이 함수가 스스로 contextsMutex_ 를 잡는다.
     void AbortTransfer(const std::string& transferId, const std::string& reason);
 };
