@@ -1,5 +1,4 @@
 using ExamManager.Shared;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows.Threading;
 using NetworkLib;
@@ -9,11 +8,11 @@ namespace StudentUI.Service
     // 교수의 상태 전환 명령(ClassModeChange)에 따라 학생 PC를 세 상태로 바꾼다.
     //   자유(Free)   아무 제한 없음. 로그인 직후 기본값이다.
     //   통제(Locked) 키보드·마우스를 OS 레벨에서 전부 막고 어두운 전체화면 덮개를 띄운다(수업 경청).
-    //   시험(Exam)   시험 창(StudentExamWindow)이 스스로 전체화면 덮개가 된다.
+    //   시험(Exam)   시험 창(ExamWindow)이 스스로 전체화면 덮개가 된다.
     //                여기서는 바탕화면 탈출키(Alt+Tab·Win·Alt+F4 등)만 막고, 그 창의 버튼은 누를 수 있게 둔다.
     //
     // 이 서비스는 '입력 차단'과 '통제 덮개'만 맡는다. 시험 창을 덮개로 바꾸는 일은
-    // StudentExamWindow 가 ModeChanged 를 듣고 스스로 한다(창 모양은 그 창이 안다).
+    // ExamWindow 가 ModeChanged 를 듣고 스스로 한다(창 모양은 그 창이 안다).
     //
     // 기존 KeyboardLockService 는 '개별 학생 키보드 잠금' 토글 전용이라 건드리지 않고 따로 둔다.
     //
@@ -23,14 +22,12 @@ namespace StudentUI.Service
     {
         public static ClassControlService Instance { get; } = new();
 
-        /// <summary>현재 상태. 로그인 직후 StudentExamWindow 가 초기 모양을 맞추는 데도 쓴다.</summary>
+        /// <summary>현재 상태. 로그인 직후 ExamWindow 가 초기 모양을 맞추는 데도 쓴다.</summary>
         public ClassMode CurrentMode { get; private set; } = ClassMode.Free;
 
-        /// <summary>상태가 바뀌면 화면 스레드에서 알린다. StudentExamWindow 가 덮개 전환에 쓴다.</summary>
+        /// <summary>상태가 바뀌면 화면 스레드에서 알린다. ExamWindow 가 덮개 전환에 쓴다.</summary>
         public event Action<ClassMode>? ModeChanged;
 
-        private const int WH_KEYBOARD_LL = 13;
-        private const int WH_MOUSE_LL    = 14;
         private const int WM_KEYDOWN = 0x100, WM_KEYUP = 0x101, WM_SYSKEYDOWN = 0x104, WM_SYSKEYUP = 0x105;
 
         // 가상 키 코드. 저수준 훅은 좌/우를 구분해 주므로 둘 다 본다.
@@ -40,11 +37,9 @@ namespace StudentUI.Service
         private const int VK_LCONTROL = 0xA2, VK_RCONTROL = 0xA3;
         private const int VK_LMENU = 0xA4, VK_RMENU = 0xA5;
 
-        private delegate IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam);
-
         // GC 가 수거하지 않도록 인스턴스 필드에 대리자를 보관한다.
-        private readonly HookProc _kbProc;
-        private readonly HookProc _mouseProc;
+        private readonly InputHook.Callback _kbProc;
+        private readonly InputHook.Callback _mouseProc;
         private IntPtr _kbHook = IntPtr.Zero;
         private IntPtr _mouseHook = IntPtr.Zero;
 
@@ -236,10 +231,10 @@ namespace StudentUI.Service
         private void SetKeyboardHook(bool want)
         {
             if (want && _kbHook == IntPtr.Zero)
-                _kbHook = SetWindowsHookEx(WH_KEYBOARD_LL, _kbProc, ModuleHandle(), 0);
+                _kbHook = InputHook.Install(InputHook.Keyboard, _kbProc);
             else if (!want && _kbHook != IntPtr.Zero)
             {
-                UnhookWindowsHookEx(_kbHook);
+                InputHook.Remove(_kbHook);
                 _kbHook = IntPtr.Zero;
                 _downKeys.Clear();
             }
@@ -248,24 +243,12 @@ namespace StudentUI.Service
         private void SetMouseHook(bool want)
         {
             if (want && _mouseHook == IntPtr.Zero)
-                _mouseHook = SetWindowsHookEx(WH_MOUSE_LL, _mouseProc, ModuleHandle(), 0);
+                _mouseHook = InputHook.Install(InputHook.Mouse, _mouseProc);
             else if (!want && _mouseHook != IntPtr.Zero)
             {
-                UnhookWindowsHookEx(_mouseHook);
+                InputHook.Remove(_mouseHook);
                 _mouseHook = IntPtr.Zero;
             }
-        }
-
-        private static IntPtr ModuleHandle()
-        {
-            IntPtr hMod = GetModuleHandle(null);
-            if (hMod == IntPtr.Zero)
-            {
-                using var curProcess = Process.GetCurrentProcess();
-                using var curModule = curProcess.MainModule;
-                hMod = GetModuleHandle(curModule?.ModuleName ?? "");
-            }
-            return hMod;
         }
 
         private IntPtr KeyboardHook(int nCode, IntPtr wParam, IntPtr lParam)
@@ -282,11 +265,11 @@ namespace StudentUI.Service
 
                 // 본인 PC에서 테스트 하실 때에는 이거 주석 풀고 사용하시면 됩니다.
                 // Ctrl + Esc로 통제모드에서 강제 탈출 시키는 커맨드 입니다
-                //if (isDown && vk == VK_ESCAPE && AnyDown(VK_LCONTROL, VK_RCONTROL, VK_CONTROL))
-                //{
+                // if (isDown && vk == VK_ESCAPE && AnyDown(VK_LCONTROL, VK_RCONTROL, VK_CONTROL))
+                // {
                 //    ReleaseAll();
                 //    return (IntPtr)1;
-                //}
+                // }
 
                 // 통제: 모든 키를 막는다.
                 if (CurrentMode == ClassMode.Locked)
@@ -296,7 +279,7 @@ namespace StudentUI.Service
                 if (CurrentMode == ClassMode.Exam && IsExamEscapeKey(vk, isDown))
                     return (IntPtr)1;
             }
-            return CallNextHookEx(_kbHook, nCode, wParam, lParam);
+            return InputHook.Next(_kbHook, nCode, wParam, lParam);
         }
 
         // 시험 덮개 중 막을 '바탕화면 탈출' 키.
@@ -318,7 +301,7 @@ namespace StudentUI.Service
         {
             // 통제에서만 설치된다 — 설치돼 있으면 이동·클릭·휠까지 모든 마우스 입력을 막는다.
             if (nCode >= 0) return (IntPtr)1;
-            return CallNextHookEx(_mouseHook, nCode, wParam, lParam);
+            return InputHook.Next(_mouseHook, nCode, wParam, lParam);
         }
 
         private bool AnyDown(params int[] vks)
@@ -327,17 +310,5 @@ namespace StudentUI.Service
                 if (_downKeys.Contains(vk)) return true;
             return false;
         }
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern IntPtr SetWindowsHookEx(int idHook, HookProc lpfn, IntPtr hMod, uint dwThreadId);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool UnhookWindowsHookEx(IntPtr hhk);
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
-
-        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern IntPtr GetModuleHandle(string? lpModuleName);
     }
 }

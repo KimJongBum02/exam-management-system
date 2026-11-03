@@ -1,7 +1,5 @@
+using ExamManager.Shared;
 using NetworkLib;
-using System.Diagnostics;
-using System.IO;
-using System.Text.Json;
 
 namespace ProfessorUI.Service
 {
@@ -14,9 +12,7 @@ namespace ProfessorUI.Service
     // 합치기만 하고 지우지 않는다. 여러 강의실에서 받은 것이 쌓여도 선택창의 후보가 늘 뿐 해가 없다.
     public static class ClassroomProgramStore
     {
-        private static readonly string FilePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "ExamManager", "classroom-programs.json");
+        private static readonly string FilePath = AppRecord.PathOf("classroom-programs.json");
 
         // 네트워크 수신 스레드와 선택창이 목록을 만드는 배경 스레드가 함께 쓴다.
         private static readonly object Gate = new();
@@ -54,34 +50,18 @@ namespace ProfessorUI.Service
             if (_byExe != null) return _byExe;
 
             _byExe = new Dictionary<string, InstalledProgram>(StringComparer.OrdinalIgnoreCase);
-            try
-            {
-                if (File.Exists(FilePath))
-                    foreach (var program in JsonSerializer.Deserialize<List<InstalledProgram>>(File.ReadAllText(FilePath)) ?? new())
-                        if (!string.IsNullOrEmpty(program.ExecutableName))
-                            _byExe[program.ExecutableName] = program;
-            }
-            catch (Exception ex)
-            {
-                // 파일이 깨졌으면 빈 목록에서 다시 쌓는다. 선택창의 다른 후보는 그대로 쓸 수 있다.
-                Debug.WriteLine($"강의실 프로그램 목록을 읽지 못했습니다: {ex.Message}");
-            }
+            // 파일이 깨졌으면 빈 목록에서 다시 쌓는다. 선택창의 다른 후보는 그대로 쓸 수 있다.
+            foreach (var program in AppRecord.ReadJson<List<InstalledProgram>>(FilePath, "강의실 프로그램 목록") ?? new())
+                if (!string.IsNullOrEmpty(program.ExecutableName))
+                    _byExe[program.ExecutableName] = program;
+
             return _byExe;
         }
 
         private static void Save(Dictionary<string, InstalledProgram> byExe)
         {
-            try
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-                File.WriteAllText(FilePath,
-                    JsonSerializer.Serialize(byExe.Values.ToList(), new JsonSerializerOptions { WriteIndented = true }));
-            }
-            catch (Exception ex)
-            {
-                // 저장을 못 해도 이번 실행 동안은 들고 있으므로 선택창에는 보인다.
-                Debug.WriteLine($"강의실 프로그램 목록을 저장하지 못했습니다: {ex.Message}");
-            }
+            // 저장을 못 해도 이번 실행 동안은 들고 있으므로 선택창에는 보인다.
+            AppRecord.WriteJson(FilePath, byExe.Values.ToList(), "강의실 프로그램 목록", indented: true);
         }
     }
 }

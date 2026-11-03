@@ -11,10 +11,7 @@ namespace StudentUI.Service
     {
         public static KeyboardLockService Instance { get; } = new();
 
-        private const int WH_KEYBOARD_LL = 13;
-
-        private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
-        private readonly LowLevelKeyboardProc _proc;
+        private readonly InputHook.Callback _proc;
         private IntPtr _hookId = IntPtr.Zero;
         private bool _isLocked;
         private View.Shared.KeyboardLockBannerWindow? _bannerWindow;
@@ -58,16 +55,7 @@ namespace StudentUI.Service
 
                 if (_hookId == IntPtr.Zero)
                 {
-                    IntPtr hMod = GetModuleHandle(null);
-                    if (hMod == IntPtr.Zero)
-                    {
-                        using var curProcess = Process.GetCurrentProcess();
-                        using var curModule = curProcess.MainModule;
-                        string moduleName = curModule?.ModuleName ?? "";
-                        hMod = GetModuleHandle(moduleName);
-                    }
-
-                    _hookId = SetWindowsHookEx(WH_KEYBOARD_LL, _proc, hMod, 0);
+                    _hookId = InputHook.Install(InputHook.Keyboard, _proc);
                     if (_hookId == IntPtr.Zero)
                     {
                         int err = Marshal.GetLastWin32Error();
@@ -99,7 +87,7 @@ namespace StudentUI.Service
 
                 if (_hookId != IntPtr.Zero)
                 {
-                    UnhookWindowsHookEx(_hookId);
+                    InputHook.Remove(_hookId);
                     _hookId = IntPtr.Zero;
                     Debug.WriteLine("[KeyboardLock] 키보드 훅 해제 완료");
                 }
@@ -116,19 +104,7 @@ namespace StudentUI.Service
                 // 0이 아닌 값(1)을 반환하여 시스템 및 대상 윈도우로의 모든 키보드 메시지 전달 차단
                 return (IntPtr)1;
             }
-            return CallNextHookEx(_hookId, nCode, wParam, lParam);
+            return InputHook.Next(_hookId, nCode, wParam, lParam);
         }
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool UnhookWindowsHookEx(IntPtr hhk);
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
-
-        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern IntPtr GetModuleHandle(string? lpModuleName);
     }
 }

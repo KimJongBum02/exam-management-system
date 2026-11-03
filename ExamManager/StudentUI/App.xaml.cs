@@ -9,8 +9,8 @@ namespace StudentUI
     {
         private NavigationStore _navigationStore;
         private Window _currentWindow;
-        private Window _quizWindow;
-        private View.QuizView.ClassQuizWindow? _classQuizWindow;
+        private Window _surveyWindow;
+        private View.Quiz.QuizWindow? _quizWindow;
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -83,8 +83,8 @@ namespace StudentUI
             // 퀴즈 구독 시작 — 교수가 낸 설문·수업 확인 퀴즈를 기다린다.
             // 수업 중 이해도 확인에도 쓰는 기능이라 시험 화면에 묶지 않고 여기서 받는다.
             Service.QuizService.Instance.Start();
-            Service.QuizService.Instance.QuestionReceived += ShowQuizWindow;
-            Service.QuizService.Instance.ClassQuizReceived += ShowClassQuizWindow;
+            Service.QuizService.Instance.SurveyReceived += ShowSurveyWindow;
+            Service.QuizService.Instance.QuizReceived += ShowQuizWindow;
 
             // ── 시험 파일을 수신하면 교수 PC로 '수신 완료' 응답을 보낸다 ──
             // 실제 접속/로그인 패킷 전송은 교수 PC 를 찾은 뒤 LoginViewModel.CompleteLogin 에서 수행한다.
@@ -118,24 +118,24 @@ namespace StudentUI
 
         // 새 문제가 오면 앞 문제 창은 닫고 새로 띄운다.
         // 교수가 연달아 낼 수 있어, 창이 쌓이면 학생이 어느 문제에 답하는지 헷갈린다.
-        private void ShowQuizWindow(string question)
+        private void ShowSurveyWindow(string question)
         {
-            _quizWindow?.Close();
+            _surveyWindow?.Close();
 
-            _quizWindow = new View.QuizView.QuizWindow(question);
-            _quizWindow.Closed += (_, _) => _quizWindow = null;
-            _quizWindow.Show();
+            _surveyWindow = new View.Quiz.SurveyWindow(question);
+            _surveyWindow.Closed += (_, _) => _surveyWindow = null;
+            _surveyWindow.Show();
         }
 
         // 수업 확인 퀴즈도 새 것이 오면 앞 창을 닫는다. 앞 퀴즈를 내지 않았으면 미제출로 남는다.
-        private void ShowClassQuizWindow(string quizId, System.Collections.Generic.List<(string Question, string[] Options)> questions)
+        private void ShowQuizWindow(string quizId, System.Collections.Generic.List<(string Question, string[] Options)> questions)
         {
-            _classQuizWindow?.CloseWithoutAsking();
+            _quizWindow?.CloseWithoutAsking();
 
-            _classQuizWindow = new View.QuizView.ClassQuizWindow(quizId, questions);
-            _classQuizWindow.Closed += (_, _) => _classQuizWindow = null;
-            _classQuizWindow.Show();
-            _classQuizWindow.Activate();
+            _quizWindow = new View.Quiz.QuizWindow(quizId, questions);
+            _quizWindow.Closed += (_, _) => _quizWindow = null;
+            _quizWindow.Show();
+            _quizWindow.Activate();
         }
 
         // 정상 흐름에서는 쓰고 바로 지우지만, 도중에 앱이 꺼지면 %TEMP% 에 남는 것들.
@@ -166,14 +166,14 @@ namespace StudentUI
 
             if (_navigationStore.CurrentViewModel is LoginViewModel loginVM)
             {
-                nextWindow = new MainWindow()
+                nextWindow = new LoginWindow()
                 {
                     DataContext = loginVM
                 };
             }
-            else if (_navigationStore.CurrentViewModel is StudentExamViewModel examVM)
+            else if (_navigationStore.CurrentViewModel is ExamViewModel examVM)
             {
-                nextWindow = new StudentUI.View.StudentExamView.StudentExamWindow()
+                nextWindow = new StudentUI.View.Exam.ExamWindow()
                 {
                     DataContext = examVM
                 };
@@ -190,7 +190,7 @@ namespace StudentUI
                     // 네비게이션에 의한 닫힘이므로 종료 핸들러를 먼저 떼어낸다
                     oldWindow.Closed -= OnCurrentWindowClosed;
                     // 화면 전환에 의한 닫힘은 종료 확인창을 띄우지 않도록 표시한다
-                    if (oldWindow is StudentUI.View.StudentExamView.StudentExamWindow examWindow)
+                    if (oldWindow is StudentUI.View.Exam.ExamWindow examWindow)
                         examWindow.IsNavigating = true;
                     oldWindow.Close();
                 }
@@ -198,8 +198,8 @@ namespace StudentUI
                 nextWindow.Closed += OnCurrentWindowClosed;
 
                 // 시험 창은 Show() 로 무조건 띄우지 않는다. 자유·통제·시험 중에는 숨어 있어야 하는데,
-                // 띄운 뒤 숨기면 내용을 그리기 전의 검은 창이 잠깐 보인다(StudentExamWindow.Present 참고).
-                if (nextWindow is StudentUI.View.StudentExamView.StudentExamWindow examWindowToShow)
+                // 띄운 뒤 숨기면 내용을 그리기 전의 검은 창이 잠깐 보인다(ExamWindow.Present 참고).
+                if (nextWindow is StudentUI.View.Exam.ExamWindow examWindowToShow)
                     examWindowToShow.Present();
                 else
                     nextWindow.Show();

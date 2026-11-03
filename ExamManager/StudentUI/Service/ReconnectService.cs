@@ -4,7 +4,7 @@ namespace StudentUI.Service
 {
     // 교수 프로그램이 꺼졌다 다시 켜지면 학생 앱이 스스로 다시 붙는다.
     //
-    // 연결이 뜻하지 않게 끊기면 몇 초마다 교수 PC 를 다시 찾는다(ProfessorDiscovery).
+    // 연결이 뜻하지 않게 끊기면 몇 초마다 교수 PC 를 다시 찾는다(AutoConnectService).
     // 찾으면 같은 학번·이름으로 다시 로그인하므로 학생은 아무것도 누르지 않아도 된다.
     // 학생이 로그아웃한 경우는 끊긴 것이 아니라 스스로 나간 것이라 다시 붙지 않는다(Disable).
     //
@@ -71,7 +71,7 @@ namespace StudentUI.Service
                     if (NetworkService.Instance.IsConnected) break;
 
                     // 교수 PC 가 새 포트로 켜졌을 수 있어 먼저 물어보고, 답이 없으면 지난 주소·포트로 바로 붙어 본다.
-                    (string Ip, int Port) target = await ProfessorDiscovery.FindAsync(_lastIp) ?? (_lastIp, _lastPort);
+                    (string Ip, int Port) target = await AutoConnectService.FindAsync(_lastIp) ?? (_lastIp, _lastPort);
                     if (!NetworkService.Instance.Connect(target.Ip, target.Port)) continue;
 
                     // 승인 회신을 못 받으면 LoginAsync 가 실패로 돌려준다 — 그 포트를 쓰는 다른 프로그램에

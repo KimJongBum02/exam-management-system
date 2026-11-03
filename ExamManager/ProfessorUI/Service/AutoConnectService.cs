@@ -17,7 +17,7 @@ namespace ProfessorUI.Service
     public static class AutoConnectService
     {
         // 자리와 주고받는 말은 두 앱이 같은 약속을 써야 하므로 NetworkInterop 의 DiscoveryProtocol 한 곳에 둔다
-        // (학생 쪽 ProfessorDiscovery 도 같은 것을 쓴다).
+        // (학생 쪽 AutoConnectService 도 같은 것을 쓴다).
         public const int DiscoveryPort = DiscoveryProtocol.Port;
 
         private const string Request  = DiscoveryProtocol.Request;

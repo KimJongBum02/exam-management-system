@@ -21,7 +21,6 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/ProfessorUI;component/View/Professor/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
-            <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
             <!-- 상단바 가운데의 중요 공지 칸. 공지가 있으면 노란 띠에 문구가, 없으면 흰 띠에 [중요 공지 등록]이 보인다.
                  어느 쪽이든 누르면 등록·수정·내리기 창이 뜬다 -->

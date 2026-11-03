@@ -469,7 +469,7 @@ namespace NetworkLib
     //
     //  패킷이 아니라 짧은 문자열 약속이라 Encode/Decode 가 없다.
     //  듣는 자리(UDP)는 시험 서버 포트(TCP)와 따로 고정이다 — 서버 포트가 바뀌어도 찾을 수 있어야 한다.
-    //  (보내는 쪽: 학생 ProfessorDiscovery, 받는 쪽: 교수 AutoConnectService)
+    //  (보내는 쪽: 학생 AutoConnectService, 받는 쪽: 교수 AutoConnectService — 두 앱이 같은 이름을 쓴다)
     // ══════════════════════════════════════════════════════════════════
     public static class DiscoveryProtocol
     {

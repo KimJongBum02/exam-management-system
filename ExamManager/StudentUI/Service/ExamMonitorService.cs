@@ -226,15 +226,6 @@ namespace StudentUI.Service
             // 잘못 읽고 시험 도중에 감시를 꺼버리는 것이 더 위험하다.
             if (!ExamPhasePayload.TryDecode(payload, payloadLen, out ExamPhase phase)) return;
 
-            // 교수가 새 시험을 준비하면(대기) 지난 시험은 끝났다. 이어 받을 기록도 지운다.
-            // 남겨 두면 다시 켰을 때 지난 시험의 종료 화면이 뜬다.
-            if (phase == ExamPhase.Waiting)
-            {
-                _resumeSession = null;
-                ExamSessionStore.Clear();
-                return;
-            }
-
             // 아직 시험 중이라는 알림이면 감시를 건드리지 않는다.
             if (phase < ExamPhase.SubmitRequested) return;
 

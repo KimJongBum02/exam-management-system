@@ -34,7 +34,7 @@ namespace ProfessorUI.View.Professor
         //   ② 전용 키의 스캔코드(한/영 0xF2 · 한자 0xF1)는 RDP 가 나르는 표준 범위 밖이고, 뗌이 없는 키다
         // 그래서 저수준 훅으로 IMM 보다 먼저 가로채 우리 패킷으로 보내고, 키는 삼킨다.
         // 삼키지 않으면 학생 PC 는 그대로인데 교수 PC 의 한글 상태만 몰래 바뀐다.
-        private const int WH_KEYBOARD_LL = 13;
+
         private const int WM_KEYDOWN = 0x0100, WM_SYSKEYDOWN = 0x0104;
         private const int VkHangul = 0x15, VkHanja = 0x19;
 
@@ -50,7 +50,7 @@ namespace ProfessorUI.View.Professor
         private readonly string _password;
         private ViewerHost? _viewer;
 
-        private readonly LowLevelKeyboardProc _keyProc;   // GC 가 수거하지 않도록 필드에 보관한다
+        private readonly InputHook.Callback _keyProc;     // GC 가 수거하지 않도록 필드에 보관한다
         private readonly string _defaultHint;             // 상단바 안내 원문(XAML 한 곳에서만 쓴다)
         private IntPtr _keyHook = IntPtr.Zero;
         private IntPtr _handle = IntPtr.Zero;
@@ -222,7 +222,7 @@ namespace ProfessorUI.View.Professor
                 _hintTimer = null;
                 if (_keyHook != IntPtr.Zero)
                 {
-                    UnhookWindowsHookEx(_keyHook);
+                    InputHook.Remove(_keyHook);
                     _keyHook = IntPtr.Zero;
                 }
 
@@ -300,8 +300,7 @@ namespace ProfessorUI.View.Professor
         {
             _handle = new WindowInteropHelper(this).Handle;
 
-            IntPtr hMod = GetModuleHandle(null);
-            _keyHook = SetWindowsHookEx(WH_KEYBOARD_LL, _keyProc, hMod, 0);
+            _keyHook = InputHook.Install(InputHook.Keyboard, _keyProc);
             if (_keyHook != IntPtr.Zero) return;
 
             // 못 걸면 한/영이 조용히 안 먹는 상태가 된다. 대신 쓸 방법까지 적어 준다 —
@@ -330,7 +329,7 @@ namespace ProfessorUI.View.Professor
                     return (IntPtr)1;
                 }
             }
-            return CallNextHookEx(_keyHook, nCode, wParam, lParam);
+            return InputHook.Next(_keyHook, nCode, wParam, lParam);
         }
 
         private void SendImeKey(bool hanja)
@@ -365,22 +364,8 @@ namespace ProfessorUI.View.Professor
             _hintTimer.Start();
         }
 
-        private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool UnhookWindowsHookEx(IntPtr hhk);
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
-
         [DllImport("user32.dll")]
         private static extern IntPtr GetForegroundWindow();
-
-        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern IntPtr GetModuleHandle(string? lpModuleName);
 
         private void Close_Click(object sender, RoutedEventArgs e) => Safely("창을 닫지 못했습니다", Close);
 

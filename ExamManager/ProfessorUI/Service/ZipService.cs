@@ -56,7 +56,7 @@ namespace ProfessorUI.Service
                 foreach (string item in sourceItems)
                 {
                     if (Directory.Exists(item))
-                        CopyDirectory(item, Path.Combine(stagingContent, Path.GetFileName(item.TrimEnd('\\'))), CopyOne);
+                        FileSystem.CopyFolder(item, Path.Combine(stagingContent, Path.GetFileName(item.TrimEnd('\\'))), CopyOne);
                     else if (File.Exists(item))
                         CopyOne(item, Path.Combine(stagingContent, Path.GetFileName(item)));
                 }
@@ -109,17 +109,6 @@ namespace ProfessorUI.Service
             }
 
 
-        }
-
-        // .NET에는 폴더 깊은 복사가 없어 직접 재귀 복사.
-        // 파일 하나하나는 넘겨받은 copyOne 이 옮긴다 — 부르는 쪽이 복사한 양을 셀 수 있게 한다.
-        private static void CopyDirectory(string source, string dest, Action<string, string> copyOne)
-        {
-            Directory.CreateDirectory(dest);
-            foreach (string file in Directory.GetFiles(source))
-                copyOne(file, Path.Combine(dest, Path.GetFileName(file)));
-            foreach (string dir in Directory.GetDirectories(source))
-                CopyDirectory(dir, Path.Combine(dest, Path.GetFileName(dir)), copyOne);
         }
 
         // 압축이 도는 동안 묶음 파일이 커지는 것을 보고 진행률을 올린다.

@@ -163,18 +163,8 @@ namespace StudentUI.Service
         public event Action? ExamStartHandled;
 
         // 교수 PC가 '시험 시작'을 누르면 오는 명령 — 받은 파일을 자동으로 풀고 해제 폴더를 띄운다.
-        // 또한 교수가 시험을 초기화(Waiting)하면 파일 상태를 리셋한다.
         private void OnPacketReceived(PacketType type, IntPtr payload, uint payloadLen)
         {
-            if (type == PacketType.ExamPhaseChange)
-            {
-                if (ExamPhasePayload.TryDecode(payload, payloadLen, out ExamPhase phase) && phase == ExamPhase.Waiting)
-                {
-                    Post(Reset);
-                }
-                return;
-            }
-
             if (type != PacketType.ExtractArchive) return;
 
             Post(StartExamAsync);
@@ -214,29 +204,6 @@ namespace StudentUI.Service
                 IsExtracting = false;
                 StatusText = $"시험 시작 처리 실패: {ex.Message} — 교수님께 재배포를 요청해 주세요.";
             }
-        }
-
-        public void Reset()
-        {
-            _archiveName = string.Empty;
-            _archivePath = string.Empty;
-            _password = string.Empty;
-            _transferId = string.Empty;
-            _startPending = false;
-            _lastExtracted.Clear();
-            ExtractedFiles.Clear();
-            FileName = "-";
-            Progress = 0;
-            IsReceived = false;
-            IsExtracted = false;
-            IsExtracting = false;
-            IsMissing = false;
-            TransferFailed = false;
-            StatusText = "파일 수신 대기 중";
-            OnPropertyChanged(nameof(HasExamFolder));
-            OnPropertyChanged(nameof(ExtractedRoot));
-            OnPropertyChanged(nameof(ExamPassword));
-            OnPropertyChanged(nameof(ArchiveName));
         }
 
         // ── 바인딩용 상태 ──
@@ -555,7 +522,7 @@ namespace StudentUI.Service
 
                 string dest = Path.Combine(target, name);
                 if (Directory.Exists(entry))
-                    CopyDirectory(entry, dest);
+                    FileSystem.CopyFolder(entry, dest);
                 else
                     File.Copy(entry, dest, true);
             }
@@ -563,16 +530,6 @@ namespace StudentUI.Service
             // 이번 배포가 전달한 파일 목록 (staging 기준 상대 경로 = 시험 폴더 기준 상대 경로)
             foreach (string path in Directory.GetFiles(staging, "*", SearchOption.AllDirectories))
                 delivered.Add(Path.GetRelativePath(staging, path));
-        }
-
-        // .NET에는 폴더 깊은 복사가 없어 직접 재귀 복사
-        private static void CopyDirectory(string source, string dest)
-        {
-            Directory.CreateDirectory(dest);
-            foreach (string file in Directory.GetFiles(source))
-                File.Copy(file, Path.Combine(dest, Path.GetFileName(file)), true);
-            foreach (string dir in Directory.GetDirectories(source))
-                CopyDirectory(dir, Path.Combine(dest, Path.GetFileName(dir)));
         }
 
         // 네이티브 스레드에서 온 알림을 UI 스레드로 넘긴다 (두 앱이 함께 쓰는 Shared\UiThread.cs)

@@ -47,7 +47,7 @@ namespace StudentUI.Service
         public event Action<AnswerSubmitState, string>? StateChanged;
 
         // 답안을 내고 시험 파일 정리까지 끝났다. 지웠으면 true, 남았으면 false.
-        // 이 학생에게는 시험이 완전히 끝난 순간이라 시험 화면이 이걸 보고 마무리한다(StudentExamWindow).
+        // 이 학생에게는 시험이 완전히 끝난 순간이라 시험 화면이 이걸 보고 마무리한다(ExamWindow).
         // StateChanged 로는 가를 수 없다 — 정리에 실패해도 제출 자체는 성공(Succeeded)이기 때문이다.
         // 제출을 끝낸 배경 작업에서 올라오므로 받는 쪽에서 화면 스레드로 넘겨야 한다.
         public event Action<bool>? CleanupFinished;

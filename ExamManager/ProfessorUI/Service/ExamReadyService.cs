@@ -24,7 +24,7 @@ namespace ProfessorUI.Service
 
         // 이번 실행에서 마지막으로 만든 묶음과, 그 묶음을 학생에게 보냈는지.
         // 보내기 전에 다시 압축하면 같은 번호를 새 내용으로 바꾸고, 보낸 뒤에는 다음 번호를 쓴다.
-        // SendFileState.IsFileDistributed 는 [새 시험 준비]에서 다시 false 가 되므로 따로 기억한다.
+        // SendFileState.IsFileDistributed 는 배포 전후로 바뀌므로 이 실행에서 만든 묶음은 따로 기억한다.
         private string? _currentOutput;
         private bool _currentDistributed;
 

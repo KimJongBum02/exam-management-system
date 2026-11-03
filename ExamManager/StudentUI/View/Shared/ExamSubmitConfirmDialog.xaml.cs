@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using ExamManager.Shared;
 
 namespace StudentUI.View.Shared
 {
@@ -14,13 +15,7 @@ namespace StudentUI.View.Shared
             StudentInfoText.Text = string.IsNullOrWhiteSpace(studentInfo) ? "-" : studentInfo;
         }
 
-        private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            if (e.ButtonState == MouseButtonState.Pressed)
-            {
-                DragMove();
-            }
-        }
+        private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => UiWindow.Drag(this);
 
         private void YesButton_Click(object sender, RoutedEventArgs e)
         {

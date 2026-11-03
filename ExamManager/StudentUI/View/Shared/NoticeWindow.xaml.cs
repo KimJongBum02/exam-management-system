@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Input;
+using ExamManager.Shared;
 
 namespace StudentUI.View.Shared
 {
@@ -18,9 +19,6 @@ namespace StudentUI.View.Shared
         private void Confirm_Click(object sender, RoutedEventArgs e) => Close();
 
         // 테두리를 잡고 창을 옮길 수 있게 한다. 공지가 화면을 가릴 때를 위한 것이다.
-        private void Border_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            if (e.ButtonState == MouseButtonState.Pressed) DragMove();
-        }
+        private void Border_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => UiWindow.Drag(this);
     }
 }

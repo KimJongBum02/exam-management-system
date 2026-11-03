@@ -236,6 +236,29 @@ namespace ProfessorUI.View.Professor
                     warnings.Add($"답안을 아직 걷지 못한 학생이 {uncollected}명 있습니다.\n지금 종료하면 다시 켜도 이 학생들의 답안을 걷을 수 없습니다.");
             }
 
+            // 시험 로그(출석 · 부정행위)는 파일로 남기지 않으면 프로그램과 함께 사라진다.
+            // 종료가 그 기록이 사라지는 유일한 순간이라, 여기서 한 번 붙잡는다.
+            if (_ctx.ExamLog.Rows.Count > 0 && !_ctx.ExamLog.IsSaved)
+            {
+                var save = MessageBox.Show(
+                    "시험 로그(출석 · 부정행위)를 아직 저장하지 않았습니다.\n" +
+                    "지금 종료하면 이 기록은 사라집니다.\n\n" +
+                    "[예] 지금 엑셀로 저장하고 계속\n" +
+                    "[아니오] 저장하지 않고 종료\n" +
+                    "[취소] 돌아가기",
+                    "종료 확인", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
+
+                if (save == MessageBoxResult.Cancel) return;
+
+                // 저장을 고르고도 저장 창에서 취소하거나 실패했으면 종료하지 않는다.
+                // 남기려던 교수의 뜻을 무시하고 끄면 되돌릴 길이 없다.
+                if (save == MessageBoxResult.Yes)
+                {
+                    if (!ExamLogExport.Save(_ctx.ExamLog.Rows)) return;
+                    _ctx.ExamLog.MarkSaved();
+                }
+            }
+
             string message = warnings.Count == 0
                 ? "프로그램을 종료하시겠습니까?"
                 : string.Join("\n\n", warnings) + "\n\n그래도 종료하시겠습니까?";
@@ -244,6 +267,11 @@ namespace ProfessorUI.View.Professor
             if (MessageBox.Show(message, "종료 확인", MessageBoxButton.YesNo, MessageBoxImage.Warning,
                                 MessageBoxResult.Yes) != MessageBoxResult.Yes)
                 return;
+
+            // 시험을 끝낸 뒤 교수가 스스로 끄는 것은 "이 시험은 여기까지"라는 뜻이다.
+            // 이어 받기 기록을 지워, 다음에 켤 때 지난 시험의 종료 단계로 들어가지 않게 한다.
+            // 스스로 끄지 않은 경우(크래시 · 정전)에는 기록이 남아 그대로 이어받는다 — 그게 이 기록의 목적이다.
+            if (ExamState.CurrentPhase >= ExamPhase.SubmitRequested) ExamSessionStore.Clear();
 
             Application.Current.Shutdown();
         }

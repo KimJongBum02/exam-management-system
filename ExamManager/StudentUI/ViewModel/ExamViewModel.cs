@@ -1,0 +1,535 @@
+using ExamManager.Shared;
+using System.Collections.ObjectModel;
+using System.Windows;
+using System.Windows.Input;
+using NetworkLib;
+using StudentUI.Model;
+using StudentUI.Service;
+using StudentUI.View.Shared;
+
+namespace StudentUI.ViewModel
+{
+    // 학생 화면 알림창에 표시할 감시 적발 내역 한 건.
+    public class CheatWarningItem
+    {
+        public string Time { get; init; } = string.Empty;
+        public string Description { get; init; } = string.Empty;
+    }
+
+    public class ExamFileStatusItem
+    {
+        public string Icon { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string StatusLevel { get; set; } = "Normal"; // Success, Info, Warning, Normal
+        public string Description { get; set; } = string.Empty;
+    }
+
+    public class ExamViewModel : UiBinding
+    {
+            private readonly NavigationStore _navigationStore;
+
+            public Student Student { get; set; } = new Student();
+
+            // 시험 파일 수신·압축 해제 상태 (화면 바인딩용)
+            public ExamFileStore ExamFile => ExamFileStore.Instance;
+
+            // 시험 남은 시간. 화면이 바뀌어도 이어지도록 저장소를 그대로 내보낸다.
+            public ExamTimeStore ExamTime => ExamTimeStore.Instance;
+
+            // 교수와 주고받는 채팅·알림. 시험 내내 이 화면에 머무르므로 여기에 둔다.
+            public SharedChatViewModel ChatVM => SharedChatViewModel.Instance;
+
+            private bool _isNotificationOpen;
+            public bool IsNotificationOpen
+            {
+                get => _isNotificationOpen;
+                set
+                {
+                    _isNotificationOpen = value;
+                    OnPropertyChanged();
+                    if (value) UnreadCheatWarningCount = 0; // 알림창을 열면 쌓인 경고를 본 것이다
+                }
+            }
+
+            private bool _isChatOpen;
+            public bool IsChatOpen
+            {
+                get => _isChatOpen;
+                set { _isChatOpen = value; OnPropertyChanged(); }
+            }
+
+            // 교수가 시험 종료 신호를 보내면 true가 된다. 학생 화면 전체를 잠근다.
+            public bool IsExamEnded => ExamTime.IsFinished;
+            public DateTime? ExamEndedTime => ExamTime.FinishedAt;
+
+            // ── 종료 화면의 답안 제출 ──
+            // 교수의 자동 수집이 실패했거나(편집기를 열어 둠 등) 앱을 다시 켜 아직 내지 못한 학생이
+            // 교수를 기다리지 않고 직접 다시 낼 수 있게 한다. 이미 냈거나 보내는 중이면 숨긴다.
+            // 교수 PC 와 끊긴 동안에는 보낼 곳이 없으므로 누르지 못하게 한다.
+            public bool CanSubmitAfterEnd => IsExamEnded && IsConnected &&
+                AnswerSubmitService.Instance.State is AnswerSubmitState.Idle or AnswerSubmitState.Failed;
+
+            // 지금 답안을 낼 수 없는 이유. 낼 수 있으면 빈 문자열이다.
+            // 끊긴 채로 눌러 '제출 실패'를 보면 학생은 답안을 잃은 줄 알고 당황한다. 누르기 전에 알린다.
+            public string SubmitBlockedReason => IsConnected
+                ? string.Empty
+                : "교수님 PC 와 연결이 끊겨 지금은 제출할 수 없습니다. 연결되면 바로 제출할 수 있습니다.";
+
+            public bool HasSubmitBlockedReason => SubmitBlockedReason.Length > 0;
+
+            public string SubmitAfterEndText =>
+                AnswerSubmitService.Instance.State == AnswerSubmitState.Failed ? "답안 다시 제출" : "답안 제출";
+
+            // 종료 화면에 보이는 제출 상태 한 줄. 아직 아무 일도 없으면 비어 있다.
+            public bool HasSubmitStatus => SubmitStatus.Length > 0;
+
+            public ICommand SubmitAfterEndCommand { get; }
+
+            public ICommand ToggleNotificationCommand { get; }
+            public ICommand ToggleChatCommand { get; }
+
+            // ── 서버 접속 상태 ──
+            // 시험 중 교수 PC가 꺼지거나 연결이 끊기면 학생이 바로 알 수 있어야 한다.
+            private bool _isConnected;
+            public bool IsConnected
+            {
+                get => _isConnected;
+                set
+                {
+                    _isConnected = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(ConnectionStatusText));
+
+                    // 끊기면 제출 버튼이 바로 잠기고, 다시 붙으면 바로 풀려야 한다.
+                    OnPropertyChanged(nameof(SubmitBlockedReason));
+                    OnPropertyChanged(nameof(HasSubmitBlockedReason));
+                    OnPropertyChanged(nameof(CanSubmitAfterEnd));
+                    UiThread.Post(CommandManager.InvalidateRequerySuggested);
+                }
+            }
+
+            public string ConnectionStatusText => IsConnected ? "실시간 연결 중" : "서버 미연결";
+
+            // 화면에 표시할 간결한 시험 파일 경로 (전송 전: 바탕화면\시험 파일, 전송 후: 바탕화면\시험 파일\시험파일명)
+            public string DisplayFolderPath
+            {
+                get
+                {
+                    if (ExamFile.HasExamFolder || ExamFile.IsReceived)
+                    {
+                        string name = !string.IsNullOrEmpty(ExamFile.ArchiveName)
+                            ? ExamFile.ArchiveName
+                            : (!string.IsNullOrEmpty(ExamFile.FileName) ? System.IO.Path.GetFileNameWithoutExtension(ExamFile.FileName) : "");
+                        return string.IsNullOrEmpty(name) ? @"바탕화면\시험 파일" : $@"바탕화면\시험 파일\{name}";
+                    }
+                    return @"바탕화면\시험 파일";
+                }
+            }
+
+            // 현황 테이블 항목들
+            public ObservableCollection<ExamFileStatusItem> StatusItems { get; } = new ObservableCollection<ExamFileStatusItem>();
+
+            public ICommand OpenExtractFolderCommand { get; }
+
+            // 답안을 제출하고 시험을 끝낸다. 시험 중일 때만 누를 수 있다.
+            public ICommand SubmitAnswerCommand { get; }
+
+            // 제출 진행 상황. 100MB를 보내는 동안 아무 표시가 없으면 멈춘 줄 알고 다시 누른다.
+            private string _submitStatus = string.Empty;
+            public string SubmitStatus
+            {
+                get => _submitStatus;
+                private set
+                {
+                    _submitStatus = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(IsSubmitting));
+                    OnPropertyChanged(nameof(HasSubmitStatus));
+                    OnPropertyChanged(nameof(CanSubmitAfterEnd));
+                    OnPropertyChanged(nameof(SubmitAfterEndText));
+                    RefreshStatusItems();
+                }
+            }
+
+            public bool IsSubmitting => AnswerSubmitService.Instance.State is
+                AnswerSubmitState.Compressing or AnswerSubmitState.Sending or AnswerSubmitState.WaitingAck;
+
+            // 감시에 걸린 내역. 화면의 알림창에 쌓인다.
+            // 최근 것이 위로 오도록 앞에 넣는다.
+            public ObservableCollection<CheatWarningItem> CheatWarnings { get; } = new ObservableCollection<CheatWarningItem>();
+
+            public bool HasCheatWarnings => CheatWarnings.Count > 0;
+            public int CheatWarningCount => CheatWarnings.Count;
+
+            // 상단 [알림] 배지. 알림창을 열어 보기 전까지 쌓인 경고 수다.
+            // 전체 수(CheatWarningCount)는 KPI 카드가 계속 보여 준다.
+            private int _unreadCheatWarningCount;
+            public int UnreadCheatWarningCount
+            {
+                get => _unreadCheatWarningCount;
+                private set
+                {
+                    _unreadCheatWarningCount = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(HasUnreadCheatWarnings));
+                }
+            }
+            public bool HasUnreadCheatWarnings => _unreadCheatWarningCount > 0;
+
+            public ICommand LogoutCommand { get; }
+
+            // ── 실시간 시계 타이머 ──
+            private readonly System.Windows.Threading.DispatcherTimer _clockTimer;
+
+            private string _currentTime = string.Empty;
+            public string CurrentTime
+            {
+                get => _currentTime;
+                set { _currentTime = value; OnPropertyChanged(); }
+            }
+
+            public ExamViewModel(NavigationStore navigationStore, Student student)
+            {
+                _navigationStore = navigationStore;
+                Student = student;
+
+                // 문제 폴더가 풀리기 전(앱만 켠 상태)에는 낼 답안이 없으므로 누를 수 없다.
+                // 교수 PC 와 끊긴 동안에는 보낼 곳이 없으므로 누르지 못하게 한다(SubmitBlockedReason 이 이유를 보여 준다).
+                SubmitAnswerCommand = new UiCommand(_ => SubmitAnswer(), _ => !IsSubmitting && ExamFile.IsExtracted && IsConnected);
+
+                // 시험은 이미 끝났으므로 '시험을 끝냅니다' 확인은 묻지 않는다.
+                // 결과는 StateChanged 로 올라와 종료 화면의 상태 줄과 결과 창에 나온다.
+                SubmitAfterEndCommand = new UiCommand(
+                    _ => { _ = AnswerSubmitService.Instance.SubmitAsync(); },
+                    _ => CanSubmitAfterEnd);
+
+                AnswerSubmitService.Instance.StateChanged += OnSubmitStateChanged;
+                ExamMonitorService.Instance.CheatWarning += OnCheatWarning;
+                ExamMonitorService.Instance.NetworkStateChanged += RefreshStatusItems;
+
+                IsConnected = NetworkService.Instance.IsConnected;
+                NetworkService.Instance.Disconnected += OnServerDisconnected;
+                ReconnectService.Reconnected += OnServerReconnected;
+                NetworkService.Instance.PacketReceived += OnPacketReceived;
+
+                // 채팅 수신 이벤트 구독
+                ChatVM.MessageArrived += OnChatMessageArrived;
+
+                // 시험 파일 상태 변경 감지 시 테이블 갱신
+                ExamFile.PropertyChanged += (s, e) =>
+                {
+                    OnPropertyChanged(nameof(DisplayFolderPath));
+                    RefreshStatusItems();
+
+                    // 압축이 풀리면 [답안 제출 및 시험 종료]를 바로 다시 따진다.
+                    // 그대로 두면 마우스를 움직이기 전까지 회색으로 남는다.
+                    if (e.PropertyName == nameof(ExamFile.IsExtracted))
+                        UiThread.Post(CommandManager.InvalidateRequerySuggested);
+                };
+
+                ExamTime.PropertyChanged += (s, e) =>
+                {
+                    OnPropertyChanged(nameof(IsExamEnded));
+                    OnPropertyChanged(nameof(ExamEndedTime));
+                    OnPropertyChanged(nameof(CanSubmitAfterEnd));
+                };
+
+                // 기본은 채팅/알림 오버레이 닫힘 상태
+                IsChatOpen = false;
+                IsNotificationOpen = false;
+
+                // 실시간 시계 초기화 및 시작
+                UpdateTime();
+                _clockTimer = new System.Windows.Threading.DispatcherTimer
+                {
+                    Interval = TimeSpan.FromSeconds(1)
+                };
+                _clockTimer.Tick += (s, e) => UpdateTime();
+                _clockTimer.Start();
+
+                // 압축 해제 뒤 탐색기가 자동으로 열리지만, 학생이 창을 닫았거나
+                // 자동 열기가 실패한 경우를 위해 언제든 다시 열 수 있게 둔다.
+                OpenExtractFolderCommand = new UiCommand(_ => ExamFile.OpenExtractFolder());
+
+                ToggleNotificationCommand = new UiCommand(_ =>
+                {
+                    IsNotificationOpen = !IsNotificationOpen;
+                    if (IsNotificationOpen) IsChatOpen = false; // 한 번에 하나만
+                });
+
+                ToggleChatCommand = new UiCommand(_ =>
+                {
+                    IsChatOpen = !IsChatOpen;
+                    if (IsChatOpen)
+                    {
+                        IsNotificationOpen = false;
+                        ChatVM.MarkAsRead();
+                    }
+                });
+
+                LogoutCommand = new UiCommand(_ =>
+                {
+                    Unsubscribe();
+                    ReconnectService.Disable(); // 스스로 나가는 것이라 다시 붙지 않는다
+                    NetworkService.Instance.Disconnect();
+                    ChatVM.Clear();
+                    ExamTime.Reset();
+                    _navigationStore.CurrentViewModel = new LoginViewModel(_navigationStore);
+                });
+
+                RefreshStatusItems();
+            }
+
+            public void RefreshStatusItems()
+            {
+                UiThread.Post(() =>
+                {
+                    StatusItems.Clear();
+
+                    // 1. 시험 문제지 수신 상태
+                    // 파일이 사라졌거나 전송이 실패한 것은 학생이 바로 알아야 교수님께 재배포를 요청할 수 있다.
+                    // 교수 화면에도 같은 상태가 올라가 그 학생이 재배포 대상이 된다(ExamFileStore 의 5초 점검).
+                    bool fileReceived = ExamFile.IsReceived;
+                    string fileName = string.IsNullOrEmpty(ExamFile.FileName) ? "배포 대기 중" : ExamFile.FileName;
+
+                    var (fileStatus, fileLevel, fileDescription) =
+                        ExamFile.IsMissing
+                            ? ("파일 삭제됨", "Warning",
+                               "받은 시험 파일이 이 PC 에서 보이지 않습니다. 교수님께 재배포를 요청하세요.")
+                        : ExamFile.TransferFailed
+                            ? ("전송 실패", "Warning",
+                               $"{ExamFile.StatusText} 교수님께 재배포를 요청하세요.")
+                        : fileReceived
+                            ? ("수신 완료", "Success", "문제 압축 파일이 안전하게 수신되었습니다.")
+                        : (string.IsNullOrEmpty(ExamFile.StatusText) ? "배포 대기" : ExamFile.StatusText, "Normal",
+                           "교수님이 시험 문제를 배포하면 자동으로 수신됩니다.");
+
+                    StatusItems.Add(new ExamFileStatusItem
+                    {
+                        Icon = "📦",
+                        Category = "시험 파일",
+                        Name = fileName,
+                        Status = fileStatus,
+                        StatusLevel = fileLevel,
+                        Description = fileDescription
+                    });
+
+                    // 2. 작업 폴더 (문제 풀이 및 소스코드 저장 위치)
+                    bool isExtracted = ExamFile.IsExtracted;
+                    string folderStatus = isExtracted ? "풀이 준비 완료" : (fileReceived ? "압축 해제 대기" : "대기 중");
+                    StatusItems.Add(new ExamFileStatusItem
+                    {
+                        Icon = "📁",
+                        Category = "시험 파일 경로",
+                        Name = DisplayFolderPath,
+                        Status = folderStatus,
+                        StatusLevel = isExtracted ? "Success" : (fileReceived ? "Info" : "Normal"),
+                        Description = isExtracted ? $"폴더 내 문제 파일({ExamFile.ExtractedFiles.Count}개)을 열어 시험을 진행하세요." :"시험이 시작되면 문제 파일이 자동 압축 해제됩니다."
+                    });
+
+                    // 3. 답안 제출 파일
+                    // 상태 칸에는 짧은 말만 둔다. 긴 안내를 넣으면 칸이 늘어나 설명 칸이 한두 글자 폭으로 눌린다.
+                    // 실패 이유 같은 긴 안내는 설명 줄에 보인다.
+                    // 문제 폴더가 풀리기 전에는 쓸 답안이 없으므로 '작성 중'이 아니라 대기로 둔다.
+                    var submitState = AnswerSubmitService.Instance.State;
+                    string submitText = submitState switch
+                    {
+                        AnswerSubmitState.Succeeded => "제출 완료",
+                        AnswerSubmitState.Failed    => "제출 실패",
+                        AnswerSubmitState.Idle      => isExtracted ? "작성 중" : "대기 중",
+                        _                           => "제출 중",
+                    };
+                    string submitLevel = submitState switch
+                    {
+                        AnswerSubmitState.Succeeded => "Success",
+                        AnswerSubmitState.Failed    => "Warning",
+                        AnswerSubmitState.Idle when !isExtracted => "Normal",
+                        _                           => "Info",
+                    };
+                    // 교수 PC 에 저장되는 이름과 같게 적는다 — "학번 이름" (교수 AnswerCollectService.BuildFolderName).
+                    string answerFileName = $"{Student.StudentNumber} {Student.StudentName}".Trim();
+                    StatusItems.Add(new ExamFileStatusItem
+                    {
+                        Icon = "📤",
+                        Category = "답안 파일",
+                        Name = answerFileName,
+                        Status = submitText,
+                        StatusLevel = submitLevel,
+                        Description = string.IsNullOrEmpty(SubmitStatus)
+                            ? "종료 전 '답안 제출' 버튼을 누르면 작업 폴더 전체가 자동 압축되어 전송됩니다."
+                            : SubmitStatus
+                    });
+
+                    // 4. 보안 감시 정책
+                    // 프로그램 감시는 네트워크 차단과 같은 때(시험 시작 처리) 켜지므로, 차단이 아직이면 감시도 시작 전이다.
+                    // 답안을 내면 감시를 멈추고 차단도 푼다(ExamMonitorService.OnSubmitStateChanged).
+                    bool monitorStarted = ExamMonitorService.Instance.NetworkState != NetworkBlockState.NotApplied;
+                    var (policyStatus, policyLevel, policyDescription) =
+                        !monitorStarted ? ("시험 시작 시 적용", "Normal",
+                                           "시험이 시작되면 비인가 프로그램 및 생성형 AI 사이트 접근이 실시간 감시/차단됩니다.")
+                        : submitState == AnswerSubmitState.Succeeded ? ("해제됨", "Success",
+                                           "답안 제출이 끝나 프로그램 감시와 차단이 풀렸습니다.")
+                        : IsConnected ? ("적용 중", "Success",
+                                           "비인가 프로그램 및 생성형 AI 사이트 접근이 실시간 감시/차단됩니다.")
+                        : ("서버 미연결", "Warning",
+                                           "비인가 프로그램 및 생성형 AI 사이트 접근이 실시간 감시/차단됩니다.");
+                    StatusItems.Add(new ExamFileStatusItem
+                    {
+                        Icon = "🛡️",
+                        Category = "보안 정책",
+                        Name = "실시간 프로그램 & 웹 차단",
+                        Status = policyStatus,
+                        StatusLevel = policyLevel,
+                        Description = policyDescription
+                    });
+
+                    // 5. 인터넷 차단
+                    // 사이트는 "오프라인입니다"라고만 해서 학생이 인터넷이 끊긴 줄 안다. 막은 것임을 여기서 알린다.
+                    // '차단 중'은 시험 중 정상 상태지만 초록(Success)으로 두면 '인터넷 정상'으로 읽혀 안내(Info)로 둔다.
+                    var (networkStatus, networkLevel, networkDescription) = ExamMonitorService.Instance.NetworkState switch
+                    {
+                        NetworkBlockState.Blocked  => ("차단 중", "Info",
+                                                       "시험 중에는 교수님 PC 외의 인터넷이 막힙니다. 사이트가 '오프라인'으로 보이는 것은 정상이며, 답안을 제출하면 자동으로 풀립니다."),
+                        NetworkBlockState.Released => ("해제됨", "Success",
+                                                       "답안 제출이 끝나 인터넷 차단이 풀렸습니다."),
+                        NetworkBlockState.Failed   => ("적용 실패", "Warning",
+                                                       "인터넷 차단을 적용하지 못했습니다. 교수님 PC에 자동으로 보고되었습니다."),
+                        _                          => ("시험 시작 시 적용", "Normal",
+                                                       "시험이 시작되면 교수님 PC 연결을 제외한 인터넷이 차단됩니다."),
+                    };
+                    StatusItems.Add(new ExamFileStatusItem
+                    {
+                        Icon = "🌐",
+                        Category = "네트워크 차단",
+                        Name = "외부 인터넷 차단 (교수님 PC 연결만 허용)",
+                        Status = networkStatus,
+                        StatusLevel = networkLevel,
+                        Description = networkDescription
+                    });
+                });
+            }
+
+            private void UpdateTime()
+            {
+                CurrentTime = DateTime.Now.ToString("HH:mm:ss");
+            }
+
+            // 화면을 떠날 때 구독을 정리한다.
+            private void Unsubscribe()
+            {
+                _clockTimer.Stop();
+                ChatVM.MessageArrived -= OnChatMessageArrived;
+                NetworkService.Instance.Disconnected -= OnServerDisconnected;
+                ReconnectService.Reconnected -= OnServerReconnected;
+                NetworkService.Instance.PacketReceived -= OnPacketReceived;
+                AnswerSubmitService.Instance.StateChanged -= OnSubmitStateChanged;
+                ExamMonitorService.Instance.CheatWarning -= OnCheatWarning;
+                ExamMonitorService.Instance.NetworkStateChanged -= RefreshStatusItems;
+            }
+
+            // 채팅창을 열어 두고 있을 때 온 메시지는 바로 읽은 것으로 처리한다.
+            // (닫혀 있을 때는 채팅 단추가 깜빡이고, 열어 볼 때 MarkAsRead 가 한꺼번에 회신한다)
+            private void OnChatMessageArrived()
+            {
+                UiThread.Post(() =>
+                {
+                    if (IsChatOpen) ChatVM.MarkAsRead();
+                });
+            }
+
+            // 교수 PC의 시험 단계 알림 수신
+            private void OnPacketReceived(PacketType type, IntPtr payload, uint payloadLen)
+            {
+                if (type != PacketType.ExamPhaseChange) return;
+                if (!ExamPhasePayload.TryDecode(payload, payloadLen, out _)) return;
+
+                // RefreshStatusItems 가 스스로 화면 스레드로 넘기므로 여기서 감싸지 않는다.
+                RefreshStatusItems();
+            }
+
+            // ── 답안 제출 ──
+            // 시험 20분 뒤부터 답안을 다 쓴 학생이 먼저 나갈 수 있다. 그때 누르는 버튼이다.
+            private void SubmitAnswer()
+            {
+                // 전송받은 시험 폴더명 및 경로 정보 구성.
+                // 학생이 폴더 이름을 바꿨을 수 있으므로 실제로 묶여 나갈 폴더를 보여 준다(없으면 원래 경로).
+                string folderPath = ExamFile.ResolveAnswerFolder();
+                if (folderPath.Length == 0) folderPath = ExamFile.ExtractedRoot;
+
+                string folderName = System.IO.Path.GetFileName(folderPath);
+                if (folderName.Length == 0)
+                    folderName = !string.IsNullOrEmpty(ExamFile.FileName)
+                        ? System.IO.Path.GetFileNameWithoutExtension(ExamFile.FileName) : "시험 파일";
+                string studentInfo = $"{Student.StudentNumber} {Student.StudentName}".Trim();
+
+                // 시험 폴더 이름과 답안 이름 형식 작성 확인 팝업창 표시
+                var dialog = new ExamSubmitConfirmDialog(folderName, folderPath, studentInfo);
+                if (Application.Current?.MainWindow != null && Application.Current.MainWindow.IsVisible)
+                {
+                    dialog.Owner = Application.Current.MainWindow;
+                }
+
+                bool? result = dialog.ShowDialog();
+                if (result != true) return;
+
+                // 압축·전송은 시간이 걸리므로 화면을 붙잡지 않는다.
+                // 결과는 StateChanged로 올라와 SubmitStatus에 표시된다.
+                _ = AnswerSubmitService.Instance.SubmitAsync();
+            }
+
+            // 제출 진행 상황 (다른 스레드에서 호출될 수 있음)
+            private void OnSubmitStateChanged(AnswerSubmitState state, string message)
+            {
+                UiThread.Post(() =>
+                {
+                    SubmitStatus = message;
+
+                    // 제출이 끝나면 결과를 확실히 알려 준다.
+                    // 실패했어도 답안은 PC에 그대로 남아 있으므로 다시 제출할 수 있다.
+                    if (state == AnswerSubmitState.Succeeded)
+                        MessageBox.Show(message, "제출 완료", MessageBoxButton.OK, MessageBoxImage.Information);
+                    else if (state == AnswerSubmitState.Failed)
+                        MessageBox.Show(message, "제출 실패", MessageBoxButton.OK, MessageBoxImage.Warning);
+                });
+            }
+
+            // 감시에 걸렸을 때 (네이티브 감시 스레드에서 호출됨)
+            private void OnCheatWarning(string description)
+            {
+                UiThread.Post(() =>
+                {
+                    CheatWarnings.Insert(0, new CheatWarningItem
+                    {
+                        Time = DateTime.Now.ToString("HH:mm:ss"),
+                        Description = description,
+                    });
+                    OnPropertyChanged(nameof(HasCheatWarnings));
+                    OnPropertyChanged(nameof(CheatWarningCount));
+                    // 알림창은 저절로 열지 않고 상단 [알림] 배지 숫자로 알린다. 열어 보면 배지가 사라진다.
+                    if (!IsNotificationOpen) UnreadCheatWarningCount++;
+                    RefreshStatusItems();
+
+                    // 금지 프로그램 창에 가려 있어도 시험 화면이 알림을 띄웠음을 알 수 있게 한다.
+                    ExamManager.Shared.UiSignal.FlashTaskbar();
+                });
+            }
+
+            // 서버 연결이 끊겼을 때 UI 상태를 갱신 (네이티브 스레드에서 호출됨)
+            private void OnServerDisconnected(DisconnectReason reason)
+            {
+                UiThread.Post(() => IsConnected = false);
+            }
+
+            // 자동 재연결로 다시 로그인까지 끝났을 때 (배경 스레드에서 호출됨)
+            private void OnServerReconnected()
+            {
+                UiThread.Post(() =>
+                {
+                    IsConnected = true;
+                    RefreshStatusItems();
+                });
+            }
+        }
+}

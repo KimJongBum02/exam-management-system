@@ -110,41 +110,5 @@ namespace ProfessorUI.Service
 
             return approved;
         }
-
-        // ── 새 시험 준비 ──
-        // 모든 과정이 끝난 뒤 학생별 기록과 시험 단계를 되돌린다. 걷은 답안 파일은 건드리지 않는다.
-        // 시험 중에는 되돌리지 않는다 — 아직 푸는 학생이 있는데 단계가 대기로 돌아가기 때문이다.
-        public bool ResetForNextExam()
-        {
-            if (ExamState.CurrentPhase < ExamPhase.SubmitRequested) return false;
-
-            foreach (var student in StudentStore.Instance.Students)
-            {
-                student.IsSelected = false;
-                student.IsFileReceived = false;
-                student.IsAnswerSubmitted = false;
-                student.SubmittedAt = null;
-                student.IsApproved = false;
-                student.IsCleanupFailed = false;
-                student.IsCleanupDone = false;
-                student.HasEverStarted = false;
-                student.Status = student.IsConnected ? "대기" : "미접속";
-
-                // 배포 표도 처음 상태로. 그대로 두면 다음 시험 준비 화면에 지난 시험의 '수신완료'가 남는다.
-                student.IsDeployTarget = true;
-                student.DeployStatus = "대기 중";
-                student.DeployProgress = 0;
-                student.SendingSessionId = null;
-            }
-
-            AlertStore.Instance.Clear();
-            SendFileState.IsFileDistributed = false;
-            ExamState.CurrentPhase = ExamPhase.Waiting;
-
-            // 접속 중인 학생들에게도 시험 초기화(대기 상태)를 알린다.
-            NetworkService.Instance.Broadcast(PacketType.ExamPhaseChange,
-                ExamPhasePayload.Encode(ExamPhase.Waiting, "시험이 초기화되었습니다."));
-            return true;
-        }
     }
 }
