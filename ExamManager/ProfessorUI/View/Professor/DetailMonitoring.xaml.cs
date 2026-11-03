@@ -43,6 +43,10 @@ namespace ProfessorUI.View.Professor
             InitializeComponent();
             _item = item;
 
+            // 이 학생에게 지금 걸려 있는 상태를 버튼에 보여 준다. 전체와 다르게 따로 맞춰 둔
+            // 학생이면 그 값이 나온다 — 그래야 교수가 개별 지정해 둔 것을 창에서 확인할 수 있다.
+            ShowActiveMode(ClassModeState.ModeFor(item.StudentId));
+
             Title           = $"화면 상세 보기 – {item.DisplayName}";
             NameText.Text   = item.DisplayName;
             UpdatedText.Text = $"마지막 수신: {item.LastUpdated}";
@@ -147,6 +151,17 @@ namespace ProfessorUI.View.Professor
             // 이 학생만 따로 지정한 것도 기억해 둔다. 기억하지 않으면 그 학생이 재접속할 때
             // 전체 상태가 덮어 보내져, 교수가 따로 맞춰 둔 것이 조용히 풀린다.
             ClassModeState.SendTo(_item.SessionId, _item.StudentId, mode);
+
+            ShowActiveMode(mode);
+        }
+
+        // 지금 걸려 있는 상태의 버튼만 채워서 보여 준다(DetailModeButton 스타일의 Tag="on").
+        // 전에는 셋 다 같은 모양이라, 이 학생에게 무엇을 걸어 뒀는지 창에서 알 길이 없었다.
+        private void ShowActiveMode(ClassMode mode)
+        {
+            FreeModeButton.Tag   = mode == ClassMode.Free   ? "on" : null;
+            LockedModeButton.Tag = mode == ClassMode.Locked ? "on" : null;
+            ExamModeButton.Tag   = mode == ClassMode.Exam   ? "on" : null;
         }
 
         private void KeyboardLock_Click(object sender, RoutedEventArgs e)

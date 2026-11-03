@@ -42,6 +42,10 @@ namespace ProfessorUI.View.Professor
         {
             InitializeComponent();
 
+            // 창을 닫았다 다시 열어도 지금 걸려 있는 학생 상태가 버튼에 그대로 보이게 한다.
+            // 상태는 ClassModeState 가 들고 있어 창보다 오래 산다.
+            ShowActiveMode(ClassModeState.Current);
+
             // 최대화로 시작하고, 복원하면 학생 시험 창과 같은 크기로 화면 가운데에 온다.
             UiWindow.ApplyMainWindowSize(this);
 
@@ -164,10 +168,17 @@ namespace ProfessorUI.View.Professor
             // 보내는 것만으로는 부족하다. 끊겼다 돌아온 학생에게 다시 알려 줘야 하므로 상태를 기억해 둔다.
             ClassModeState.Broadcast(mode);
 
-            // 지금 어느 상태인지 활성 버튼을 굵게 하여 표시한다.
-            FreeModeButton.FontWeight   = mode == ClassMode.Free   ? FontWeights.Bold : FontWeights.Normal;
-            LockedModeButton.FontWeight = mode == ClassMode.Locked ? FontWeights.Bold : FontWeights.Normal;
-            ExamModeButton.FontWeight   = mode == ClassMode.Exam   ? FontWeights.Bold : FontWeights.Normal;
+            ShowActiveMode(mode);
+        }
+
+        // 지금 걸려 있는 상태의 버튼만 채워서 보여 준다(ClassModeButton 스타일의 Tag="on").
+        // 굵기만 바꾸던 때는 눌린 것과 안 눌린 것이 구별되지 않아, 교수가 지금 무슨 상태인지
+        // 화면만 보고는 알 수 없었다.
+        private void ShowActiveMode(ClassMode mode)
+        {
+            FreeModeButton.Tag   = mode == ClassMode.Free   ? "on" : null;
+            LockedModeButton.Tag = mode == ClassMode.Locked ? "on" : null;
+            ExamModeButton.Tag   = mode == ClassMode.Exam   ? "on" : null;
         }
 
         // 포트는 9000 을 그대로 쓰는 것이 기본이다. 그 자리를 다른 프로그램이 쓰고 있을 때만 여기서 바꾼다.
