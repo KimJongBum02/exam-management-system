@@ -160,6 +160,46 @@
         </Setter>
     </Style>
 
+    <!-- 학생 상태 전환(자유·통제·시험) — 지금 걸려 있는 상태 하나만 채워서 보여 준다.
+         Tag="on" 이 지금 걸린 상태다(MainWindow.ShowActiveMode 가 넣는다).
+
+         전에는 글자 굵기만 바꿨는데, 상단바의 작은 버튼에서는 굵기 차이가 눈에 띄지 않아
+         교수가 지금 무슨 상태인지 알 수 없었다. 그래서 켜진 것만 검게 채우고 나머지는
+         테두리만 둔다 — 흰 상단바 위에서 채움과 테두리는 멀리서도 갈린다.
+         파랑(BtnPrimary)은 '지금 해야 할 일' 하나에 쓰는 색이라 여기서는 쓰지 않는다. -->
+    <Style x:Key="ClassModeButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+        <Setter Property="Padding" Value="14,8"/>
+        <!-- 켜진 버튼은 굵어져 글자가 넓어진다. 폭을 잡아 두지 않으면 상태를 바꿀 때마다
+             세 버튼의 폭이 달라져 줄 전체가 좌우로 흔들린다 -->
+        <Setter Property="MinWidth" Value="64"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="8"
+                            BorderBrush="{StaticResource BorderLight}" BorderThickness="1"
+                            Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgSubtle}"/>
+                        </Trigger>
+                        <!-- 켜진 상태. 테두리까지 같은 색으로 덮어 한 덩어리로 보이게 한다.
+                             올려놓기 트리거보다 뒤에 둬야 켜진 버튼이 옅어지지 않는다 -->
+                        <Trigger Property="Tag" Value="on">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BtnDark}"/>
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource BtnDark}"/>
+                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- 본문 안의 밑줄 링크 (브레드크럼, "전체 경고 내역 보기" 등) -->
     <Style x:Key="LinkButton" TargetType="Button">
         <Setter Property="Cursor" Value="Hand"/>

@@ -84,12 +84,14 @@
                                 shell:WindowChrome.IsHitTestVisibleInChrome="True">
                         <TextBlock Text="학생 상태" FontSize="{StaticResource FontSmall}"
                                    Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <Button x:Name="FreeModeButton" Content="자유" FontWeight="Bold"
-                                Style="{StaticResource SecondaryButton}" Click="ClassModeFree_Click"/>
+                        <!-- 굵기는 스타일이 켜진 버튼에만 준다. 여기서 FontWeight 를 적으면
+                             그 값이 스타일 트리거를 눌러 꺼진 버튼도 굵게 남는다 -->
+                        <Button x:Name="FreeModeButton" Content="자유"
+                                Style="{StaticResource ClassModeButton}" Click="ClassModeFree_Click"/>
                         <Button x:Name="LockedModeButton" Content="통제" Margin="6,0,0,0"
-                                Style="{StaticResource SecondaryButton}" Click="ClassModeLocked_Click"/>
+                                Style="{StaticResource ClassModeButton}" Click="ClassModeLocked_Click"/>
                         <Button x:Name="ExamModeButton" Content="시험" Margin="6,0,0,0"
-                                Style="{StaticResource SecondaryButton}" Click="ClassModeExam_Click"/>
+                                Style="{StaticResource ClassModeButton}" Click="ClassModeExam_Click"/>
                     </StackPanel>
                 </StackPanel>
                 <!-- 가운데: 중요 공지. 학생 앱 상단 가운데에도 같은 문구가 뜬다.
