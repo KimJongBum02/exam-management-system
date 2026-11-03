@@ -37,7 +37,35 @@ bool StudentClient::Connect(const std::string& serverIp, int port)
     addr.sin_port = htons(static_cast<u_short>(port));
     inet_pton(AF_INET, serverIp.c_str(), &addr.sin_addr);
 
-    if (::connect(sock_, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == SOCKET_ERROR)
+    // 연결 시도에 제한을 둔다(CONNECT_TIMEOUT_MS). 소켓을 잠깐 논블로킹으로 바꿔 connect 를
+    // 걸어 두고, select 로 정해진 시간만 기다린다. 끝나면 다시 블로킹으로 돌려놓는다 —
+    // 받기 루프와 보내기(SO_SNDTIMEO)는 블로킹 소켓을 전제로 돈다.
+    u_long mode = 1;                     // 1 = 논블로킹
+    ::ioctlsocket(sock_, FIONBIO, &mode);
+
+    bool ok = ::connect(sock_, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != SOCKET_ERROR;
+    if (!ok && ::WSAGetLastError() == WSAEWOULDBLOCK)
+    {
+        // 연결이 끝나면(성공이든 실패든) 쓰기 가능으로 깨어난다.
+        fd_set writeSet;
+        FD_ZERO(&writeSet);
+        FD_SET(sock_, &writeSet);
+        timeval wait{ CONNECT_TIMEOUT_MS / 1000, (CONNECT_TIMEOUT_MS % 1000) * 1000 };
+
+        // 깨어난 것만으로는 성공이 아니다. 거절당해도 깨어나므로 소켓 오류를 따로 확인한다.
+        if (::select(0, nullptr, &writeSet, nullptr, &wait) > 0)
+        {
+            int err = 0;
+            int len = static_cast<int>(sizeof(err));
+            ok = ::getsockopt(sock_, SOL_SOCKET, SO_ERROR,
+                              reinterpret_cast<char*>(&err), &len) != SOCKET_ERROR && err == 0;
+        }
+    }
+
+    mode = 0;                            // 0 = 블로킹으로 되돌림
+    ::ioctlsocket(sock_, FIONBIO, &mode);
+
+    if (!ok)
     {
         ::closesocket(sock_);
         sock_ = INVALID_SOCKET;

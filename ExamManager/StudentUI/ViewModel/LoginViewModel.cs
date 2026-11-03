@@ -107,7 +107,14 @@ namespace StudentUI.ViewModel
         {
             // 교수 PC 를 찾았거나 직접 입력받은 시점에 실제 서버로 연결을 시도한다.
             Student.IPAddress = ip;
-            bool connected = NetworkService.Instance.Connect(ip, port);
+
+            // 연결은 배경 스레드에서 한다. 네이티브 쪽에 제한(CONNECT_TIMEOUT_MS)을 걸어 뒀어도,
+            // 그 몇 초 동안 화면 스레드를 붙잡으면 창이 굳어 윈도우가 '응답 없음'을 띄운다.
+            // 주소를 잘못 친 학생이 가장 먼저 겪는 자리라 특히 멈추면 안 된다.
+            ConnectStatus = $"{ip}:{port} 에 연결하는 중…";
+            bool connected = await Task.Run(() => NetworkService.Instance.Connect(ip, port));
+            ConnectStatus = string.Empty;
+
             if (!connected)
             {
                 MessageBox.Show($"서버에 연결하지 못했습니다: {ip}:{port}\n주소와 교수 프로그램 실행 여부를 확인해 주세요.",
