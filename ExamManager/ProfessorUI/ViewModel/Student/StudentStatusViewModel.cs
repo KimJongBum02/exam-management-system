@@ -156,7 +156,7 @@ namespace ProfessorUI.ViewModel
         {
             get => _hasEverStarted;
             // 접속 상태 문구가 이 값으로 갈리므로 같이 알린다.
-            // 새 시험 준비로 되돌릴 때(ExamFlowService.ResetForNextExam) 표가 '미접속'으로 돌아가야 한다.
+            // 시험을 치른 적이 없는 학생은 접속이 끊기면 '미접속'으로 보여야 한다.
             set { _hasEverStarted = value; OnPropertyChanged(); OnPropertyChanged(nameof(ConnectionText)); }
         }
 

@@ -105,7 +105,6 @@ namespace StudentUI.Service
             {
                 if (phase == ExamPhase.InProgress) Begin();
                 else if (phase >= ExamPhase.SubmitRequested) Finish();
-                else if (phase <= ExamPhase.Ready) Reset();
             });
         }
 

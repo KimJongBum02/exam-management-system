@@ -7,9 +7,6 @@
                 <ResourceDictionary Source="pack://application:,,,/ProfessorUI;component/View/Professor/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- 부정행위가 없는 학생 줄에는 내역 상자를 아예 띄우지 않는다 -->
-            <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
-
             <!-- 부정행위 내역은 건수만큼 줄이 늘어난다. 다른 표와 달리 행 높이를 고정하지 않는다 -->
             <Style x:Key="LogRow" TargetType="ListViewItem" BasedOn="{StaticResource TableRow}">
                 <Setter Property="Height" Value="Auto"/>
@@ -59,7 +56,7 @@
         </UniformGrid>
 
         <TextBlock Grid.Row="2" Style="{StaticResource Caption}" Margin="0,0,0,12" TextWrapping="Wrap"
-                   Text="출석은 시험에 접속해 시험을 시작한 기록으로 판단합니다. 부정행위 횟수는 금지 프로그램 실행처럼 학생 PC 가 실제로 막은 건만 셉니다 — 허용 프로그램을 닫은 기록이나 감시 확인 경고는 세지 않습니다."/>
+                   Text="출석은 시험에 접속해 시험을 시작한 기록으로 판단합니다. 이 기록은 프로그램을 끄면 사라지므로, 남겨 두려면 [엑셀로 저장]을 눌러 주세요. 부정행위 횟수는 금지 프로그램 실행처럼 학생 PC 가 실제로 막은 건만 셉니다 — 허용 프로그램을 닫은 기록이나 감시 확인 경고는 세지 않습니다."/>
 
         <ListView Grid.Row="3" x:Name="LogTable" Style="{StaticResource FlatTable}" MinHeight="420"
                   ItemContainerStyle="{StaticResource LogRow}"
@@ -95,7 +92,7 @@
                             <DataTemplate>
                                 <Border Background="{StaticResource AlertSoft}" CornerRadius="4"
                                         Padding="10,6" Margin="6,4" HorizontalAlignment="Stretch"
-                                        Visibility="{Binding HasCheated, Converter={StaticResource BoolToVisibility}}">
+                                        Visibility="{Binding HasCheated, Converter={StaticResource BoolToVis}}">
                                     <TextBlock Text="{Binding CheatDetail}" FontSize="{StaticResource FontSmall}"
                                                Foreground="{StaticResource TextPrimary}" TextWrapping="Wrap"/>
                                 </Border>

@@ -2,39 +2,10 @@ using ExamManager.Shared;
 
 namespace StudentUI.Model
 {
-    public class ChatMessageModel : UiBinding
+    // 보낸 사람 · 본문 · 시각 · 내 말인지와 표시용 시각은 공용 바탕(ExamManager.Shared.ChatMessage)에 있다.
+    // 학생 쪽은 이어 말하기 표시만 더 붙인다.
+    public class ChatMessageModel : ChatMessage
     {
-        private string _senderName = string.Empty;
-        private string _message = string.Empty;
-        private DateTime _timestamp;
-        private bool _isMine;
-
-        public string SenderName
-        {
-            get => _senderName;
-            set { _senderName = value; OnPropertyChanged(); }
-        }
-
-        public string Message
-        {
-            get => _message;
-            set { _message = value; OnPropertyChanged(); }
-        }
-
-        public DateTime Timestamp
-        {
-            get => _timestamp;
-            set { _timestamp = value; OnPropertyChanged(); OnPropertyChanged(nameof(DisplayTime)); }
-        }
-
-        public string DisplayTime => Timestamp.ToString("HH:mm");
-
-        public bool IsMine
-        {
-            get => _isMine;
-            set { _isMine = value; OnPropertyChanged(); }
-        }
-
         // 같은 사람이 이어서 말하면 얼굴과 이름을 다시 그리지 않는다. 쌓을 때 한 번 정해지고 바뀌지 않는다.
         public bool ShowSender { get; init; } = true;
     }

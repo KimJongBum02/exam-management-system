@@ -1,3 +1,4 @@
+using ExamManager.Shared;
 using System.Buffers.Binary;
 using System.Diagnostics;
 using System.IO;
@@ -30,9 +31,7 @@ namespace StudentUI.Service
 
         // 시험 때문에 우리가 켠 방화벽 프로필. 끝나면 이것만 다시 꺼야 원래 상태가 된다.
         // 프로그램이 죽어도 남아 있어야 하므로 앱 폴더가 아닌 곳에 둔다.
-        private static readonly string EnabledProfilesPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "ExamManager", "firewall-enabled-profiles.txt");
+        private static readonly string EnabledProfilesPath = AppRecord.PathOf("firewall-enabled-profiles.txt");
 
         // 차단을 건다. 성공하면 null, 실패하면 교수 화면에 보일 이유를 돌려준다.
         public static string? Apply(string professorIp)

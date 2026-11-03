@@ -70,7 +70,7 @@ namespace StudentUI.ViewModel
             {
                 // 학번·이름만 치면 들어갈 수 있도록 교수 PC 를 스스로 찾는다.
                 ConnectStatus = "교수 PC를 찾는 중…";
-                (string Ip, int Port)? professor = await ProfessorDiscovery.FindAsync();
+                (string Ip, int Port)? professor = await AutoConnectService.FindAsync();
                 ConnectStatus = string.Empty;
 
                 // 못 찾는 경우(브로드캐스트를 막는 공유기, 교수 PC 가 다른 대역)에는 예전처럼 IP 를 직접 받는다.
@@ -165,7 +165,7 @@ namespace StudentUI.ViewModel
             ReconnectService.Enable(Student, ip, port);
 
             // 교수 UI와 동일한 '시험 준비 마법사' 대시보드로 진입 (1단계: 대기부터 시작)
-            _navigationStore.CurrentViewModel = new StudentExamViewModel(_navigationStore, Student);
+            _navigationStore.CurrentViewModel = new ExamViewModel(_navigationStore, Student);
         }
 
         private void ValidateFields()

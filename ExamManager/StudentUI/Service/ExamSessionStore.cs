@@ -1,6 +1,4 @@
-using System.Diagnostics;
-using System.IO;
-using System.Text.Json;
+using ExamManager.Shared;
 
 namespace StudentUI.Service
 {
@@ -20,9 +18,7 @@ namespace StudentUI.Service
         private static readonly TimeSpan MaxAge = TimeSpan.FromHours(3);
 
         // 프로그램이 죽어도 남아 있어야 하므로 앱 폴더가 아닌 곳에 둔다.
-        private static readonly string SessionPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "ExamManager", "exam-session.json");
+        private static readonly string SessionPath = AppRecord.PathOf("exam-session.json");
 
         public sealed class ExamSession
         {
@@ -41,40 +37,18 @@ namespace StudentUI.Service
         // 교수가 끝낸 시험(ExamEnded)도 돌려준다 — 답안을 아직 내지 못했으면 이 기록으로 제출한다.
         public static ExamSession? Load()
         {
-            try
-            {
-                if (!File.Exists(SessionPath)) return null;
-
-                var session = JsonSerializer.Deserialize<ExamSession>(File.ReadAllText(SessionPath));
-                if (session != null && session.ArchiveName.Length > 0 &&
-                    DateTime.UtcNow - session.StartedAtUtc <= MaxAge)
-                    return session;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"이어 받기 기록을 읽지 못했습니다: {ex.Message}");
-            }
+            var session = AppRecord.ReadJson<ExamSession>(SessionPath, "이어 받기 기록");
+            if (session != null && session.ArchiveName.Length > 0 &&
+                DateTime.UtcNow - session.StartedAtUtc <= MaxAge)
+                return session;
 
             Clear();
             return null;
         }
 
         public static void Save(ExamSession session)
-        {
-            try
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(SessionPath)!);
-                File.WriteAllText(SessionPath, JsonSerializer.Serialize(session));
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"이어 받기 기록을 남기지 못했습니다: {ex.Message}");
-            }
-        }
+            => AppRecord.WriteJson(SessionPath, session, "이어 받기 기록");
 
-        public static void Clear()
-        {
-            try { File.Delete(SessionPath); } catch { }
-        }
+        public static void Clear() => AppRecord.Delete(SessionPath);
     }
 }

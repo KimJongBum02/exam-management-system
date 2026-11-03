@@ -1,6 +1,5 @@
-using System.Diagnostics;
 using System.IO;
-using System.Text.Json;
+using ExamManager.Shared;
 using NetworkLib;
 
 namespace ProfessorUI.Service
@@ -17,9 +16,7 @@ namespace ProfessorUI.Service
         // 이보다 오래된 기록은 버린다. 지난 수업의 기록으로 다음 수업이 시험 중으로 열리지 않게 한다.
         private static readonly TimeSpan MaxAge = TimeSpan.FromHours(3);
 
-        private static readonly string SessionPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "ExamManager", "professor-session.json");
+        private static readonly string SessionPath = AppRecord.PathOf("professor-session.json");
 
         public sealed class ProfessorSession
         {
@@ -63,21 +60,12 @@ namespace ProfessorUI.Service
 
         private static ProfessorSession? Load()
         {
-            try
-            {
-                if (!File.Exists(SessionPath)) return null;
+            var session = AppRecord.ReadJson<ProfessorSession>(SessionPath, "시험 기록");
 
-                var session = JsonSerializer.Deserialize<ProfessorSession>(File.ReadAllText(SessionPath));
-
-                // 시험 전 단계로 남은 기록은 되살릴 것이 없다.
-                if (session != null && session.Phase > ExamPhase.Waiting &&
-                    DateTime.UtcNow - session.SavedAtUtc <= MaxAge)
-                    return session;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"시험 기록을 읽지 못했습니다: {ex.Message}");
-            }
+            // 시험 전 단계로 남은 기록은 되살릴 것이 없다.
+            if (session != null && session.Phase > ExamPhase.Waiting &&
+                DateTime.UtcNow - session.SavedAtUtc <= MaxAge)
+                return session;
 
             Clear();
             return null;
@@ -86,30 +74,19 @@ namespace ProfessorUI.Service
         // 단계나 묶음 상태가 바뀔 때마다 불린다.
         public static void Save()
         {
-            try
+            AppRecord.WriteJson(SessionPath, new ProfessorSession
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(SessionPath)!);
-                File.WriteAllText(SessionPath, JsonSerializer.Serialize(new ProfessorSession
-                {
-                    Phase = ExamState.CurrentPhase,
-                    EndedAt = ExamState.EndedAt,
-                    ExamId = SendFileState.ExamId,
-                    PackagePath = SendFileState.PackagePath,
-                    Password = SendFileState.Password,
-                    IsFilePrepared = SendFileState.IsFilePrepared,
-                    IsFileDistributed = SendFileState.IsFileDistributed,
-                    SavedAtUtc = DateTime.UtcNow,
-                }));
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"시험 기록을 남기지 못했습니다: {ex.Message}");
-            }
+                Phase = ExamState.CurrentPhase,
+                EndedAt = ExamState.EndedAt,
+                ExamId = SendFileState.ExamId,
+                PackagePath = SendFileState.PackagePath,
+                Password = SendFileState.Password,
+                IsFilePrepared = SendFileState.IsFilePrepared,
+                IsFileDistributed = SendFileState.IsFileDistributed,
+                SavedAtUtc = DateTime.UtcNow,
+            }, "시험 기록");
         }
 
-        public static void Clear()
-        {
-            try { File.Delete(SessionPath); } catch { }
-        }
+        public static void Clear() => AppRecord.Delete(SessionPath);
     }
 }

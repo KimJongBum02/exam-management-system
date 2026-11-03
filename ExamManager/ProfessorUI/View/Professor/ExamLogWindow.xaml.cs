@@ -1,8 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
-using Microsoft.Win32;
 using ProfessorUI.Common;
-using ProfessorUI.Service;
 
 namespace ProfessorUI.View.Professor
 {
@@ -22,33 +20,8 @@ namespace ProfessorUI.View.Professor
 
         private void SaveExcel_Click(object sender, RoutedEventArgs e)
         {
-            if (_ctx.ExamLog.Rows.Count == 0)
-            {
-                MessageBox.Show("저장할 기록이 없습니다.\n학생이 접속하면 목록이 채워집니다.",
-                                "시험 로그", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            var dialog = new SaveFileDialog
-            {
-                Title = "시험 로그 저장",
-                Filter = "Excel 통합 문서 (*.xlsx)|*.xlsx",
-                FileName = $"시험로그_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx",
-            };
-            if (dialog.ShowDialog() != true) return;
-
-            try
-            {
-                ExcelReport.SaveExamLog(_ctx.ExamLog.Rows, dialog.FileName);
-                MessageBox.Show($"저장했습니다.\n{dialog.FileName}",
-                                "시험 로그", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                // 같은 파일을 엑셀에서 열어 둔 채로 저장하면 여기로 온다.
-                MessageBox.Show($"저장하지 못했습니다.\n{ex.Message}\n\n같은 이름의 파일을 엑셀에서 열어 두었다면 닫고 다시 시도해 주세요.",
-                                "시험 로그", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
+            // 저장까지 끝났으면 기억해 둔다 — 종료할 때 "저장하지 않았습니다"로 다시 묻지 않는다.
+            if (ExamLogExport.Save(_ctx.ExamLog.Rows)) _ctx.ExamLog.MarkSaved();
         }
     }
 }

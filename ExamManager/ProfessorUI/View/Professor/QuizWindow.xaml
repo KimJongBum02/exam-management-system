@@ -8,8 +8,6 @@
                 <ResourceDictionary Source="pack://application:,,,/ProfessorUI;component/View/Professor/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
-            <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
-
             <!-- 결과 표의 칸 색. 맞으면 연한 초록, 틀리면 빨강. 엑셀(ExcelReport.CorrectFill·WrongFill)도 같은 색이다 -->
             <SolidColorBrush x:Key="CorrectCell" Color="#D9F2DF"/>
             <SolidColorBrush x:Key="WrongCell"   Color="#F5B5B5"/>
@@ -225,7 +223,7 @@
                                Text="왼쪽 아래 [+ OX] · [+ N지선다] 로 문제를 추가하십시오. 두 형식을 섞어 낼 수 있습니다."/>
 
                     <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto"
-                                  Visibility="{Binding Quiz.HasSelection, Converter={StaticResource BoolToVisibility}}">
+                                  Visibility="{Binding Quiz.HasSelection, Converter={StaticResource BoolToVis}}">
                         <ContentControl Content="{Binding Quiz.SelectedQuestion}" IsTabStop="False" Margin="0,0,8,0">
                             <ContentControl.ContentTemplate>
                                 <DataTemplate>
@@ -243,7 +241,7 @@
                                                  Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"/>
 
                                         <!-- OX: 정답만 고른다 -->
-                                        <StackPanel Visibility="{Binding IsOX, Converter={StaticResource BoolToVisibility}}">
+                                        <StackPanel Visibility="{Binding IsOX, Converter={StaticResource BoolToVis}}">
                                             <TextBlock Text="정답" Style="{StaticResource FieldLabel}"/>
                                             <StackPanel Orientation="Horizontal">
                                                 <RadioButton Style="{StaticResource AnswerChoice}"
@@ -262,7 +260,7 @@
                                         </StackPanel>
 
                                         <!-- N지선다: 보기를 늘리고 줄이며, 정답 보기의 번호를 누른다 -->
-                                        <StackPanel Visibility="{Binding IsChoice, Converter={StaticResource BoolToVisibility}}">
+                                        <StackPanel Visibility="{Binding IsChoice, Converter={StaticResource BoolToVis}}">
                                             <TextBlock Text="보기 — 정답인 보기의 번호를 누르십시오" Style="{StaticResource FieldLabel}"/>
                                             <ItemsControl ItemsSource="{Binding Options}" IsTabStop="False">
                                                 <ItemsControl.ItemTemplate>

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using ProfessorUI.Model;
 using ProfessorUI.Service;
 using ExamManager.Shared;
@@ -17,10 +18,12 @@ namespace ProfessorUI.ViewModel
             Student = student;
 
             // 이름이 늦게 들어오거나 답안을 내면 출석 표시가 달라진다. 학생 쪽 변화를 그대로 따라간다.
-            student.PropertyChanged += (_, _) => NotifyAll();
+            student.PropertyChanged += OnStudentChanged;
         }
 
         public StudentStatusViewModel Student { get; }
+
+        private void OnStudentChanged(object? sender, PropertyChangedEventArgs e) => NotifyAll();
 
         public string StudentId => Student.StudentId;
         public string Name => Student.Name;
@@ -67,6 +70,13 @@ namespace ProfessorUI.ViewModel
             Rebuild();
         }
 
+        // 이 기록을 엑셀로 한 번이라도 저장했는지.
+        // 교수가 프로그램을 끌 때 "저장하지 않았습니다"로 붙잡는 데 쓴다 —
+        // 이 기록은 파일로 남기지 않으면 앱과 함께 사라진다.
+        public bool IsSaved { get; private set; }
+
+        public void MarkSaved() => IsSaved = true;
+
         public int TotalCount => Rows.Count;
         public int AttendedCount => Rows.Count(r => r.AttendanceText == "출석");
         public int CheatedCount => Rows.Count(r => r.HasCheated);
@@ -74,6 +84,7 @@ namespace ProfessorUI.ViewModel
         // 학생 목록이 바뀌면 줄을 다시 만든다. 학번순으로 둔다 — 출석부와 같은 순서라 대조하기 쉽다.
         private void Rebuild()
         {
+            IsSaved = false;
             Rows.Clear();
             foreach (var student in StudentStore.Instance.Students.OrderBy(s => s.StudentId))
                 Rows.Add(new ExamLogRow(student));

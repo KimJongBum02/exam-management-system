@@ -8,9 +8,13 @@
     <File Path="NetworkInterop/NetworkInterop.cs" />
   </Folder>
   <Folder Name="/Shared/">
+    <File Path="Shared/AppRecord.cs" />
+    <File Path="Shared/ChatMessage.cs" />
+    <File Path="Shared/CommonStyles.xaml" />
     <File Path="Shared/FileSystem.cs" />
     <File Path="Shared/FontSizes.xaml" />
     <File Path="Shared/HeaderBarPanel.cs" />
+    <File Path="Shared/InputHook.cs" />
     <File Path="Shared/KnownPrograms.cs" />
     <File Path="Shared/StartMenuPrograms.cs" />
     <File Path="Shared/UiBinding.cs" />

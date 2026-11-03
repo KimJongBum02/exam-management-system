@@ -50,8 +50,19 @@
     <Compile Include="..\Shared\UiCommand.cs" Link="UiCommand.cs" />
     <!-- 값이 바뀌었음을 화면에 알리는 바탕 클래스 -->
     <Compile Include="..\Shared\UiBinding.cs" Link="UiBinding.cs" />
+    <!-- 키보드 · 마우스 저수준 훅 선언 한 벌 -->
+    <Compile Include="..\Shared\InputHook.cs" Link="InputHook.cs" />
+    <!-- 프로그램이 꺼져도 남아야 하는 작은 기록 (%LocalAppData%\ExamManager) -->
+    <Compile Include="..\Shared\AppRecord.cs" Link="AppRecord.cs" />
+    <!-- 교수 · 학생이 주고받는 말 한 건 (말풍선이 보는 값) -->
+    <Compile Include="..\Shared\ChatMessage.cs" Link="ChatMessage.cs" />
     <!-- 글자 크기 한 벌 (Styles.xaml 이 합쳐 쓴다) -->
     <Page Include="..\Shared\FontSizes.xaml" Link="FontSizes.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <!-- 두 앱이 함께 쓰는 스타일 한 벌 (고를 수 있는 글 · 스크롤 막대) -->
+    <Page Include="..\Shared\CommonStyles.xaml" Link="CommonStyles.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
