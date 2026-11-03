@@ -148,7 +148,11 @@ namespace StudentUI.Service
 
         // ── 시험 진입 유예(저장 기회 + 프로그램 정리) ──────────────────────────
         // 덮개가 올라가면 Alt+Tab 이 막혀 학생이 자기 앱에 못 가므로, 덮개 전에 유예를 둔다.
-        private const int GraceSeconds = 15;
+        //
+        // 5초다(전에는 15초). 이 시간은 교수가 시험 시작을 누른 뒤 학생 화면이 바뀔 때까지의
+        // 기다림이기도 해서, 길면 교수가 안 걸린 줄 알고 다시 누른다. 그만큼 학생이 저장할
+        // 시간은 짧아지므로, 시험 시작은 교수가 미리 알리고 누른다는 전제를 둔다.
+        private const int GraceSeconds = 5;
         private DispatcherTimer? _graceTimer;
         private View.Shared.ExamStartCountWindow? _graceWindow;
         private int _graceLeft;
@@ -275,12 +279,14 @@ namespace StudentUI.Service
                 if (isDown) _downKeys.Add(vk);
                 else if (msg == WM_KEYUP || msg == WM_SYSKEYUP) _downKeys.Remove(vk);
 
-                // [테스트 탈출] Ctrl+Esc → 이 PC만 자유로 (모드 무관).
-                if (isDown && vk == VK_ESCAPE && AnyDown(VK_LCONTROL, VK_RCONTROL, VK_CONTROL))
-                {
-                    ReleaseAll();
-                    return (IntPtr)1;
-                }
+
+                // 본인 PC에서 테스트 하실 때에는 이거 주석 풀고 사용하시면 됩니다.
+                // Ctrl + Esc로 통제모드에서 강제 탈출 시키는 커맨드 입니다
+                //if (isDown && vk == VK_ESCAPE && AnyDown(VK_LCONTROL, VK_RCONTROL, VK_CONTROL))
+                //{
+                //    ReleaseAll();
+                //    return (IntPtr)1;
+                //}
 
                 // 통제: 모든 키를 막는다.
                 if (CurrentMode == ClassMode.Locked)
