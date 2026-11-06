@@ -33,6 +33,14 @@ namespace StudentUI.Service
         // 프로그램이 죽어도 남아 있어야 하므로 앱 폴더가 아닌 곳에 둔다.
         private static readonly string EnabledProfilesPath = AppRecord.PathOf("firewall-enabled-profiles.txt");
 
+        // 시험 중에도 열어 두는 학교 LMS. 차단을 걸기 전에 이름을 풀어 둬야 한다 —
+        // 규칙이 들어가면 DNS 서버도 막혀서 그 뒤로는 이름을 풀 방법이 없다.
+        public const string AllowedSiteHost = "eclass.yuhan.ac.kr";
+
+        // 차단을 걸 때 풀어 둔 주소. eclass 창이 DNS 없이 이 주소로 바로 붙는다(EclassWindow 참고).
+        // 못 풀었으면 null — 차단은 그대로 걸고, 창을 열 때 학생에게 알린다.
+        public static string? AllowedSiteIp { get; private set; }
+
         // 차단을 건다. 성공하면 null, 실패하면 교수 화면에 보일 이유를 돌려준다.
         public static string? Apply(string professorIp)
         {
@@ -68,7 +76,7 @@ namespace StudentUI.Service
                 rule.Direction       = RuleDirectionOut;
                 rule.Action          = RuleActionBlock;
                 rule.Protocol        = AnyProtocol;
-                rule.RemoteAddresses = BuildBlockedAddresses(professor);
+                rule.RemoteAddresses = BuildBlockedAddresses(professor, ResolveAllowedSite());
                 // 활성 프로필에만 걸면, 시험 중 핫스팟을 붙여 다른 프로필로 잡힌 연결이 빠져나간다.
                 rule.Profiles        = AllProfiles;
                 rule.Enabled         = true;
@@ -146,15 +154,38 @@ namespace StudentUI.Service
             policy.Rules.Remove(BlockRuleName);
         }
 
-        // 막을 주소 목록. 교수 PC · DHCP 서버 · 브로드캐스트만 빼고 전부다.
+        // 열어 둘 사이트의 주소. 못 풀면 null.
+        // LB 라서 주소가 여러 개 나오는데 첫 번째만 쓴다. 방화벽도 창도 같은 하나를 보게 해야
+        // '열어 준 주소' 와 '실제로 붙는 주소' 가 어긋나지 않는다.
+        private static IPAddress? ResolveAllowedSite()
+        {
+            try
+            {
+                IPAddress? address = Dns.GetHostAddresses(AllowedSiteHost)
+                    .FirstOrDefault(resolved => resolved.AddressFamily == AddressFamily.InterNetwork);
+                AllowedSiteIp = address?.ToString();
+                return address;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"{AllowedSiteHost} 주소를 풀지 못했습니다: {ex.Message}");
+                AllowedSiteIp = null;
+                return null;
+            }
+        }
+
+        // 막을 주소 목록. 교수 PC · DHCP 서버 · 브로드캐스트 · 열어 둘 사이트만 빼고 전부다.
         // 방화벽 규칙에는 '이 주소만 빼고' 조건이 없어서, 뺄 주소 사이사이를 범위로 적는다.
         //
         // DHCP 를 빼는 이유: 시험 중 IP 임대 갱신이 막히면 IP 를 잃고 교수 PC 연결까지 끊긴다.
-        private static string BuildBlockedAddresses(IPAddress professor)
+        private static string BuildBlockedAddresses(IPAddress professor, IPAddress? allowedSite)
         {
-            List<uint> excluded = DhcpServers()
+            IEnumerable<IPAddress> keep = DhcpServers()
                 .Append(professor)
-                .Append(IPAddress.Broadcast)
+                .Append(IPAddress.Broadcast);
+            if (allowedSite != null) keep = keep.Append(allowedSite);
+
+            List<uint> excluded = keep
                 .Select(ToUInt32)
                 .Distinct()
                 .OrderBy(address => address)

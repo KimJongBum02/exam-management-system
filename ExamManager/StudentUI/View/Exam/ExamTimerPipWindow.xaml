@@ -44,6 +44,29 @@
                        FontSize="{StaticResource FontSmall}" Foreground="#94A3B8"
                        HorizontalAlignment="Center"/>
 
+            <!-- 시험 중 유일하게 들어갈 수 있는 사이트(학교 LMS). 방화벽이 이 주소만 열어 둔다.
+                 차단이 실제로 걸렸을 때만 보인다 — 코드 비하인드가 켜고 끈다.
+                 제출 버튼 위에 둔다. 마지막 단추는 늘 [답안 제출] 이어야 잘못 누르지 않는다. -->
+            <Button x:Name="EclassButton" Content="eclass 열기" Click="OnOpenEclass"
+                    Visibility="Collapsed"
+                    Margin="0,14,0,0" Padding="0,10" Cursor="Hand"
+                    FontSize="{StaticResource FontSmall}" FontWeight="Bold"
+                    Foreground="#E2E8F0" Background="#334155" BorderThickness="0">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#475569"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+
             <!-- 바탕화면에서 실습하다가 여기서 바로 답안을 낼 수 있게 하는 제출 버튼.
                  메인 시험 창의 것과 같은 명령(SubmitAnswerCommand)을 쓴다 — 코드 비하인드에서 연결
 
