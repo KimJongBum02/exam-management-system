@@ -177,8 +177,9 @@
                                             <TextBlock Text="{Binding ReceiptText}" FontSize="{StaticResource FontSmall}"
                                                        Foreground="{StaticResource TextSecondary}" Margin="14,0,0,0"/>
                                         </StackPanel>
-                                        <!-- Body 스타일은 TextBlock 전용이라 그 값(글자 크기·색)을 여기 적는다 -->
-                                        <TextBox Text="{Binding Text}" Style="{StaticResource SelectableText}"
+                                        <!-- Body 스타일은 TextBlock 전용이라 그 값(글자 크기·색)을 여기 적는다.
+                                             Mode=OneWay 는 버릴 수 없다 — Text 는 get 만 있어 기본값인 TwoWay 로는 예외가 난다 -->
+                                        <TextBox Text="{Binding Text, Mode=OneWay}" Style="{StaticResource SelectableText}"
                                                  FontSize="{StaticResource FontBody}" Foreground="{StaticResource TextPrimary}"/>
                                         <TextBlock x:Name="Missing" Text="{Binding MissingText}" Style="{StaticResource Caption}"
                                                    TextWrapping="Wrap" Margin="0,8,0,0"/>

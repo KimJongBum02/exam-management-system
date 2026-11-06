@@ -65,7 +65,7 @@
                            HorizontalAlignment="Center"
                            Margin="0,0,0,6"/>
 
-                <TextBlock Text="교수 PC를 자동으로 찾지 못했습니다.&#10;교수 PC의 IP 주소를 입력해 주세요.&#10;포트를 바꿨다면 192.168.0.5:9100 처럼 적어 주세요."
+                <TextBlock Text="교수 PC를 찾지 못했거나, 붙은 교수 PC의 명단에 학번이 없습니다.&#10;교수님 화면 위쪽에 적힌 IP 주소를 입력해 주세요.&#10;포트를 바꿨다면 192.168.0.5:9100 처럼 적어 주세요."
                            FontSize="12"
                            Foreground="#6B7280"
                            TextAlignment="Center"

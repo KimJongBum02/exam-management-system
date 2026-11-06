@@ -85,7 +85,7 @@ namespace StudentUI.View.Quiz
             if (!QuizService.Instance.SubmitQuiz(_quizId, _items.Select(i => i.Answer)))
             {
                 // 답은 그대로 두어 연결이 돌아오면 다시 누를 수 있게 한다.
-                MessageBox.Show(this, "교수 PC 와 연결이 끊겨 제출하지 못했습니다. 잠시 뒤 다시 눌러 주십시오.",
+                MessageBox.Show(this, "서버와 연결이 끊겨 제출에 실패하였습니다. 잠시 뒤 다시 시도해 주세요.",
                                 "답안 제출", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }

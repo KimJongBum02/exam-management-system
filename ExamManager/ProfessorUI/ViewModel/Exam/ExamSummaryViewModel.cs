@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using NetworkLib;
 using ProfessorUI.Service;
 using ProfessorUI.Model;
 using ExamManager.Shared;
@@ -79,6 +80,25 @@ namespace ProfessorUI.ViewModel
         // 예전 문구가 "흔적 삭제 (N명)"이라 누르면 지워지는 것처럼 읽혔고, N 도 체크와 무관한
         // 수집 완료 인원이라 "2명 지운다"처럼 보이는데 체크를 안 하면 0명이 처리됐다.
         public string ApproveTargetText => $"확인 완료 처리 ({ApproveSelectedCount}명)";
+        // ── [처음 화면으로] ──
+        // 시험을 끝내고, 확인 완료 처리를 마치고, 시험 로그까지 남겨야 열린다.
+        // 정리하면 로그가 사라지므로 저장을 팝업으로 묻는 대신 버튼을 잠가 둔다.
+        // 남길 기록이 아예 없으면(학생이 한 명도 들어오지 않은 시험) 저장을 요구하지 않는다 —
+        // 그 경우 엑셀 저장이 '저장할 기록이 없습니다'로 끝나 영영 열 수 없게 된다.
+        public bool CanReset => ExamState.CurrentPhase >= ExamPhase.SubmitRequested
+                             && ApprovalWaitingCount == 0
+                             && (ExamState.IsLogSaved || Students.Count == 0);
+
+        // 누를 수 없는 이유. 누를 수 있으면 빈 문자열이고, 그때 화면은 이 줄을 숨긴다.
+        public string ResetLockReason =>
+              ExamState.CurrentPhase < ExamPhase.SubmitRequested
+                  ? "시험을 종료하고 답안을 걷은 뒤에 열립니다."
+            : ApprovalWaitingCount > 0
+                  ? $"확인 완료 처리가 남았습니다 (대기 {ApprovalWaitingCount}명)."
+            : !ExamState.IsLogSaved && Students.Count > 0
+                  ? "시험 로그를 아직 저장하지 않았습니다. 위 [엑셀로 저장]을 눌러 남겨 주세요."
+            : string.Empty;
+
         public string EndSummaryText => $"확인 완료 {ApprovedCount}명 · 미수집 {NotCollectedCount}명 · 정리 실패 {CleanupFailedCount}명";
 
         private void OnStudentsChanged(object? sender, NotifyCollectionChangedEventArgs e)

@@ -19,6 +19,13 @@ namespace ExamManager.Shared
         {
             try
             {
+                // 배치·렌더링 예외는 화면을 그릴 때마다 되풀이되고, 교수 앱은 그래도 서버를
+                // 열어 둔 채 계속 돌기 때문에(App.RegisterCrashLog) 같은 기록이 끝없이 쌓입니다 —
+                // 2026-11-05 공지 한 건으로 24,796건·238MB. 20MB 를 넘으면 crash.log.old 로 밀어 두고 새로 시작합니다.
+                // 그냥 멈추면 교수가 그 파일을 지울 때까지 다음 사고를 아예 남기지 못합니다.
+                var file = new FileInfo(LogPath);
+                if (file.Exists && file.Length > 20 * 1024 * 1024) file.MoveTo(LogPath + ".old", overwrite: true);
+
                 // 한 PC 에서 두 앱을 함께 띄우면 같은 파일에 쓰므로 줄머리에 앱 이름을 적습니다.
                 string app = Path.GetFileNameWithoutExtension(Environment.ProcessPath) ?? "알 수 없는 앱";
 

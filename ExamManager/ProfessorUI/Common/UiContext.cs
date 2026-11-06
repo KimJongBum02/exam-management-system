@@ -1,3 +1,4 @@
+using ProfessorUI.Service;
 using ProfessorUI.ViewModel;
 
 namespace ProfessorUI.Common
@@ -36,5 +37,22 @@ namespace ProfessorUI.Common
 
         // 대시보드 학생 칸. 수강생 명단과 접속한 학생을 학번으로 이어 붙여 들고 있다.
         public StudentBoardViewModel Board { get; } = new();
+
+        // ── 다음 시험 준비 ──
+        // 시험 종료·답안 수집 화면의 [처음 화면으로] 가 부르는 한 지점.
+        //
+        // 저장소 쪽(시험 단계·배포 상태·학생별 기록·경고·접속 기록)은 ExamFlowService 가 되돌리고,
+        // 화면이 따로 들고 있는 값은 그 뷰모델이 스스로 되돌린다 — 고른 시험 파일과 압축 결과,
+        // 배포 결과 문구, 대화 목록, 시험 로그의 저장 표시가 그것이다. 저장소만 되돌리면 마법사 1·2단계와 채팅에
+        // 지난 시험의 값이 그대로 남는다(2026-11-04 확인).
+        public void ResetForNextExam()
+        {
+            ExamFlowService.Instance.ResetForNextExam();
+
+            FileReady.ResetForNextExam();
+            Distribute.ResetForNextExam();
+            Chat.ResetForNextExam();
+            ExamLog.ResetForNextExam();
+        }
     }
 }

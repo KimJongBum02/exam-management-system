@@ -112,6 +112,17 @@ namespace ProfessorUI.Service
             return conflicts;
         }
 
+        // 다음 시험 준비 — 두 목록을 기본값만 남긴 상태로 되돌린다([처음 화면으로]).
+        // 이번 시험에만 넣은 것(그 과제용 도구 하나, 그날 막은 메신저)이 다음 시험에 남으면,
+        // 교수가 넣은 기억이 없는 항목으로 학생 PC 가 막힌다.
+        // 앱을 끄면 어차피 기본값이라(이 목록은 파일에 안 남긴다) 수명을 그쪽에 맞춘다.
+        public static void ResetForNextExam()
+        {
+            BlackList.Clear();
+            WhiteList.Clear();
+            LoadDefaults();
+        }
+
         public static void RestoreBlackListDefaults()
         {
             foreach (string entry in DefaultBlackList)

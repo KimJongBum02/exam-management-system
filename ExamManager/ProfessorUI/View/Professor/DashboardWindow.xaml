@@ -124,6 +124,6 @@
         <TextBlock Grid.Row="2" x:Name="EmptyNote" Style="{StaticResource Caption}"
                    HorizontalAlignment="Center" Margin="0,60,0,0" Visibility="Collapsed"
                    TextWrapping="Wrap" TextAlignment="Center"
-                   Text="아직 접속한 학생이 없습니다. 학생이 접속하면 이 자리에 한 명씩 나타납니다.&#10;학교 포털에서 받은 수강생 명단 엑셀을 [명단 불러오기]로 읽어 두면, 학생이 접속하기 전에도 명단 순서대로 칸이 미리 깔립니다."/>
+                   Text="수강생 명단을 먼저 불러와 주세요. 명단에 있는 학번만 접속할 수 있습니다.&#10;학교 포털에서 받은 엑셀을 [명단 불러오기]로 읽으면 명단 순서대로 칸이 미리 깔리고, 학생이 접속하면 그 칸이 채워집니다."/>
     </Grid>
 </UserControl>

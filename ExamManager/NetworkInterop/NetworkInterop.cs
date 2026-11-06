@@ -22,6 +22,9 @@ namespace NetworkLib
         LoginResponse           = 2,
         Heartbeat               = 3,
         Disconnect              = 4,
+        NotInRoster             = 5,   // 교수 → 학생. 수강생 명단과 대조해 받지 않음.
+                                       // payload 1바이트 — 0: 이 학번이 명단에 없다, 1: 교수 PC 에 명단이 아직 없다.
+                                       // 학생 앱은 연결을 끊고 로그인 화면으로 돌아간다(안내는 두 경우가 다르다).
 
         ExamPhaseChange         = 20,
         ExamStatusUpdate        = 21,

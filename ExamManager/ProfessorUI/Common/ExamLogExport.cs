@@ -33,6 +33,11 @@ namespace ProfessorUI.Common
             try
             {
                 ExcelReport.SaveExamLog(rows, dialog.FileName);
+
+                // 이번 시험 로그를 남겼다고 기록해 둔다. 시험 종료·답안 수집 화면의
+                // [처음 화면으로] 가 이 값으로 열린다 — 정리하면 이 기록이 사라지기 때문이다.
+                ExamState.IsLogSaved = true;
+
                 MessageBox.Show($"저장했습니다.\n{dialog.FileName}",
                                 "시험 로그", MessageBoxButton.OK, MessageBoxImage.Information);
                 return true;

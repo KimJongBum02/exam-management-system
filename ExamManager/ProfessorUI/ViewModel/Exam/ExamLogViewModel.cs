@@ -77,6 +77,15 @@ namespace ProfessorUI.ViewModel
 
         public void MarkSaved() => IsSaved = true;
 
+        // -- 다음 시험 준비 -- [처음 화면으로] 가 부른다(UiContext.ResetForNextExam).
+        // 표는 그대로 두고 저장했다는 표시만 내린다. 다음 시험의 기록은 아직 저장한 적이 없다.
+        //
+        // 내리지 않으면 기록을 조용히 잃는다. 표를 다시 만드는 Rebuild 는 학생 목록이 바뀔 때만 도는데,
+        // 정리는 학생 줄을 지우지 않으므로(StudentStore.ResetForNextExam) 접속한 학생이 그대로인
+        // 다음 시험에서는 한 번도 돌지 않는다. 그러면 프로그램을 끌 때의 저장 확인(MainWindow)이
+        // 이미 저장한 것으로 보고 건너뛰어, 다음 시험의 출석-부정행위 기록이 그대로 사라진다.
+        public void ResetForNextExam() => IsSaved = false;
+
         public int TotalCount => Rows.Count;
         public int AttendedCount => Rows.Count(r => r.AttendanceText == "출석");
         public int CheatedCount => Rows.Count(r => r.HasCheated);

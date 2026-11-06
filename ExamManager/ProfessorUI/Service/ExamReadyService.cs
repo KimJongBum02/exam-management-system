@@ -13,8 +13,11 @@ namespace ProfessorUI.Service
     {
         public static ExamReadyService Instance { get; } = new ExamReadyService();
 
-        // 배포용 묶음이 만들어지는 곳. 교수가 바로 확인할 수 있도록 바탕화면에 둔다.
-        public static string PackageFolder { get; } = Path.Combine(
+        // 배포용 묶음이 만들어지는 곳. 기본값은 바탕화면이고, 시험 준비 1단계에서 교수가 바꿀 수 있다.
+        // 바꾼 폴더는 파일에 남기지 않는다 — 앱을 끄면 다시 바탕화면이다(사용자 요구).
+        // 바로 아래 PackagedFiles 와 같은 이유다: 암호가 메모리에만 있어 이전 실행의 묶음은
+        // 어차피 쓸 수 없고, 그 폴더만 남겨 두면 교수가 자리를 착각한다.
+        public static string PackageFolder { get; set; } = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "시험 파일");
 
         // 이번 실행에서 압축·암호화를 마친 묶음들. 같은 내용을 다시 압축하려 하면 경고하는 데 쓴다.
@@ -126,6 +129,16 @@ namespace ProfessorUI.Service
 
             return new PackageResult(true, output, string.Empty);
         }
+
+        // -- 다음 시험 준비 -- [처음 화면으로] 가 부른다(ExamFlowService.ResetForNextExam).
+        // 이번 실행에서 만든 묶음 기록을 버린다. 묶음 파일은 지우지 않는다 --
+        // 지난 시험의 답안을 푸는 암호가 그 묶음의 것이다.
+        //
+        // 기록을 남겨 두면 같은 파일을 다시 골랐을 때 "이미 압축했으니 다시 만들 필요 없다"고 알린다.
+        // 그 말은 정리 뒤에는 틀렸다 -- 정리가 묶음의 암호(SendFileState.Password)를 지워
+        // 그 묶음은 배포에 쓸 수 없다. 그런데 그 물음의 기본 버튼은 [아니요]여서, 말대로 누르면
+        // 준비 상태가 채워지지 않아 2단계 배포가 잠긴 채로 멈춘다(ExamWizard 가 IsFilePrepared 로 잠근다).
+        public void ResetForNextExam() => _packaged.Clear();
 
         // 아직 배포하지 않은 묶음을 지우고 준비 상태를 되돌린다.
         // 남겨 두면 잘못 고른 파일이 그대로 배포될 수 있다. 지우지 못하면 이유를 돌려준다.

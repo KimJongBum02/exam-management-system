@@ -128,9 +128,7 @@ namespace ProfessorUI.View.Professor
             {
                 if (sessionId != item.SessionId) return;
                 Cleanup();
-                MessageBox.Show($"{item.DisplayName} 학생 PC 가 10초 안에 답하지 않아 원격 제어를 취소했습니다.\n" +
-                                "학생 PC 에 남은 원격 제어 상태는 해제했으니 다시 시도해도 됩니다.\n\n" +
-                                "계속 실패하면 학생 프로그램이 최신판인지, 연결이 살아 있는지 확인해 주세요.",
+                MessageBox.Show($"{item.DisplayName} 학생 PC가 응답하지 않아 원격 제어에 실패하였습니다. 다시 시도해주세요.",
                                 "원격 제어", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
 
@@ -254,8 +252,8 @@ namespace ProfessorUI.View.Professor
             Safely("끊긴 학생의 원격 창을 닫지 못했습니다", () =>
             {
                 Close();
-                MessageBox.Show($"{_item.DisplayName} 학생 PC 와 연결이 끊어져 원격 제어를 멈췄습니다.\n" +
-                                "학생 PC 의 전원과 네트워크를 확인해 주세요.",
+                MessageBox.Show($"{_item.DisplayName} 학생 PC와 연결이 끊어져 원격 제어를 중단했습니다.\n" +
+                                "학생 PC의 전원과 네트워크를 확인해 주세요.",
                                 "원격 제어", MessageBoxButton.OK, MessageBoxImage.Warning);
             });
         }
@@ -379,7 +377,7 @@ namespace ProfessorUI.View.Professor
         private static void Fail(string studentName, string what, Exception ex)
         {
             Debug.WriteLine($"[RemoteControl] {what} ({studentName}): {ex}");
-            MessageBox.Show($"{studentName} 학생을 원격 제어하지 못했습니다.\n{what}\n\n{(ex.InnerException ?? ex).Message}",
+            MessageBox.Show($"{studentName} 학생 원격 제어에 실패하였습니다.\n{what}\n\n{(ex.InnerException ?? ex).Message}",
                             "원격 제어", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 

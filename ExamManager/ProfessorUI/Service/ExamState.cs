@@ -42,6 +42,24 @@ namespace ProfessorUI.Service
         // 교수가 [시험 종료]를 누른 시각. 시험 전·중에는 null.
         public static DateTime? EndedAt { get; private set; }
 
+        // 이번 시험의 로그(출석·부정행위)를 엑셀로 한 번이라도 저장했는지.
+        // [처음 화면으로] 가 이 값으로 잠기고 풀린다 — 정리하면 로그가 사라지기 때문이다.
+        //
+        // 화면 쪽 ExamLogViewModel.IsSaved 와 다르다. 그쪽은 학생 목록이 바뀔 때마다 풀리는데
+        // (표가 다시 만들어지므로 저장본이 더 이상 지금 목록이 아니다), 그것을 버튼 잠금에 쓰면
+        // 저장한 뒤 학생이 한 명 들어오기만 해도 다시 잠겨 버린다.
+        public static bool IsLogSaved
+        {
+            get => _isLogSaved;
+            set
+            {
+                if (_isLogSaved == value) return;
+                _isLogSaved = value;
+                StateChanged?.Invoke();
+            }
+        }
+        private static bool _isLogSaved;
+
         // 프로그램을 다시 켤 때 진행 중이던 시험을 그대로 되살린다(ExamSessionStore).
         // 끝낸 시각은 기록에 있는 값을 그대로 쓴다 — 위 setter 를 거치면 지금 시각으로 덮어써진다.
         public static void Restore(ExamPhase phase, DateTime? endedAt)
