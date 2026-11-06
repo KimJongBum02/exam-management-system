@@ -12,7 +12,10 @@
          틀(테두리·바탕)을 전부 없애 겉보기는 TextBlock 과 같게 만든다.
          스크롤바를 Disabled 로 막아 내부 스크롤이 생기지 않게 한다 — 그래야 마우스 휠이
          이 글에서 멈추지 않고 바깥 대화 목록으로 그대로 흘러간다.
-         글자 크기·색은 쓰는 자리에서 정한다(말풍선은 흰 글씨, 공지는 검은 글씨라 한 벌로 묶을 수 없다). -->
+         글자 크기·색은 쓰는 자리에서 정한다(말풍선은 흰 글씨, 공지는 검은 글씨라 한 벌로 묶을 수 없다).
+
+         묶을 때 Mode=OneWay 를 꼭 적는다. TextBox.Text 는 기본이 TwoWay 라,
+         get 만 있는 속성에 묶으면 화면을 그리다 예외가 난다. -->
     <Style x:Key="SelectableText" TargetType="TextBox">
         <Setter Property="IsReadOnly" Value="True"/>
         <Setter Property="IsTabStop" Value="False"/>

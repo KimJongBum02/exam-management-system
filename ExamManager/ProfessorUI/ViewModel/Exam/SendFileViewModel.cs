@@ -36,6 +36,15 @@ namespace ProfessorUI.ViewModel
             set { _deployStatusMessage = value; OnPropertyChanged(); }
         }
 
+        // ── 다음 시험 준비 ── [처음 화면으로] 가 부른다.
+        // 배포 결과 문구만 지운다. 학생별 전송 상태·진행률은 학생 줄이 들고 있어
+        // StudentStore.ResetForNextExam 이 되돌린다.
+        public void ResetForNextExam()
+        {
+            DeployStatusMessage = "배포 대기 중";
+            ValidationMessage = string.Empty;
+        }
+
         // 명령어(Command)들
         public ICommand StartDeployCommand { get; }
         public ICommand SelectAllCommand { get; }

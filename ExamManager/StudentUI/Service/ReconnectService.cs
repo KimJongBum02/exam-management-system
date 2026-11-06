@@ -27,6 +27,10 @@ namespace StudentUI.Service
         // 교수가 다시 붙은 학생을 알아볼 수 있도록 화면에 알린다(네이티브 연결 이벤트와 별개로 로그인까지 끝난 뒤).
         public static event Action? Reconnected;
 
+        // 교수님 PC 가 명단 대조로 받아 주지 않는다. 다시 붙어도 같은 답이 오므로
+        // 재연결을 멈추고 화면에 알린다. 인자가 true 면 '명단이 아직 없다'(학번 탓이 아니다).
+        public static event Action<bool>? RosterRejected;
+
         // 앱 시작 시 한 번 호출 — 구독만 해 둔다.
         public static void Start()
         {
@@ -89,6 +93,15 @@ namespace StudentUI.Service
 
                     // 거절됐거나 그 사이 로그아웃했다. 연결을 거두고 다음 차례를 기다린다.
                     NetworkService.Instance.Disconnect();
+
+                    // 명단 대조에 걸린 거절은 다시 붙어도 같은 답이 온다. 끝없이 두드리지 않고 멈춘다.
+                    // _enabled 를 내려야 멈춘다 — break 만 하면 아래 finally 가 루프를 다시 띄운다.
+                    if (rejection == LoginService.NotInRoster || rejection == LoginService.RosterNotReady)
+                    {
+                        _enabled = false;
+                        RosterRejected?.Invoke(rejection == LoginService.RosterNotReady);
+                        break;
+                    }
                 }
             }
             catch (Exception ex)

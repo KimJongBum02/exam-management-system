@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using NetworkLib;
 using StudentUI.Model;
 
@@ -9,6 +10,25 @@ namespace StudentUI.Service
         // 교수 PC 가 회신하지 않았을 때 돌려주는 값. 부르는 쪽이 이것만 따로 안내한다.
         public const string NoResponse = "NO_RESPONSE";
 
+        // 이 강의실 명단에 없어 되돌려 보내진 경우. 학생이 학번을 다시 치면 된다.
+        public const string NotInRoster = "NOT_IN_ROSTER";
+
+        // 교수 PC 에 수강생 명단이 아직 올라오지 않아 아무도 받지 않는 경우.
+        // 학번 탓이 아니므로 부르는 쪽이 안내를 달리한다 — 학생은 기다렸다 다시 하는 수밖에 없다.
+        public const string RosterNotReady = "ROSTER_NOT_READY";
+
+        // NotInRoster 에 실려 오는 1바이트(ProfessorUI 의 StudentExcelStore.RosterReject).
+        // 1이면 교수 PC 에 명단이 아직 없다는 뜻. 없거나 0이면 '이 학번이 명단에 없다'로 본다 —
+        // 예전 교수 앱은 빈 페이로드로 보냈다. 시험 화면(ExamViewModel)도 같은 판정을 쓴다.
+        public static bool IsRosterMissing(IntPtr payload, uint len)
+            => len >= 1 && payload != IntPtr.Zero && Marshal.ReadByte(payload) == 1;
+
+        // 승인을 받은 뒤 '명단에 없다'가 올 수 있어 이만큼 더 듣는다.
+        // 교수 쪽은 승인 회신을 네이티브가 먼저 보내고(ProfessorServer::HandleLogin), 명단 검사는
+        // 그 뒤 교수 앱이 접속 알림을 받아서 한다(StudentExcelStore.SendAwayIfOutsider).
+        // 같은 강의실 랜이라 수십 ms 면 오지만 교수 화면이 바쁠 수 있어 넉넉히 둔다.
+        private static readonly TimeSpan RosterWait = TimeSpan.FromSeconds(1);
+
         // 승인을 이만큼 기다린다. 교수 쪽은 네이티브가 로그인 패킷을 받는 즉시 회신하므로
         // (ProfessorServer::HandleLogin — 교수 화면이 바빠도 영향이 없다) 강의실 랜에서는 수십 ms 면 온다.
         private static readonly TimeSpan ResponseWait = TimeSpan.FromSeconds(5);
@@ -19,11 +39,16 @@ namespace StudentUI.Service
         {
             // 교수 PC 의 승인·거절을 기다린다. 회신이 빨리 오므로 로그인 패킷보다 먼저 구독해 둔다.
             var response = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var roster = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
             void OnPacket(PacketType type, IntPtr payload, uint payloadLen)
             {
                 if (type == PacketType.LoginResponse &&
                     LoginResponsePayload.TryDecode(payload, payloadLen, out bool approved, out string reason))
                     response.TrySetResult(approved ? null : reason);
+
+                // 승인을 받은 뒤에 오는 거절이다. 명단과 대조한 결과다.
+                else if (type == PacketType.NotInRoster)
+                    roster.TrySetResult(IsRosterMissing(payload, payloadLen) ? RosterNotReady : NotInRoster);
             }
             NetworkService.Instance.PacketReceived += OnPacket;
 
@@ -39,11 +64,24 @@ namespace StudentUI.Service
             // 교수 앱은 승인이든 거절이든 반드시 회신하므로, 회신이 없다는 것은 우리 교수 앱이 아니라는 뜻이다.
             // 학생 앱은 교수 앱 없이는 아무 뜻이 없으니, 애매하면 들여보내지 않는 쪽이 맞다.
             Task finished = await Task.WhenAny(response.Task, Task.Delay(ResponseWait));
-            NetworkService.Instance.PacketReceived -= OnPacket;
-            if (finished != response.Task) return NoResponse;
+            if (finished != response.Task)
+            {
+                NetworkService.Instance.PacketReceived -= OnPacket;
+                return NoResponse;
+            }
 
             string? rejection = response.Task.Result;
-            if (rejection != null) return rejection;
+            if (rejection != null)
+            {
+                NetworkService.Instance.PacketReceived -= OnPacket;
+                return rejection;
+            }
+
+            // 승인은 받았다. 명단 검사 결과가 곧 뒤따라 올 수 있어 잠깐 더 듣는다.
+            // 여기서 기다리지 않으면 시험 화면까지 들어간 뒤에 되돌려 보내져, 화면을 되감아야 한다.
+            Task rosterFinished = await Task.WhenAny(roster.Task, Task.Delay(RosterWait));
+            NetworkService.Instance.PacketReceived -= OnPacket;
+            if (rosterFinished == roster.Task) return roster.Task.Result;
 
             // 시험 파일을 이미 갖고 있으면 다시 알린다. 교수 PC 는 다시 들어온 학생을 '미수신'으로 되돌려 두므로,
             // 알리지 않으면 파일이 있는데도 배포 표에 '대기 중'으로 남는다.

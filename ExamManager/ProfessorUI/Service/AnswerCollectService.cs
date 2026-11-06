@@ -15,9 +15,12 @@ namespace ProfessorUI.Service
     {
         public static AnswerCollectService Instance { get; } = new AnswerCollectService();
 
-        // 걷은 답안을 모아 둘 폴더. 교수가 바로 찾아갈 수 있도록 바탕화면에 둔다.
-        // 이 아래에 학생별 폴더가 하나씩 쌓인다.
-        public static string CollectFolder { get; } = Path.Combine(
+        // 걷은 답안을 모아 둘 폴더. 이 아래에 날짜 폴더(1105)가 생기고, 그 안에 학생별 폴더가 쌓인다.
+        // 기본값은 바탕화면이고, 시험 준비 1단계에서 교수가 바꿀 수 있다.
+        // 바꾼 폴더는 파일에 남기지 않는다 — 앱을 끄면 다시 바탕화면이다(사용자 요구).
+        // 답안을 받을 때마다 읽으므로, 걷는 도중에 바꾸면 그다음 답안부터 새 폴더에 쌓이고
+        // 이미 받아 둔 것은 옛 폴더에 그대로 남는다.
+        public static string CollectFolder { get; set; } = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "답안 파일");
 
         // 답안을 하나 받을 때마다 알린다 (학번, 저장 경로).
@@ -86,10 +89,15 @@ namespace ProfessorUI.Service
         {
             try
             {
-                Directory.CreateDirectory(CollectFolder);
+                // 날짜 폴더로 한 번 더 묶는다 — 폴더 이름이 학번·이름뿐이라
+                // 언제 치른 시험인지 알 수 없었다(교수님 요청).
+                // 시험 시작 시각은 아무도 들고 있지 않아(ExamSessionStore 는 끝낸 시각만 둔다)
+                // 답안이 들어온 시각으로 짓는다. 한 시험의 답안은 몇 분 안에 다 들어오므로 같은 폴더에 모인다.
+                string dayFolder = Path.Combine(CollectFolder, DateTime.Now.ToString("MMdd"));
+                Directory.CreateDirectory(dayFolder);
 
                 // 같은 학생이 다시 내면 덮어쓴다. 마지막 제출이 최종본이다.
-                string studentFolder = Path.Combine(CollectFolder, BuildFolderName(studentId, studentName));
+                string studentFolder = Path.Combine(dayFolder, BuildFolderName(studentId, studentName));
                 string archivePath = studentFolder + ".7z";
 
                 File.Copy(tempPath, archivePath, true);

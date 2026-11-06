@@ -141,22 +141,58 @@ namespace ProfessorUI.ViewModel
             // 이름을 잘못 쳤다가 고쳐서 다시 로그인하면 StudentStore 가 그 줄의 이름만 바꾼다.
             // 그때는 학생이 새로 들어온 것이 아니라 대화 줄을 다시 만들 일이 없으므로,
             // 이름 변화를 직접 받아 줄 이름도 따라 고친다.
-            student.PropertyChanged -= OnStudentNameChanged;
-            student.PropertyChanged += OnStudentNameChanged;
+            student.PropertyChanged -= OnStudentChanged;
+            student.PropertyChanged += OnStudentChanged;
         }
 
-        private void OnStudentNameChanged(object? sender, PropertyChangedEventArgs e)
+        // 이름이 바뀌었거나, 나갔던 학생이 다시 들어왔을 때 대화 줄을 맞춘다.
+        // 다시 접속까지 보는 이유는 ResetForNextExam 이 나간 학생의 줄을 뺐기 때문이다 —
+        // 그 학생이 다음 시험에 들어오면 학생 목록은 이미 그 줄을 갖고 있어
+        // CollectionChanged 가 뜨지 않고, 여기서 만들지 않으면 채팅 목록에 영영 나타나지 않는다.
+        private void OnStudentChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName != nameof(StudentStatusViewModel.Name)) return;
-            if (sender is StudentStatusViewModel student && student.StudentId.Length > 0)
+            if (sender is not StudentStatusViewModel student || student.StudentId.Length == 0) return;
+
+            if (e.PropertyName == nameof(StudentStatusViewModel.Name) ||
+                (e.PropertyName == nameof(StudentStatusViewModel.IsConnected) && student.IsConnected))
                 GetOrCreateTab(student.StudentId, student.Name, student.SessionId);
+        }
+
+        // ── 다음 시험 준비 ── [처음 화면으로] 가 부른다.
+        //
+        // 지난 시험을 치르고 나간 학생이 대화 목록에 그대로 남아 있지 않게 한다.
+        // 지금 접속해 있는 학생 줄은 남기고 주고받은 말만 비운다 — 수업이 이어지는 중이라
+        // 교수가 먼저 말을 걸 수 있어야 하기 때문이다.
+        // 나간 학생이 다시 접속하면 줄이 되살아난다(OnStudentChanged 가 접속을 보고 다시 만든다).
+        //
+        // 전체 공지 줄(SessionId == null)은 목록의 붙박이라 지우지 않는다.
+        // 상단바의 중요 공지도 건드리지 않는다 — 내리는 일은 학생 PC 로 패킷이 가는 일이라 교수가 직접 한다.
+        public void ResetForNextExam()
+        {
+            foreach (var tab in Tabs.Where(t => t.SessionId != null).ToList())
+            {
+                var student = StudentStore.Instance.Students.FirstOrDefault(s => s.StudentId == tab.StudentId);
+                if (student != null && student.IsConnected)
+                {
+                    tab.Messages.Clear();
+                    tab.UnreadCount = 0;
+                    continue;
+                }
+
+                // 학생 줄에 걸어 둔 구독은 그대로 둔다 — 그 학생이 다시 접속할 때 줄을 되살리는 길이다.
+                if (SelectedTab == tab) SelectedTab = Tabs.FirstOrDefault(t => t.SessionId == null);
+                Tabs.Remove(tab);
+            }
+
+            Notices.Clear();
+            OnPropertyChanged(nameof(LatestNotice));
         }
 
         // 줄째로 빠진 학생의 대화를 지운다. 주고받은 말도 함께 사라지지만,
         // 아무것도 남기지 않고 나간 접속이라 지울 것이 사실상 없다.
         private void RemoveTabFor(StudentStatusViewModel student)
         {
-            student.PropertyChanged -= OnStudentNameChanged;
+            student.PropertyChanged -= OnStudentChanged;
 
             var tab = Tabs.FirstOrDefault(t => t.SessionId != null && t.StudentId == student.StudentId);
             if (tab == null) return;

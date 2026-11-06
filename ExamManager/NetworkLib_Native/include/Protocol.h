@@ -18,6 +18,8 @@ enum class PacketType : uint32_t
     LoginResponse            = 2,
     Heartbeat                = 3,
     Disconnect               = 4,
+    NotInRoster              = 5,   // 교수 → 학생. 명단과 대조해 받지 않음 (payload 1바이트). 번호만 예약한다 —
+                                    // 보내는 쪽도 받는 쪽도 C# 이고, 네이티브는 모르는 번호를 그대로 올린다
 
     // 출결 (10~19)
 

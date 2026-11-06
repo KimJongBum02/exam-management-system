@@ -70,12 +70,12 @@ namespace ProfessorUI.ViewModel
         {
             if (_health == ServerService.Health.NoNetwork)
             {
-                MessageBox.Show("이 PC가 네트워크에 연결되어 있지 않습니다.\n랜선이나 와이파이를 확인해 주세요. 연결되면 자동으로 다시 활성화됩니다.",
+                MessageBox.Show("현재 네트워크에 연결되어 있지 않습니다.",
                                 "서버 다시 열기", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            var confirm = MessageBox.Show("서버를 다시 엽니다.\n접속 중인 학생은 잠시 끊겼다가 자동으로 다시 접속합니다.\n\n계속하시겠습니까?",
+            var confirm = MessageBox.Show("서버를 다시 여시겠습니까?\n접속 중인 학생은 자동으로 다시 연결됩니다.",
                                           "서버 다시 열기", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (confirm != MessageBoxResult.Yes) return;
 

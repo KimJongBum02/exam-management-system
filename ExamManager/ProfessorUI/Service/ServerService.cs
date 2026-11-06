@@ -107,7 +107,7 @@ namespace ProfessorUI.Service
             NetworkService.Instance.RecreateServer(_port);
 
             if (!Start())
-                return $"포트 {_port}번을 열지 못했습니다. 다른 프로그램이 쓰고 있는지 확인해 주세요.";
+                return "현재 포트로 서버 연결에 실패하였습니다. 다른 포트를 사용해 주세요.";
 
             StateChanged?.Invoke();
             return null;

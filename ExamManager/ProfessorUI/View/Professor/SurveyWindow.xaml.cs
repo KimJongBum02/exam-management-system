@@ -48,7 +48,7 @@ namespace ProfessorUI.View.Professor
 
             if (!_session.Ask(question))
             {
-                MessageBox.Show("접속한 학생이 없어 문제를 보내지 못했습니다.", "출제",
+                MessageBox.Show("접속한 학생이 없어 전송에 실패하였습니다.", "출제",
                                 MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -137,7 +137,7 @@ namespace ProfessorUI.View.Professor
             if (_session.Rounds.Count == 0) return;
 
             var confirm = MessageBox.Show(
-                $"지금까지 낸 {_session.Rounds.Count}문제의 응답 기록을 화면에서 비웁니다.\n설문은 파일로 남기지 않으므로 비운 기록은 되살릴 수 없습니다.",
+                $"지금까지 낸 {_session.Rounds.Count}문제의 응답 기록을 초기화 합니다.\n설문은 따로 저장되지 않아 초기화 이후 재확인이 불가능합니다.",
                 "기록 비우기", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (confirm != MessageBoxResult.Yes) return;
 

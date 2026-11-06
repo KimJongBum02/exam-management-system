@@ -126,7 +126,17 @@ namespace ProfessorUI.View.Professor
 
             string? problem = StudentExcelStore.Load(dialog.FileName);
             if (problem != null)
+            {
                 MessageBox.Show(problem, "명단 불러오기", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // 학생이 교수보다 먼저 앱을 켜는 일이 흔하다. 명단을 올리기 전에 이미 붙은 학생 중
+            // 명단에 없는 사람은 옆 강의실 학생이므로 여기서 되돌려 보낸다.
+            int sentAway = StudentExcelStore.SendAwayOutsiders();
+            if (sentAway > 0)
+                MessageBox.Show($"명단에 없는 학생 {sentAway}명의 접속을 차단했습니다.",
+                                "명단 불러오기", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         // 강의실 큰 모니터에 올려 둘 현황판을 띄운다.

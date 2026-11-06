@@ -1,4 +1,5 @@
 using System.IO;
+using NetworkLib;
 using System.Text.RegularExpressions;
 using ClosedXML.Excel;
 using ProfessorUI.Model;
@@ -15,6 +16,13 @@ namespace ProfessorUI.Service
     // 접속하지 않은 학생 줄이 생긴다. 파일로 남기지 않으므로 앱을 다시 켜면 다시 불러온다.
     public static class StudentExcelStore
     {
+        // NotInRoster 패킷에 싣는 1바이트. 학생 앱(LoginService)도 같은 값을 읽는다.
+        public static class RosterReject
+        {
+            public const byte NotListed = 0;   // 이 학번이 명단에 없다 — 학생이 다시 치면 된다
+            public const byte NoRoster  = 1;   // 교수 PC 에 명단이 아직 없다 — 학생은 기다리는 수밖에 없다
+        }
+
         // 머리글을 찾아볼 위쪽 줄 수. 포털 파일은 맨 위에 제목·날짜 줄이 붙기도 해서 첫 줄로 단정하지 않는다.
         private const int HeaderSearchRows = 20;
 
@@ -34,6 +42,48 @@ namespace ProfessorUI.Service
         // 학생이 로그인 때 친 이름이 명단과 같은지. 띄어쓰기는 보지 않는다.
         public static bool SameName(string a, string b)
             => Regex.Replace(a, @"\s", "") == Regex.Replace(b, @"\s", "");
+
+        // ── 명단 밖 학생을 제 강의실로 되돌려 보낸다 ──
+        // 강의실끼리 망이 분리돼 있지 않아, 학생 앱이 교수 PC 를 브로드캐스트로 찾을 때
+        // 옆 강의실 교수가 먼저 답하면 그쪽에 붙는다(2026-11-04 확인). 명단에 없는 학번은
+        // 이 강의실 학생이 아니므로 받지 않는다. 패킷을 받은 학생 앱은 연결을 끊고
+        // 다음 교수 PC 후보로 옮겨 간다(StudentUI/Service/LoginService).
+        //
+        // 로그인 자체를 거절하지 않는 이유: 승인은 네이티브가 즉시 회신하므로(ProfessorServer::HandleLogin)
+        // 거기서 막으려면 명단을 네이티브로 내려보내고 DLL 을 다시 빌드해야 한다. 그렇게 해도
+        // 명단을 올리기 전에 이미 붙은 학생은 끊을 길이 없어 이 패킷이 어차피 필요하다.
+        //
+        // 명단이 아직 없으면 **아무도 받지 않는다**. 예전에는 그때 전원 통과시켰는데,
+        // 그 틈이 곧 '아무나 들어오는 창'이라 막아 달라는 요청을 받았다(2026-11-05).
+        // 교수는 학생을 들이기 전에 반드시 명단을 올려야 한다.
+        //
+        // 실려 보내는 1바이트가 두 경우를 가른다. 학생 앱의 안내가 달라야 하기 때문이다 —
+        // '명단에 없는 학번'은 학생이 다시 치면 되지만, '명단이 아직 없음'은 학생이 할 수 있는 것이 없다.
+        // 가리지 않으면 명단 올리기 전에 들어온 학생이 제 학번을 의심하다 교수 PC 주소까지 직접 치게 된다.
+        public static void SendAwayIfOutsider(string sessionId, string studentId)
+        {
+            if (HasRoster && Find(studentId) != null) return;
+
+            byte reason = HasRoster ? RosterReject.NotListed : RosterReject.NoRoster;
+            NetworkService.Instance.SendToSession(sessionId, PacketType.NotInRoster, new[] { reason });
+        }
+
+        // 명단을 올린 뒤 이미 붙어 있는 학생을 훑는다. 되돌려 보낸 인원 수를 돌려준다.
+        // 학생이 교수보다 먼저 앱을 켜는 일이 흔해, 이것이 없으면 그 틈에 붙은 옆 강의실 학생이 그대로 남는다.
+        public static int SendAwayOutsiders()
+        {
+            if (!HasRoster) return 0;
+
+            var outsiders = StudentStore.Instance.Students
+                .Where(s => s.IsConnected && s.StudentId.Length > 0 && Find(s.StudentId) == null)
+                .ToList();
+
+            foreach (var student in outsiders)
+                NetworkService.Instance.SendToSession(student.SessionId, PacketType.NotInRoster,
+                                                     new[] { RosterReject.NotListed });
+
+            return outsiders.Count;
+        }
 
         // 엑셀 파일을 읽어 명단을 바꾼다. 성공하면 null, 못 읽었으면 화면에 보일 이유.
         // 못 읽었으면 쓰던 명단을 그대로 둔다.

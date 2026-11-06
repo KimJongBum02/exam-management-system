@@ -29,8 +29,6 @@ namespace ProfessorUI.View.Professor
         // 시험 단계와 무관한 기능이라 잠그지 않는다
         private readonly MenuEntryViewModel _quiz       = new("퀴즈");
         private readonly MenuEntryViewModel _monitoring = new("화면 모니터링");
-        // 지난 기록을 보는 화면이라 시험 전에도 열어 둔다 (표가 비어 있을 뿐이다)
-        private readonly MenuEntryViewModel _examLog    = new("시험 로그");
 
         private readonly UiContext _ctx = UiContext.Instance;
 
@@ -51,7 +49,7 @@ namespace ProfessorUI.View.Professor
 
             MenuList.ItemsSource = new List<MenuEntryViewModel>
             {
-                _dashboard, _prep, _manage, _settle, _chat, _policy, _quiz, _monitoring, _examLog
+                _dashboard, _prep, _manage, _settle, _chat, _policy, _quiz, _monitoring
             };
             ApplyPhaseGates();
             MenuList.SelectedIndex = 0;
@@ -227,36 +225,29 @@ namespace ProfessorUI.View.Professor
 
             if (ExamState.IsExamRunning)
             {
-                warnings.Add("시험이 진행 중입니다.\n지금 종료하면 시험 진행 상태가 사라져, 다시 켜도 이 시험을 끝내거나 답안을 걷을 수 없습니다.");
+                warnings.Add("시험이 진행 중입니다. 종료 시 답안 수집이 불가능합니다.");
             }
             else if (ExamState.CurrentPhase == ExamPhase.SubmitRequested)
             {
                 int uncollected = students.Count(s => !s.IsAnswerSubmitted);
                 if (uncollected > 0)
-                    warnings.Add($"답안을 아직 걷지 못한 학생이 {uncollected}명 있습니다.\n지금 종료하면 다시 켜도 이 학생들의 답안을 걷을 수 없습니다.");
+                    warnings.Add($"답안 수집을 못한 학생이 {uncollected}명 있습니다.\n종료 시 답안 수집이 불가능합니다.");
             }
 
             // 시험 로그(출석 · 부정행위)는 파일로 남기지 않으면 프로그램과 함께 사라진다.
             // 종료가 그 기록이 사라지는 유일한 순간이라, 여기서 한 번 붙잡는다.
-            if (_ctx.ExamLog.Rows.Count > 0 && !_ctx.ExamLog.IsSaved)
+            //
+            // 시험을 끝까지 치렀을 때만 묻는다. 학생이 들어왔다 나가기만 해도 로그 표에는 줄이 생기는데,
+            // 시작·종료를 거치지 않은 그 줄은 남길 기록이 아니다(시험 도중 종료는 바로 위에서 따로 붙잡는다).
+            // 저장 여부는 ExamState.IsLogSaved 로 본다 — 화면 쪽 IsSaved 는 학생 목록이 바뀔 때마다 풀려서,
+            // 저장한 뒤 학생이 한 명 들어오기만 해도 또 묻게 된다.
+            if (ExamState.CurrentPhase >= ExamPhase.SubmitRequested && !ExamState.IsLogSaved &&
+                _ctx.ExamLog.Rows.Count > 0)
             {
-                var save = MessageBox.Show(
-                    "시험 로그(출석 · 부정행위)를 아직 저장하지 않았습니다.\n" +
-                    "지금 종료하면 이 기록은 사라집니다.\n\n" +
-                    "[예] 지금 엑셀로 저장하고 계속\n" +
-                    "[아니오] 저장하지 않고 종료\n" +
-                    "[취소] 돌아가기",
-                    "종료 확인", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
-
-                if (save == MessageBoxResult.Cancel) return;
-
-                // 저장을 고르고도 저장 창에서 취소하거나 실패했으면 종료하지 않는다.
-                // 남기려던 교수의 뜻을 무시하고 끄면 되돌릴 길이 없다.
-                if (save == MessageBoxResult.Yes)
-                {
-                    if (!ExamLogExport.Save(_ctx.ExamLog.Rows)) return;
-                    _ctx.ExamLog.MarkSaved();
-                }
+                if (MessageBox.Show("시험 로그를 출력하지 않았습니다. 괜찮으십니까?",
+                                    "종료 확인", MessageBoxButton.YesNo, MessageBoxImage.Warning)
+                    != MessageBoxResult.Yes)
+                    return;
             }
 
             string message = warnings.Count == 0
@@ -295,7 +286,6 @@ namespace ProfessorUI.View.Professor
             5 => new ProgramManageWindow(),
             6 => new QuizTab(),
             7 => new ScreenMonitoring(),
-            8 => new ExamLogWindow(),
             _ => null
         };
 

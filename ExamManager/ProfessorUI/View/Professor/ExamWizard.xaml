@@ -206,10 +206,34 @@
                                         Command="{Binding FileReady.ClearAllCommand}"/>
                             </Grid>
 
-                            <!-- 만들어진 배포용 묶음이 어디에 있는지. 학생에게 못 갔을 때 직접 찾아가야 한다 -->
+                            <!-- 만들어진 배포용 묶음이 어디에 있는지. 학생에게 못 갔을 때 직접 찾아가야 한다.
+                                 [변경하기]로 폴더를 옮길 수 있다 — 바탕화면 말고 다른 곳에 두는 교수가 있다 -->
                             <TextBlock Text="시험 파일 경로" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Style="{StaticResource ReadOnlyBox}" Margin="0,0,0,22"
-                                     Text="{Binding FileReady.PackagePathText, Mode=OneWay}"/>
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Style="{StaticResource ReadOnlyBox}"
+                                         Text="{Binding FileReady.PackagePathText, Mode=OneWay}"/>
+                                <Button Grid.Column="1" Content="변경하기" Style="{StaticResource SecondaryButton}"
+                                        Height="38" Margin="10,0,0,0"
+                                        Command="{Binding FileReady.ChangeExamFolderCommand}"/>
+                            </Grid>
+
+                            <!-- 걷은 답안이 쌓일 곳. 시험 파일 경로와 같은 모양으로 둔다 -->
+                            <TextBlock Text="답안 파일 경로" Style="{StaticResource FieldLabel}"/>
+                            <Grid Margin="0,0,0,22">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Style="{StaticResource ReadOnlyBox}"
+                                         Text="{Binding FileReady.AnswerPathText, Mode=OneWay}"/>
+                                <Button Grid.Column="1" Content="변경하기" Style="{StaticResource SecondaryButton}"
+                                        Height="38" Margin="10,0,0,0"
+                                        Command="{Binding FileReady.ChangeAnswerFolderCommand}"/>
+                            </Grid>
                         </StackPanel>
 
                         <!-- 상태·진행률을 실행 버튼 바로 옆에 둔다. 누른 결과가 그 자리에서 바뀐다 -->
@@ -549,8 +573,8 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="&#x1F512; 2단계에서 파일 배포를 한 번 이상 실행해야 시험을 시작할 수 있습니다."
-                                           Margin="0,0,12,0" VerticalAlignment="Center">
+                                <TextBlock Grid.Column="0" Margin="0,0,12,0" VerticalAlignment="Center"
+                                           TextWrapping="Wrap">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock" BasedOn="{StaticResource LockNote}">
                                             <Setter Property="Visibility" Value="Visible"/>
@@ -561,6 +585,8 @@
                                             </Style.Triggers>
                                         </Style>
                                     </TextBlock.Style>
+                                    <!-- Run.Text 는 기본이 TwoWay 다. 읽기 전용 속성이라 Mode 를 적지 않으면 이 화면을 열 때 예외가 난다 -->
+                                    <Run Text="&#x1F512;"/><Run Text=" "/><Run Text="{Binding ExamStart.StartLockReason, Mode=OneWay}"/>
                                 </TextBlock>
                                 <Button Grid.Column="1" Content="시험 시작 실행" Style="{StaticResource PrimaryButton}"
                                         IsEnabled="{Binding ExamStart.IsStartButtonEnabled}" Click="StartExam_Click"/>

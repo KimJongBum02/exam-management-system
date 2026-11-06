@@ -219,12 +219,19 @@ void StudentClient::RecvLoop()
 }
 
 // ─── Heartbeat 전송 루프 (5초마다) ─────────────────────────────────
+// 5초를 한 번에 자지 않고 0.1초씩 나눠 잔다. Disconnect 가 이 스레드를 join 으로 기다리므로,
+// 5초를 내리 자면 부른 쪽이 그만큼 멈춘다 — 그 자리가 학생 앱의 화면 스레드여서
+// 로그인 거절 팝업이 뜨기 전에 창이 5초 굳고 윈도우가 '응답 없음'을 띄운다(2026-11-05 실측 4996ms).
 void StudentClient::HeartbeatLoop()
 {
+    // 깨어날 때마다 셈을 올려 50번째(=5초)에 한 번만 보낸다.
+    int ticks = 0;
     while (connected_)
     {
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
         if (!connected_) break;
+        if (++ticks < 50) continue;
+        ticks = 0;
         SendPacket(PacketType::Heartbeat); // 페이로드 없음
     }
 }

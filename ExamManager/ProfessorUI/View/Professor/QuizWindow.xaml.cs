@@ -111,7 +111,7 @@ namespace ProfessorUI.View.Professor
 
             if (!_session.Ask(_ctx.Quiz.Snapshot()))
             {
-                MessageBox.Show("접속한 학생이 없어 퀴즈를 보내지 못했습니다.", "출제",
+                MessageBox.Show("접속한 학생이 없어 퀴즈 전송에 실패하였습니다.", "출제",
                                 MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -301,15 +301,15 @@ namespace ProfessorUI.View.Professor
             if (_session.Rounds.Count == 0) return;
 
             var confirm = MessageBox.Show(
-                $"지금까지 낸 퀴즈 {_session.Rounds.Count}번의 답안 기록을 화면에서 비웁니다.\n" +
-                "퀴즈마다 저장된 엑셀 파일은 지워지지 않습니다.",
+                $"지금까지 낸 퀴즈 {_session.Rounds.Count}번의 답안 기록을 초기화 합니다.\n" +
+                "현재까지 저장된 퀴즈 로그는 지워지지 않습니다.",
                 "퀴즈 기록 비우기", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (confirm != MessageBoxResult.Yes) return;
 
             if (!_session.ClearSession())
             {
-                MessageBox.Show("기록을 파일로 저장하지 못해 비우지 않았습니다.\n" +
-                                $"바탕화면의 기록 폴더에 쓸 수 있는지 확인해 주세요.\n\n{QuizService.SessionFolder}",
+                MessageBox.Show("퀴즈 기록을 파일로 저장할 수 없어 비우기에 실패하였습니다. " +
+                                $"해당 경로에 저장할 수 있는지 확인해 주세요.\n\n{QuizService.SessionFolder}",
                                 "퀴즈 기록 비우기", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }

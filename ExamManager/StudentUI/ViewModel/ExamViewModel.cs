@@ -212,6 +212,7 @@ namespace StudentUI.ViewModel
                 IsConnected = NetworkService.Instance.IsConnected;
                 NetworkService.Instance.Disconnected += OnServerDisconnected;
                 ReconnectService.Reconnected += OnServerReconnected;
+                ReconnectService.RosterRejected += OnRosterRejected;
                 NetworkService.Instance.PacketReceived += OnPacketReceived;
 
                 // 채팅 수신 이벤트 구독
@@ -269,15 +270,7 @@ namespace StudentUI.ViewModel
                     }
                 });
 
-                LogoutCommand = new UiCommand(_ =>
-                {
-                    Unsubscribe();
-                    ReconnectService.Disable(); // 스스로 나가는 것이라 다시 붙지 않는다
-                    NetworkService.Instance.Disconnect();
-                    ChatVM.Clear();
-                    ExamTime.Reset();
-                    _navigationStore.CurrentViewModel = new LoginViewModel(_navigationStore);
-                });
+                LogoutCommand = new UiCommand(_ => Logout(rejectedStudentId: string.Empty));
 
                 RefreshStatusItems();
             }
@@ -423,6 +416,7 @@ namespace StudentUI.ViewModel
                 ChatVM.MessageArrived -= OnChatMessageArrived;
                 NetworkService.Instance.Disconnected -= OnServerDisconnected;
                 ReconnectService.Reconnected -= OnServerReconnected;
+                ReconnectService.RosterRejected -= OnRosterRejected;
                 NetworkService.Instance.PacketReceived -= OnPacketReceived;
                 AnswerSubmitService.Instance.StateChanged -= OnSubmitStateChanged;
                 ExamMonitorService.Instance.CheatWarning -= OnCheatWarning;
@@ -439,9 +433,57 @@ namespace StudentUI.ViewModel
                 });
             }
 
+            // 교수님 PC 의 수강생 명단에 없어 접속이 거두어졌다. 두 길로 들어온다 —
+            // 시험 화면까지 들어간 뒤에 거절 패킷이 온 경우(교수 화면이 바빠 LoginService.RosterWait 을 넘겼다)와,
+            // 자동 재연결이 거절당한 경우(교수가 명단을 다른 것으로 바꿔 올렸다).
+            // 그냥 두면 '연결 끊김'만 보여 학생은 이유를 모른다. 알리고 로그인 화면으로 되돌린다.
+            // 거절 패킷은 두 번 올 수 있다 — 교수가 명단을 다시 올리면 붙어 있는 학생을 또 훑는다
+            // (ProfessorUI 의 SendAwayOutsiders). 두 번 물으면 두 번째 대답이 로그인 화면을 다시 만들어
+            // 학생이 고른 길을 지운다. 한 번만 묻는다 — 화면 스레드에 넘긴 뒤에 보므로 서로 엇갈리지 않는다.
+            private bool _rosterRejected;
+
+            private void OnRosterRejected(bool rosterMissing)
+            {
+                UiThread.Post(() =>
+                {
+                    if (_rosterRejected) return;
+                    _rosterRejected = true;
+
+                    // 시험 화면에는 학번 칸이 없어 빨간 글씨로 알릴 수 없다. 여기서만 알리고 돌려보낸다.
+                    MessageBox.Show(
+                        rosterMissing
+                            ? "서버에 명단이 없어 접속에 실패하였습니다.\n잠시 뒤 다시 로그인해주세요."
+                            : "명단에 해당 학번이 존재하지 않아 접속에 실패하였습니다.\n" +
+                              "학번과 이름을 다시 확인해 로그인해 주세요.",
+                        "접속 거절", MessageBoxButton.OK, MessageBoxImage.Warning);
+
+                    // 거절당한 학번을 로그인 화면에 넘긴다. 같은 학번으로 또 거절당하면 오타가 아니므로
+                    // 그때 로그인 화면이 교수 PC 주소를 직접 받는다(LoginViewModel).
+                    // 명단이 아직 없는 것뿐이면 넘기지 않는다 — 학번 탓이 아닌데 IP 를 치게 된다.
+                    Logout(rosterMissing ? string.Empty : Student.StudentNumber);
+                });
+            }
+
+            // 시험 화면을 접고 로그인 화면으로 돌아간다. 학생이 [로그아웃]을 누른 경우와
+            // 명단 밖이라 되돌려 보내진 경우가 같은 길을 쓴다 — 뒤쪽은 거절당한 학번을 함께 넘긴다.
+            private void Logout(string rejectedStudentId)
+            {
+                Unsubscribe();
+                ReconnectService.Disable(); // 스스로 나가는 것이라 다시 붙지 않는다
+                NetworkService.Instance.Disconnect();
+                ChatVM.Clear();
+                ExamTime.Reset();
+                _navigationStore.CurrentViewModel = new LoginViewModel(_navigationStore, rejectedStudentId);
+            }
+
             // 교수 PC의 시험 단계 알림 수신
             private void OnPacketReceived(PacketType type, IntPtr payload, uint payloadLen)
             {
+                if (type == PacketType.NotInRoster)
+                {
+                    OnRosterRejected(LoginService.IsRosterMissing(payload, payloadLen));
+                    return;
+                }
                 if (type != PacketType.ExamPhaseChange) return;
                 if (!ExamPhasePayload.TryDecode(payload, payloadLen, out _)) return;
 

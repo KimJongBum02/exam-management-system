@@ -254,5 +254,34 @@ namespace ProfessorUI.ViewModel
                 return $"{time} (종료 {elapsed} 뒤)";
             }
         }
+
+        // ── 다음 시험을 위해 이 학생의 시험 기록을 되돌린다 ──
+        // 학번·이름·IP·세션과 접속 여부는 그대로 둔다 — 지금 접속해 있는 학생은 계속 접속해 있다.
+        // 되돌리는 것은 이번 시험에서 생긴 것뿐이다(배포·수신·제출·확인 완료·흔적 삭제·감시 보고·응시 여부).
+        // 줄 자체는 지우지 않는다 — 접속이 끊긴 학생은 다음 시험에서 '미접속'으로 남아 보인다.
+        // 부르는 곳은 ExamFlowService.ResetForNextExam 하나다.
+        public void ResetForNextExam()
+        {
+            IsSelected = false;
+            IsDeployTarget = true;
+            IsFileReceived = false;
+            DeployProgress = 0;
+            DeployStatus = "대기 중";
+            SendingSessionId = null;
+
+            IsAnswerSubmitted = false;
+            SubmittedAt = null;
+            IsApproved = false;
+            IsCleanupDone = false;
+            IsCleanupFailed = false;
+
+            // 응시 여부와 감시 보고는 이번 시험의 것이다. 다음 시험에서는 다시 '시작 전'이다.
+            HasEverStarted = false;
+            ClearMonitorStatus();
+
+            // 비고 칸은 맨 마지막에 되돌린다 — 위 값이 바뀔 때마다 이 칸 문구가 따라 바뀌기 때문이다.
+            // 접속이 끊긴 학생에게 남아 있던 '미제출(연결 끊김)'도 이번 시험의 결과라 함께 지운다.
+            Status = "대기";
+        }
     }
 }

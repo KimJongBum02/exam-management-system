@@ -30,9 +30,7 @@ namespace ProfessorUI
             // 알 수 없다. 여기서 아예 막고 이유를 알려 준다.
             if (AlreadyRunning())
             {
-                MessageBox.Show("시험 운영 프로그램이 이미 실행 중입니다.\n\n" +
-                                "작업 표시줄에서 먼저 켜 둔 창을 찾아 주세요.\n" +
-                                "두 번 띄우면 학생 접속을 받는 쪽과 교수가 보는 쪽이 어긋날 수 있습니다.",
+                MessageBox.Show("프로그램이 이미 실행 중입니다.",
                                 "이미 실행 중", MessageBoxButton.OK, MessageBoxImage.Warning);
                 Shutdown();
                 return;
@@ -67,6 +65,9 @@ namespace ProfessorUI
                     // 학생 앱은 연결이 끊기는 순간 잠금과 덮개를 스스로 푼다. 다시 알려 주지 않으면
                     // 랜선이 한 번 흔들린 학생만 자유 상태로 남아 감시 공백이 생긴다(ClassModeState).
                     Service.ClassModeState.SendOnConnect(sid, studentId);
+
+                    // 명단에 없는 학번은 이 강의실 학생이 아니다 — 옆 강의실 교수 PC 에 붙은 것이라 되돌려 보낸다.
+                    Service.StudentExcelStore.SendAwayIfOutsider(sid, studentId);
                 });
 
             network.StudentDisconnected += (sid, studentId, name, reason) =>
@@ -142,7 +143,7 @@ namespace ProfessorUI
             // 교수가 따로 열어 줄 것이 없어야 학생이 접속하지 못하는 사고가 생기지 않는다.
             // 여닫는 일은 Service.ServerService 이 맡는다.
             if (!Service.ServerService.Start())
-                MessageBox.Show($"서버를 열지 못했습니다. 포트 {Service.ServerService.Port}번을 다른 프로그램이 쓰고 있는지 확인해 주세요.",
+                MessageBox.Show("서버 생성에 실패하였습니다. 포트를 변경 해주세요.",
                                 "서버 열기 실패", MessageBoxButton.OK, MessageBoxImage.Warning);
             // ───────────────────────────────────
 
@@ -182,9 +183,7 @@ namespace ProfessorUI
                 if (_crashNoticeShown) return;
                 _crashNoticeShown = true;
                 MessageBox.Show(
-                    "화면 처리 중 오류가 발생했습니다.\n학생 접속과 서버는 그대로 열려 있습니다.\n\n" +
-                    "화면이 이상해 보이면 시험을 마친 뒤 프로그램을 다시 켜 주시고,\n" +
-                    "바탕화면의 crash.log 를 함께 보내 주세요.",
+                    "화면 처리 중 오류가 발생했습니다.",
                     "오류", MessageBoxButton.OK, MessageBoxImage.Warning);
             };
 

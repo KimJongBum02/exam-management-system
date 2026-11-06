@@ -43,11 +43,15 @@ namespace ProfessorUI.ViewModel
             set { _currentStatusMessage = value; OnPropertyChanged(); }
         }
 
-        // 화면에는 바탕화면부터 짧게 보여 준다. 만들기 전에는 파일 이름 자리를 '...'로 둔다.
-        private static readonly string PackageFolderText =
-            @"바탕화면\" + Path.GetFileName(ExamReadyService.PackageFolder) + @"\";
+        // 폴더를 교수가 바꿀 수 있게 된 뒤로는 전체 경로를 그대로 보여 준다.
+        // 예전처럼 "바탕화면\…" 로 줄이면 바탕화면 밖으로 옮겼을 때 거짓말이 된다.
+        // 만들기 전에는 파일 이름 자리를 '...'로 둔다.
+        private static string PackageFolderText => ExamReadyService.PackageFolder + @"\";
 
         private string _packagePathText = PackageFolderText + "...";
+
+        // 걷은 답안이 쌓일 곳. 보여 주기만 하므로 서비스 값을 그대로 읽는다.
+        public string AnswerPathText => AnswerCollectService.CollectFolder;
         public string PackagePathText
         {
             get => _packagePathText;
@@ -63,6 +67,8 @@ namespace ProfessorUI.ViewModel
         public ICommand RemoveItemCommand { get; }
         public ICommand ClearAllCommand { get; }
         public ICommand StartProcessCommand { get; }
+        public ICommand ChangeExamFolderCommand { get; }
+        public ICommand ChangeAnswerFolderCommand { get; }
 
         // 파일 선택 창 이름 칸의 기본값. 이 값 그대로 [열기]를 누르면 지금 들어가 있는 폴더를 고른 것으로 본다.
         private const string FolderPlaceholder = "폴더 선택";
@@ -73,6 +79,8 @@ namespace ProfessorUI.ViewModel
             RemoveItemCommand = new UiCommand(ExecuteRemoveItem);
             ClearAllCommand = new UiCommand(ExecuteClearAll);
             StartProcessCommand = new UiCommand(ExecuteStartProcess);
+            ChangeExamFolderCommand = new UiCommand(_ => ChangeExamFolder());
+            ChangeAnswerFolderCommand = new UiCommand(_ => ChangeAnswerFolder());
         }
 
         // 선택 버튼 하나로 파일과 폴더를 모두 고른다.
@@ -172,8 +180,7 @@ namespace ProfessorUI.ViewModel
 
             if (conflicts.Count > 0)
                 System.Windows.MessageBox.Show(
-                    "목록에 같은 이름이 이미 있어 넣지 않았습니다. 묶음 안에서는 같은 이름이 하나만 남습니다.\n" +
-                    "이름을 바꾸거나 목록에서 먼저 빼 주세요.\n\n" + string.Join("\n", conflicts),
+                    "목록에 이미 있던 파일은 제외됩니다.\n" + string.Join("\n", conflicts),
                     "같은 이름");
         }
 
@@ -220,6 +227,61 @@ namespace ProfessorUI.ViewModel
             OnSelectionChanged();
         }
 
+        // ── 폴더 바꾸기 ──
+        // 시험 파일과 답안을 바탕화면 말고 다른 곳에 두고 싶어 하는 교수가 있어 연 자리다.
+        // 고른 폴더는 이번 실행 동안만이다 — 앱을 끄면 바탕화면 기본값으로 돌아간다.
+        private void ChangeExamFolder()
+        {
+            string? picked = PickFolder("시험 파일을 둘 폴더", ExamReadyService.PackageFolder);
+            if (picked == null) return;
+
+            ExamReadyService.PackageFolder = picked;
+
+            // 이미 만들어 둔 묶음은 옮기지 않는다 — 그 파일은 옛 폴더에 그대로 있고, 배포도 그것으로 한다.
+            // 그래서 아직 만들기 전일 때만 표시를 새 폴더로 바꾼다. 다음 압축부터 새 폴더에 들어간다.
+            if (!_isPackaged) PackagePathText = PackageFolderText + "...";
+        }
+
+        private void ChangeAnswerFolder()
+        {
+            string? picked = PickFolder("걷은 답안을 둘 폴더", AnswerCollectService.CollectFolder);
+            if (picked == null) return;
+
+            AnswerCollectService.CollectFolder = picked;
+            OnPropertyChanged(nameof(AnswerPathText));
+        }
+
+        // 교수가 창을 닫으면 null — 부르는 쪽이 아무것도 바꾸지 않는다.
+        // 폴더가 아직 없으면 대화상자가 그 자리를 못 열어서, 없을 때는 바탕화면에서 시작한다.
+        private static string? PickFolder(string title, string startAt)
+        {
+            var dialog = new OpenFolderDialog
+            {
+                Title = title,
+                InitialDirectory = Directory.Exists(startAt)
+                    ? startAt
+                    : Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+            };
+            return dialog.ShowDialog() == true ? dialog.FolderName : null;
+        }
+
+        // ── 다음 시험 준비 ──
+        // 시험 종료·답안 수집 화면의 [처음 화면으로] 가 부른다(UiContext.ResetForNextExam).
+        // 고른 목록과 압축 결과 표시를 지워 1단계를 처음 상태로 되돌린다.
+        // 3단계 최종 점검의 '시험 파일 압축·암호화' 줄도 이 값을 보고 있어 함께 돌아간다.
+        //
+        // 만들어 둔 묶음 파일은 지우지 않는다 — 걷은 답안을 푸는 암호가 그 묶음의 것이고,
+        // 파일을 지우는 일은 [모두 지우기]가 따로 묻고 한다.
+        public void ResetForNextExam()
+        {
+            SelectedItems.Clear();
+            _isPackaged = false;
+            PackagePathText = PackageFolderText + "...";
+
+            // 요약·상태 문구·진행률을 목록이 빈 상태에 맞춘다
+            OnSelectionChanged();
+        }
+
         // 목록이 바뀔 때마다 요약과 상태 문구를 맞춘다.
         // 압축한 뒤에 목록을 고쳤으면, 다시 압축해야 배포에 반영된다는 것을 알린다.
         private void OnSelectionChanged()
@@ -244,7 +306,7 @@ namespace ProfessorUI.ViewModel
         {
             if (SelectedItems.Count == 0)
             {
-                System.Windows.MessageBox.Show("먼저 대상 파일을 선택해주세요!", "알림");
+                System.Windows.MessageBox.Show("시험 파일을 선택해 주세요.", "알림");
                 return;
             }
 
@@ -267,8 +329,12 @@ namespace ProfessorUI.ViewModel
                 return;
             }
 
-            if (plan.Previous != null && !ConfirmRepackage(plan.Previous))
+            // 같은 내용으로 이미 만든 묶음이 있으면 알리고 끝낸다 — 묻지 않는다(사용자 요구).
+            // 다시 만들려면 시험 파일 폴더에서 그 .7z 를 지우면 된다. 그러면 이 창이 뜨지 않는다.
+            if (plan.Previous != null)
             {
+                System.Windows.MessageBox.Show("이미 압축된 파일입니다.", "이미 압축된 파일",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                 _isProcessing = false;
                 return;
             }
@@ -292,7 +358,8 @@ namespace ProfessorUI.ViewModel
             {
                 ProgressText = "100%";
                 CurrentStatusMessage = "압축·암호화 완료!";
-                PackagePathText = PackageFolderText + Path.GetFileName(result.OutputPath);
+                // 만들어진 파일의 전체 경로를 그대로 쓴다 — 중간에 교수가 폴더를 바꿨어도 실제 자리를 가리킨다.
+                PackagePathText = result.OutputPath;
                 _isPackaged = true;
             }
             else
@@ -303,17 +370,5 @@ namespace ProfessorUI.ViewModel
 
             _isProcessing = false;
         }
-
-        // 같은 내용을 다시 압축할지 교수에게 묻는다. 기본 버튼은 [아니요]다.
-        private static bool ConfirmRepackage(ExamReadyService.PackagedRecord previous)
-            => System.Windows.MessageBox.Show(
-                   "이미 압축·암호화를 마친 파일입니다. 다시 만들 필요가 없습니다.\n\n" +
-                   $"위치: {previous.OutputPath}\n" +
-                   $"만든 시각: {previous.PackagedAt:HH:mm:ss}\n\n" +
-                   "다시 만들면 새 암호가 생기고 기존 묶음을 바꿔 놓습니다. 그래도 다시 만들까요?",
-                   "이미 압축된 파일",
-                   System.Windows.MessageBoxButton.YesNo,
-                   System.Windows.MessageBoxImage.Warning,
-                   System.Windows.MessageBoxResult.No) == System.Windows.MessageBoxResult.Yes;
     }
 }

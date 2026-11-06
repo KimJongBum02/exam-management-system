@@ -168,7 +168,7 @@ namespace StudentUI.Service
                                 "답안 파일을 이 폴더에 저장한 뒤 다시 제출하십시오.");
 
                 if (!NetworkService.Instance.IsConnected)
-                    return Fail("답안 제출 실패.\n교수 PC와 연결된 뒤 다시 시도하십시오.");
+                    return Fail("답안 제출 실패.\n서버와 연결된 뒤 다시 시도하십시오.");
 
                 // 1. 답안 폴더를 통째로 압축·암호화한다.
                 SetState(AnswerSubmitState.Compressing, "답안을 압축하는 중입니다...");
@@ -196,7 +196,7 @@ namespace StudentUI.Service
                 // 3. 교수가 잘 받았는지 확인한다. 이 확인이 있어야 파일을 지울 수 있다.
                 SetState(AnswerSubmitState.WaitingAck, "교수님 PC의 확인을 기다리는 중입니다...");
                 if (!await WaitForAckAsync())
-                    return Fail("답안 제출 실패.\n교수 PC의 수신 확인이 없습니다. 다시 시도하십시오.");
+                    return Fail("답안 제출 실패.\n서버의 수신 확인이 없습니다. 다시 시도하십시오.");
 
                 // 4. 여기서부터가 되돌릴 수 없는 구간이다.
                 //    교수가 확실히 받았다고 회신한 뒤에만 시험 파일을 지운다.
@@ -257,7 +257,7 @@ namespace StudentUI.Service
                 ReportStatus(StudentStatus.CleanupFailed, $"시험 파일을 지우지 못했습니다: {ex.Message}");
                 ExamFileStore.Instance.MarkAnswerSubmitted(cleanupSucceeded: false);
                 SetState(AnswerSubmitState.Succeeded,
-                         "답안은 제출되었으나 시험 파일이 남아 있습니다. 교수님께 알려 주세요.");
+                         "답안 제출에는 성공 했으나, 시험 파일 폴더 초기화에 실패하였습니다.\n교수님께 문의 바랍니다.");
                 CleanupFinished?.Invoke(false);
             }
         }
