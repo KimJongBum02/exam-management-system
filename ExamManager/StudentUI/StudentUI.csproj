@@ -96,5 +96,10 @@
       <Link>ProcessControl.dll</Link>
     </None>
   </ItemGroup>
+  <!-- 시험 중 학교 LMS 만 들어가게 해 주는 창(EclassWindow)이 쓰는 브라우저 컨트롤.
+       실행에는 WebView2 런타임이 필요한데 Windows 11 에는 기본으로 들어 있다 -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
+  </ItemGroup>
 
 </Project>

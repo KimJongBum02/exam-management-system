@@ -21,9 +21,40 @@ namespace StudentUI.View.Exam
             if (submitCommand != null) SubmitButton.Command = submitCommand;
             else SubmitButton.Visibility = Visibility.Collapsed;
 
+            // eclass 단추는 네트워크 차단이 실제로 걸렸을 때만 보인다. 차단이 없는 PC 는 평소 브라우저로
+            // 들어가면 되고, 차단에 실패한 PC 는 열어 둔 주소도 없어 눌러도 들어가지 못한다.
+            UpdateEclassButton();
+            ExamMonitorService.Instance.NetworkStateChanged += OnNetworkStateChanged;
+            Closed += (_, _) => ExamMonitorService.Instance.NetworkStateChanged -= OnNetworkStateChanged;
+
             // 처음에는 화면 오른쪽 위에 둔다. 코딩 화면과 겹치면 끌어서 옮기면 된다.
             UiWindow.PinTopRight(this);
         }
+
+        // 시험 중 하나만 띄운다. 닫으면 다음에 다시 만든다.
+        private EclassWindow? _eclass;
+
+        private void OnOpenEclass(object sender, RoutedEventArgs e)
+        {
+            if (_eclass == null)
+            {
+                _eclass = new EclassWindow();
+                _eclass.Closed += (_, _) => _eclass = null;
+                _eclass.Show();
+                return;
+            }
+
+            if (_eclass.WindowState == WindowState.Minimized) _eclass.WindowState = WindowState.Normal;
+            _eclass.Activate();
+        }
+
+        // 차단 상태는 네트워크 수신 스레드에서 바뀐다.
+        private void OnNetworkStateChanged() => UiThread.Post(UpdateEclassButton);
+
+        private void UpdateEclassButton()
+            => EclassButton.Visibility = ExamMonitorService.Instance.NetworkState == NetworkBlockState.Blocked
+                ? Visibility.Visible
+                : Visibility.Collapsed;
 
         // 제목줄이 없는 창이라 몸통을 끌어서 옮긴다 (떼어진 뒤 들어오는 경우는 UiWindow.Drag 가 가린다).
         protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
