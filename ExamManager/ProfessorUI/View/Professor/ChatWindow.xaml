@@ -1,0 +1,327 @@
+<UserControl x:Class="ProfessorUI.View.Professor.ChatWindow"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:ProfessorUI.View.Professor"
+             Unloaded="Page_Unloaded">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/ProfessorUI;component/View/Professor/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- 대화 목록 필터. 고를 수 있는 것이라 검은 테두리, 고른 것은 검은 바탕이다 -->
+            <Style x:Key="FilterChip" TargetType="RadioButton">
+                <Setter Property="FontSize" Value="{StaticResource FontSmall}"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Margin" Value="0,0,8,0"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="RadioButton">
+                            <Border x:Name="Bd" Background="White" BorderBrush="{StaticResource BorderStrong}"
+                                    BorderThickness="1" CornerRadius="14" Padding="14,5">
+                                <TextBlock x:Name="Txt" Text="{TemplateBinding Content}"
+                                           Foreground="{StaticResource TextPrimary}"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource BtnDark}"/>
+                                    <Setter TargetName="Txt" Property="Foreground" Value="White"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 제목 ([전체 공지 작성]은 공지 내역 위로 옮겼다) -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,22">
+            <TextBlock Text="채팅" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- 보안 경고 목록은 여기 있었는데 시험 관리 화면 한 곳으로 모았다.
+             두 화면에 같은 목록을 놓으니 왼쪽 메뉴의 빨간 숫자가 채팅인지 경고인지 알 수 없어,
+             채팅을 다 읽어도 1 이 남은 것처럼 보였다(교수님 피드백). 이제 이 메뉴의 숫자는 채팅만 센다.
+             경고는 시험이 시작된 뒤에만 쌓이고(StudentReportService 의 네 자리 모두 시험 시작 뒤다)
+             시험 관리 메뉴도 그때 열리므로, 옮겨도 못 보는 구간이 생기지 않는다. -->
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="5*"/>
+                <ColumnDefinition Width="30"/>
+                <ColumnDefinition Width="7*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ── 학생 대화 목록 ──
+                 들어온 학생 한 명이 한 줄이다. 새 메시지가 와도 줄이 늘지 않고 그 학생 줄이 위로 올라온다.
+                 안 읽은 대화가 있는 학생이 먼저, 그다음 최근에 말이 오간 순서, 말이 오간 적 없는 학생은 학번순이다. -->
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="학생 대화 목록" Style="{StaticResource SectionTitle}"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                    <RadioButton x:Name="FilterAll" Content="전체" GroupName="ChatFilter" IsChecked="True"
+                                 Style="{StaticResource FilterChip}" Checked="Filter_Changed"/>
+                    <RadioButton x:Name="FilterUnread" Content="미읽음" GroupName="ChatFilter"
+                                 Style="{StaticResource FilterChip}" Checked="Filter_Changed"/>
+                    <RadioButton x:Name="FilterRead" Content="읽음" GroupName="ChatFilter"
+                                 Style="{StaticResource FilterChip}" Checked="Filter_Changed"/>
+                </StackPanel>
+                <!-- 학생 이름으로 찾는 칸이라 한글 자판으로 들어간다. 학번은 숫자라 그대로 쳐진다 -->
+                <TextBox x:Name="SearchBox" Style="{StaticResource SearchBox}" Margin="0,0,0,14"
+                         InputMethod.PreferredImeState="On" InputMethod.PreferredImeConversionMode="Native"
+                         TextChanged="Filter_Changed"/>
+
+                <!-- 학생이 많으면 목록 안에서 넘긴다. 화면 전체가 길어지면 아래 학생을 눌렀을 때
+                     위쪽에 열리는 대화가 보이지 않는다. 높이는 오른쪽 대화 칸과 맞춘다 -->
+                <ScrollViewer MaxHeight="530" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl x:Name="ConversationList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border x:Name="Row" Style="{StaticResource Card}" Padding="14,12" Margin="0,0,0,10"
+                                        Cursor="Hand" MouseLeftButtonUp="ConversationRow_Click">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Width="36" Height="36" CornerRadius="18" VerticalAlignment="Center"
+                                                Background="{StaticResource BgSubtle}">
+                                            <TextBlock Text="{Binding Initial}" FontSize="{StaticResource FontBody}" FontWeight="Bold"
+                                                       Foreground="{StaticResource TextSecondary}"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+
+                                        <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                <TextBlock Text="{Binding StudentName}" FontSize="{StaticResource FontBody}"
+                                                           Foreground="{StaticResource TextPrimary}"/>
+                                                <TextBlock Text="{Binding StudentId}" Style="{StaticResource Caption}" Margin="8,0,0,0"/>
+                                                <TextBlock x:Name="ReadState" Text="{Binding ReadStateText}" FontSize="{StaticResource FontSmall}"
+                                                           Foreground="{StaticResource TextMuted}" Margin="14,0,0,0"/>
+                                                <TextBlock Text="{Binding LastTimeText}" Style="{StaticResource Caption}" Margin="10,0,0,0"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding LastMessageText}" FontSize="{StaticResource FontSmall}"
+                                                       Foreground="{StaticResource TextSecondary}" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+
+                                        <Button Grid.Column="2" Content="대화" Style="{StaticResource SecondaryButton}"
+                                                VerticalAlignment="Center" Click="OpenConversation_Click"/>
+                                    </Grid>
+                                </Border>
+                                <DataTemplate.Triggers>
+                                    <!-- 안 읽은 대화가 있는 학생 줄은 옅은 파랑으로 칠해 목록에서 바로 보이게 한다 -->
+                                    <DataTrigger Binding="{Binding HasUnread}" Value="True">
+                                        <Setter TargetName="ReadState" Property="FontWeight" Value="Bold"/>
+                                        <Setter TargetName="ReadState" Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                                        <Setter TargetName="Row" Property="Background" Value="#EFF6FF"/>
+                                        <Setter TargetName="Row" Property="BorderBrush" Value="#93C5FD"/>
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+                <!-- 문구는 상황에 따라 코드가 정한다(UpdateConversationEmpty) -->
+                <TextBlock x:Name="ConversationEmpty" Style="{StaticResource Caption}" TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <!-- ── 오른쪽: 공지 내역 / 1:1 대화 ── 대화를 열면 공지 내역 자리를 대화가 차지한다 -->
+            <Grid Grid.Column="2">
+                <StackPanel x:Name="NoticePanel">
+                    <!-- [전체 공지 작성]을 누르면 열린다 -->
+                    <Border x:Name="ComposeCard" Style="{StaticResource Card}" Margin="0,0,0,22" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="전체 학생에게 공지" Style="{StaticResource FieldLabel}"/>
+                            <!-- 채팅 칸과 같이, 들어오는 순간 한글 자판으로 바꾼다 -->
+                            <TextBox x:Name="NoticeBox" Height="96" Style="{StaticResource NoteBox}"
+                                     InputMethod.PreferredImeState="On" InputMethod.PreferredImeConversionMode="Native"
+                                     Text="{Binding Chat.NoticeInput, UpdateSourceTrigger=PropertyChanged}"
+                                     PreviewKeyDown="NoticeBox_PreviewKeyDown"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                                <Button Content="취소" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"
+                                        Click="CancelCompose_Click"/>
+                                <Button Content="전송" Style="{StaticResource PrimaryButton}" Click="SendNotice_Click"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 공지 작성 버튼은 공지 내역 바로 위에 둔다.
+                         화면 제목 옆에 있으면 무엇을 여는 버튼인지 한눈에 들어오지 않는다 -->
+                    <Grid Margin="0,0,0,12">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="전체 공지 내역" Style="{StaticResource SectionTitle}" Margin="0"/>
+                            <TextBlock Text="{Binding Chat.LatestNotice.SummaryText}" Style="{StaticResource Caption}"
+                                       Margin="0,6,0,0"/>
+                        </StackPanel>
+                        <Button Content="전체 공지 작성" Style="{StaticResource PrimaryButton}"
+                                HorizontalAlignment="Right" VerticalAlignment="Center" Click="Compose_Click"/>
+                    </Grid>
+
+                    <!-- 공지마다 몇 명이 실제로 받았는지. 받은 사람은 학생 PC 의 수신 회신으로 센다 -->
+                    <ItemsControl ItemsSource="{Binding Chat.Notices}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource Card}" Padding="16,14" Margin="0,0,0,10">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                            <TextBlock Text="[공지]" Style="{StaticResource Caption}"/>
+                                            <TextBlock Text="{Binding Time}" Style="{StaticResource Caption}" Margin="14,0,0,0"/>
+                                            <TextBlock Text="{Binding ReceiptText}" FontSize="{StaticResource FontSmall}"
+                                                       Foreground="{StaticResource TextSecondary}" Margin="14,0,0,0"/>
+                                        </StackPanel>
+                                        <!-- Body 스타일은 TextBlock 전용이라 그 값(글자 크기·색)을 여기 적는다.
+                                             Mode=OneWay 는 버릴 수 없다 — Text 는 get 만 있어 기본값인 TwoWay 로는 예외가 난다 -->
+                                        <TextBox Text="{Binding Text, Mode=OneWay}" Style="{StaticResource SelectableText}"
+                                                 FontSize="{StaticResource FontBody}" Foreground="{StaticResource TextPrimary}"/>
+                                        <TextBlock x:Name="Missing" Text="{Binding MissingText}" Style="{StaticResource Caption}"
+                                                   TextWrapping="Wrap" Margin="0,8,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding HasMissing}" Value="False">
+                                        <Setter TargetName="Missing" Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="보낸 공지가 없습니다. [전체 공지 작성]으로 보낼 수 있습니다.">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Chat.Notices.Count}" Value="0">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <!-- 가장 최근 공지의 결과 -->
+                    <TextBlock Text="공지 전송 결과 요약" Style="{StaticResource SectionTitle}" Margin="0,18,0,10"/>
+                    <Border Style="{StaticResource Card}">
+                        <UniformGrid Columns="4">
+                            <StackPanel>
+                                <TextBlock Text="전송 대상" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding Chat.LatestNotice.TargetText, FallbackValue=-}" Style="{StaticResource Body}"/>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="수신 완료" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding Chat.LatestNotice.ReceivedText, FallbackValue=-}" Style="{StaticResource Body}"/>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="미수신" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding Chat.LatestNotice.MissingCountText, FallbackValue=-}" Style="{StaticResource Body}"/>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="마지막 전송" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding Chat.LatestNotice.Time, FallbackValue=-}" Style="{StaticResource Body}"/>
+                            </StackPanel>
+                        </UniformGrid>
+                    </Border>
+                </StackPanel>
+
+                <!-- 1:1 대화 -->
+                <StackPanel x:Name="ConversationPanel" Visibility="Collapsed">
+                    <Button Content="← 공지 내역으로" Style="{StaticResource LinkButton}" Margin="0,0,0,12"
+                            Click="CloseConversation_Click"/>
+                    <TextBlock x:Name="ConversationTitle" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource Card}" Padding="16">
+                        <!-- 가로 스크롤을 막아야 한다. 열어 두면 줄이 가로로 끝없이 늘어나,
+                                 오른쪽에 붙인 내 말풍선이 보이는 자리 밖으로 밀려난다 -->
+                        <ScrollViewer x:Name="ConversationScroll" Height="420" VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl x:Name="MessageList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <!-- 누가 한 말인지는 자리로 가른다 — 상대는 왼쪽, 내 말은 오른쪽.
+                                             줄 전체를 늘려 두고 그 안의 묶음만 한쪽으로 붙인다. -->
+                                        <Grid Margin="0,0,0,14">
+                                            <StackPanel x:Name="Column" HorizontalAlignment="Left">
+                                                <!-- 이름만 한 줄로 둔다.
+                                                     시각을 이름과 같은 줄에 좌·우로 붙이면 그 줄의 폭이 말풍선을 따라가,
+                                                     말이 길면 둘 사이가 벌어지고 짧으면 겹친다. 시각은 말풍선 옆으로 보냈다. -->
+                                                <TextBlock x:Name="Sender" Text="{Binding SenderName}"
+                                                           HorizontalAlignment="Left" Margin="4,0,4,5"
+                                                           FontSize="{StaticResource FontSmall}"
+                                                           Foreground="{StaticResource TextSecondary}"/>
+
+                                                <!-- 말풍선과 그 끝에 붙는 시각·읽음. 학생 화면의 채팅과 같은 모양이다.
+                                                     폭이 자리를 따라 변하지 않도록 둘 다 Auto 칸에 담고,
+                                                     내 말일 때는 칸 번호만 바꿔 시각을 바깥쪽(왼쪽)으로 보낸다. -->
+                                                <Grid x:Name="BubbleRow" HorizontalAlignment="Left">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <!-- 꼬리 쪽 모서리만 덜 둥글려 말하는 쪽을 가리킨다.
+                                                         긴 말은 여기서 접힌다 — 폭 제한을 묶음이 아니라 말풍선에 걸어야
+                                                         옆의 시각이 밀려 나가지 않는다.
+                                                         390 인 이유: 옆에 붙는 시각·읽음(약 50)까지 합쳐 한 줄이 440 을 넘지 않아야
+                                                         오른쪽 스크롤바에 닿지 않는다 -->
+                                                    <Border x:Name="Bubble" Grid.Column="0" MaxWidth="390"
+                                                            Background="{StaticResource BubbleDark}"
+                                                            CornerRadius="16,16,16,5" Padding="15,11">
+                                                        <TextBox Text="{Binding Message}" Style="{StaticResource SelectableTextOnDark}"
+                                                                 FontSize="{StaticResource FontBody}" Foreground="White"/>
+                                                    </Border>
+
+                                                    <!-- 읽음은 내가 보낸 1:1 메시지에만 값이 있다. 나머지는 빈 줄이라 자리를 차지하지 않는다 -->
+                                                    <StackPanel x:Name="Meta" Grid.Column="1"
+                                                                VerticalAlignment="Bottom" Margin="7,0,0,3">
+                                                        <TextBlock x:Name="ReadState" Text="{Binding ReadStateText}"
+                                                                   HorizontalAlignment="Left" Style="{StaticResource Caption}"/>
+                                                        <TextBlock x:Name="Time" Text="{Binding DisplayTime}"
+                                                                   HorizontalAlignment="Left" Style="{StaticResource Caption}"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding IsMine}" Value="True">
+                                                <Setter TargetName="Column" Property="HorizontalAlignment" Value="Right"/>
+                                                <Setter TargetName="BubbleRow" Property="HorizontalAlignment" Value="Right"/>
+                                                <Setter TargetName="Bubble" Property="Background" Value="{StaticResource BtnPrimary}"/>
+                                                <Setter TargetName="Bubble" Property="CornerRadius" Value="16,16,5,16"/>
+                                                <!-- 말풍선이 오른쪽에 붙으므로 이름도 그쪽 끝으로 보내고,
+                                                     시각·읽음은 말풍선 바깥쪽인 왼쪽에 붙인다 -->
+                                                <Setter TargetName="Sender" Property="HorizontalAlignment" Value="Right"/>
+                                                <Setter TargetName="Bubble" Property="Grid.Column" Value="1"/>
+                                                <Setter TargetName="Meta" Property="Grid.Column" Value="0"/>
+                                                <Setter TargetName="Meta" Property="Margin" Value="0,0,7,3"/>
+                                                <Setter TargetName="ReadState" Property="HorizontalAlignment" Value="Right"/>
+                                                <Setter TargetName="Time" Property="HorizontalAlignment" Value="Right"/>
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+                    <!-- 학생에게 보내는 말은 늘 한글이라 칸에 들어오는 순간 한글 자판으로 바꾼다(한영키를 먼저 누르지 않아도 되게) -->
+                    <TextBox x:Name="MessageBox" Height="72" Style="{StaticResource ChatInputBox}" Margin="0,14,0,0"
+                             InputMethod.PreferredImeState="On" InputMethod.PreferredImeConversionMode="Native"
+                             Text="{Binding Chat.InputMessage, UpdateSourceTrigger=PropertyChanged}"
+                             PreviewKeyDown="MessageBox_PreviewKeyDown"/>
+                    <Grid Margin="0,10,0,0">
+                        <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center"
+                                   Text="Enter 로 보내고, Shift+Enter 로 줄을 바꿉니다."/>
+                        <Button Content="보내기" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Right"
+                                Command="{Binding Chat.SendMessageCommand}"/>
+                    </Grid>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

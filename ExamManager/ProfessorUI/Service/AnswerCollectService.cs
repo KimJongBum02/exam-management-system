@@ -1,0 +1,152 @@
+using ExamManager.Shared;
+using NetworkLib;
+using System.IO;
+
+namespace ProfessorUI.Service
+{
+    // 학생이 보낸 답안을 받아 저장하고, 잘 받았다고 회신한다.
+    //
+    // 학생은 이 회신을 받아야만 자기 PC의 시험 파일을 지운다.
+    // 그래서 여기서 회신을 빠뜨리면 학생 PC가 정리되지 않고 멈춰 있게 된다.
+    //
+    // 파일이 온전한지는 네이티브가 이미 SHA-256으로 검사한다(FileTransfer.cpp).
+    // 손상된 파일은 FileReceived가 아예 발생하지 않으므로, 여기까지 왔다면 온전한 파일이다.
+    public class AnswerCollectService
+    {
+        public static AnswerCollectService Instance { get; } = new AnswerCollectService();
+
+        // 걷은 답안을 모아 둘 폴더. 이 아래에 날짜 폴더(1105)가 생기고, 그 안에 학생별 폴더가 쌓인다.
+        // 기본값은 바탕화면이고, 시험 준비 1단계에서 교수가 바꿀 수 있다.
+        // 바꾼 폴더는 파일에 남기지 않는다 — 앱을 끄면 다시 바탕화면이다(사용자 요구).
+        // 답안을 받을 때마다 읽으므로, 걷는 도중에 바꾸면 그다음 답안부터 새 폴더에 쌓이고
+        // 이미 받아 둔 것은 옛 폴더에 그대로 남는다.
+        public static string CollectFolder { get; set; } = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "답안 파일");
+
+        // 답안을 하나 받을 때마다 알린다 (학번, 저장 경로).
+        public event Action<string, string>? AnswerCollected;
+
+        private AnswerCollectService() { }
+
+        // 앱 시작 시 한 번 호출 — 구독만 해둔다.
+        public void Start()
+        {
+            NetworkService.Instance.FileReceived += OnFileReceived;
+        }
+
+        // 네이티브 수신 스레드에서 불린다. 화면은 건드리지 않는다.
+        // senderId는 세션 ID다 (ClientSession.cpp에서 그렇게 넘긴다).
+        private void OnFileReceived(string transferId, string sessionId, string fileName,
+                                    string tempPath, long size, string password)
+        {
+            // 학생을 로그인 때 등록된 세션으로 찾는다. 파일 이름에 기대지 않는다.
+            (string studentId, string studentName) = ResolveStudent(sessionId);
+
+            string? savedPath = SaveAnswer(studentId, studentName, tempPath, password);
+            bool success = savedPath != null;
+
+            // 저장까지 끝난 뒤에 회신한다.
+            // 먼저 회신하면 학생이 파일을 지운 다음에 교수 쪽 저장이 실패할 수 있다.
+            NetworkService.Instance.SendToSession(
+                sessionId,
+                PacketType.CommandAck,
+                CommandAckPayload.Encode(
+                    PacketType.ExamSubmitRequest,
+                    success,
+                    success ? "답안을 정상적으로 받았습니다." : "답안을 저장하지 못했습니다."));
+
+            if (success)
+                AnswerCollected?.Invoke(studentId, savedPath!);
+
+            // 네이티브가 임시 폴더에 받아 둔 원본은 저장이 끝나면 쓸모가 없다.
+            // 지우지 않으면 시험 한 번에 학생 수만큼(재제출까지 더해) 쌓여 교수 PC 디스크를 채우고,
+            // 디스크가 차면 그다음부터 저장이 실패한다 — 늦게 내는 학생부터 당한다.
+            // 저장에 실패했을 때만 남긴다. 그때는 이것이 받은 답안의 유일한 사본이다.
+            // 회신을 보낸 뒤에 지운다 — 삭제가 늦어져도 학생이 기다리는 시간은 늘지 않는다.
+            if (success)
+                try { File.Delete(tempPath); } catch (Exception) { }
+        }
+
+        // 세션 ID로 학번과 이름을 찾는다. 못 찾으면 세션 ID를 학번 자리에 쓴다 —
+        // 누구인지 몰라도 파일은 반드시 남겨야 하기 때문이다.
+        //
+        // 목록을 직접 훑지 않고 StudentStore 에 맡긴다. 이 함수는 네이티브 수신 스레드에서 불리는데
+        // 그 목록은 화면 스레드가 넣고 빼므로, 훑는 도중 바뀌면 열거가 깨져 예외가 난다.
+        // 그 예외는 네이티브 콜백 위로 올라가 교수 앱을 통째로 죽인다(StudentStore.Gate 참고).
+        private static (string StudentId, string Name) ResolveStudent(string sessionId)
+        {
+            return StudentStore.Instance.TryResolveBySession(sessionId, out string studentId, out string name)
+                ? (studentId, name)
+                : (sessionId, "");
+        }
+
+        // 네이티브가 임시 폴더에 받아 둔 답안을 학생별 폴더로 풀어 둔다.
+        // 임시 파일은 언제 정리될지 모르므로 반드시 옮겨 두어야 한다.
+        //
+        // 학생이 보내는 답안은 암호가 걸린 .7z 다. 그대로 두면 교수가 열어 볼 수 없어
+        // 받은 자리에서 바로 푼다. 암호는 학생에게 보낸 것과 같은 값이 함께 올라온다.
+        private static string? SaveAnswer(string studentId, string studentName, string tempPath, string password)
+        {
+            try
+            {
+                // 날짜 폴더로 한 번 더 묶는다 — 폴더 이름이 학번·이름뿐이라
+                // 언제 치른 시험인지 알 수 없었다(교수님 요청).
+                // 시험 시작 시각은 아무도 들고 있지 않아(ExamSessionStore 는 끝낸 시각만 둔다)
+                // 답안이 들어온 시각으로 짓는다. 한 시험의 답안은 몇 분 안에 다 들어오므로 같은 폴더에 모인다.
+                string dayFolder = Path.Combine(CollectFolder, DateTime.Now.ToString("MMdd"));
+                Directory.CreateDirectory(dayFolder);
+
+                // 같은 학생이 다시 내면 덮어쓴다. 마지막 제출이 최종본이다.
+                string studentFolder = Path.Combine(dayFolder, BuildFolderName(studentId, studentName));
+                string archivePath = studentFolder + ".7z";
+
+                File.Copy(tempPath, archivePath, true);
+
+                // 새 답안은 옆에 먼저 푼다.
+                // 앞 제출 폴더를 먼저 지우고 그 자리에 풀면, 해제가 실패했을 때 앞 제출로 받아 둔 답안까지 사라진다.
+                // (ack 가 늦어 학생이 거짓 '제출 실패'를 보고 다시 내는 일이 있어 재제출은 드물지 않다)
+                string staging = studentFolder + ".새제출";
+                if (Directory.Exists(staging)) FileSystem.DeleteFolder(staging);
+                Directory.CreateDirectory(staging);
+
+                int code = FileSystem.ExtractDecrypt(archivePath, staging, password);
+
+                if (code != 0)
+                {
+                    // 못 풀었으면 묶음이라도 남긴다. 답안을 잃는 것보다 낫다. 앞 제출은 그대로 둔다.
+                    System.Diagnostics.Debug.WriteLine($"답안 압축 해제 실패 (코드 {code}) — 묶음 파일로 남깁니다.");
+                    try { FileSystem.DeleteFolder(staging); } catch { }
+                    return archivePath;
+                }
+
+                // 다 풀렸을 때만 앞 제출을 치우고 자리를 바꾼다.
+                // 공용 삭제를 쓴다 — 답안에 읽기 전용 파일이 섞여 있으면 Directory.Delete 는 그냥 실패해서,
+                // 그 학생은 몇 번을 다시 내도 '제출 실패'만 받게 된다.
+                if (Directory.Exists(studentFolder)) FileSystem.DeleteFolder(studentFolder);
+                Directory.Move(staging, studentFolder);
+
+                // 잘 풀렸으면 묶음 파일은 필요 없다.
+                try { File.Delete(archivePath); } catch { }
+                return studentFolder;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"답안을 저장하지 못했습니다: {ex.Message}");
+                return null;
+            }
+        }
+
+        // 교수가 탐색기에서 바로 알아볼 수 있는 이름으로 짓는다.
+        //   202407021 김종범
+        // 이름은 학생이 로그인할 때 직접 입력한 값이라 경로에 못 쓰는 문자가 섞일 수 있다.
+        // 그대로 쓰면 저장이 실패하거나 엉뚱한 폴더에 쓰게 되므로 걸러 낸다.
+        private static string BuildFolderName(string studentId, string studentName)
+        {
+            string safeName = studentName;
+            foreach (char bad in Path.GetInvalidFileNameChars())
+                safeName = safeName.Replace(bad, '_');
+
+            return $"{studentId} {safeName}".Trim();
+        }
+    }
+}

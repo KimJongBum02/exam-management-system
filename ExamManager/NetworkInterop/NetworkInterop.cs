@@ -1,0 +1,1252 @@
+// NetworkInterop.cs
+// UI 팀이 이 파일을 ProfessorUI 또는 StudentUI 프로젝트에 추가해서 사용합니다.
+// NetworkLib_Native.dll 이 실행 파일과 같은 폴더에 있어야 합니다.
+//
+// 사용법:
+//   1. 이 파일을 프로젝트에 추가
+//   2. NetworkLib_Native.dll 을 출력 폴더에 복사 (빌드 이벤트로 자동화 권장)
+//   3. 아래 클래스를 통해 서버/클라이언트를 초기화
+
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
+
+namespace NetworkLib
+{
+    // ══════════════════════════════════════════════════════════════════
+    //  패킷 타입 (Protocol.h의 PacketType enum과 동일한 값)
+    // ══════════════════════════════════════════════════════════════════
+    public enum PacketType : uint
+    {
+        StudentLogin            = 1,
+        LoginResponse           = 2,
+        Heartbeat               = 3,
+        Disconnect              = 4,
+        NotInRoster             = 5,   // 교수 → 학생. 수강생 명단과 대조해 받지 않음.
+                                       // payload 1바이트 — 0: 이 학번이 명단에 없다, 1: 교수 PC 에 명단이 아직 없다.
+                                       // 학생 앱은 연결을 끊고 로그인 화면으로 돌아간다(안내는 두 경우가 다르다).
+
+        ExamPhaseChange         = 20,
+        ExamStatusUpdate        = 21,
+        CheatingAlert           = 22,
+        FileTransferStart       = 30,
+        FileChunk               = 31,
+        FileTransferComplete    = 32,
+        ExtractArchive          = 33,
+        ExamSubmitRequest       = 34,
+        ProcessListUpdate       = 40,
+        MonitorStatusReport     = 43,   // 학생 → 교수. 감시가 실제로 켜졌는지
+        InstalledProgramsReport = 44,   // 학생 → 교수. 학생 PC 에 설치된 프로그램 목록
+        LockKeyboard            = 45,   // 교수 → 특정 학생. payload = 1 byte (1=잠금, 0=해제)
+        ClassModeChange         = 46,   // 교수 → 학생. payload = 1 byte (ClassMode: 0=자유, 1=통제, 2=시험). 전체/개별 모두 이 패킷을 쓴다
+        QuizQuestion            = 50,
+        QuizAnswer              = 51,
+
+        // 채팅
+        ChatBroadcast           = 60,  // 교수 → 전체 학생
+        ChatDirect              = 61,  // 교수 → 특정 학생
+        ChatFromStudent         = 62,  // 학생 → 교수
+        ImportantNotice         = 63,  // 교수 → 학생. 두 앱 상단 가운데에 계속 떠 있는 중요 공지 (ImportantNoticePayload)
+
+        // 화면 모니터링
+        ScreenCapture           = 70,  // 학생 → 교수, payload = JPEG 바이너리
+        ScreenQualityMode       = 71,  // 교수 → 특정 학생, payload = 1 byte (0=기본 320x180, 1=고화질 1920x1080)
+        RemoteControlStart      = 72,  // 교수 → 특정 학생. 원격 제어 시작 요청 (payload 없음)
+        RemoteControlInvitation = 73,  // 학생 → 교수. 화면 공유 접속 문자열 + 암호 (RemoteControlPayload)
+        RemoteControlStop       = 74,  // 교수 → 특정 학생. 원격 제어 종료 (payload 없음)
+        RemoteControlFailed     = 75,  // 학생 → 교수. 원격 제어를 하지 못한 이유 (UTF-8 문자열)
+        RemoteControlImeKey     = 76,  // 교수 → 특정 학생. 한/영·한자 키 (payload = 1 byte, 0=한/영, 1=한자)
+
+        CommandAck              = 100,
+    }
+
+    // 교수가 학생 PC를 두는 상태. ClassModeChange 패킷의 payload 1바이트로 전달한다.
+    // 시험(Exam)은 기존 ExamPhase 흐름과 별개의 '덮개·입력잠금' 표시용이며, 전환은 교수 상단바 버튼이 한다.
+    public enum ClassMode : byte
+    {
+        Free   = 0,   // 자유 — 아무 제한 없음
+        Locked = 1,   // 통제 — 키보드·마우스 잠금 + 전체화면 덮개
+        Exam   = 2,   // 시험 — 통제와 같되 덮개 문구가 다름
+    }
+
+    public enum ExamPhase : uint
+    {
+        Waiting         = 0,
+        Ready           = 1,
+        InProgress      = 2,
+        SubmitRequested = 3,
+        Closed          = 4,
+    }
+
+    public enum StudentStatus : uint
+    {
+        NotConnected     = 0,
+        Connected        = 1,
+        FileReceived     = 2,
+        InProgress       = 3,
+        Submitted        = 4,
+        Approved         = 5,
+        CheatingDetected = 6,
+        Absent           = 7,
+        // 답안은 냈으나 시험 파일 삭제에 실패한 상태.
+        // 답안 자체는 안전하지만, 다음에 그 자리에 앉는 학생이 앞사람 답안을 보게 되므로
+        // 교수가 그 PC를 직접 확인해야 한다.
+        CleanupFailed    = 8,
+        CleanupSucceeded = 9,   // 시험 파일까지 지웠음 (학생 → 교수)
+        // 받았던 시험 파일이 학생 PC 에서 사라졌다 (학생 → 교수).
+        // 학생이 실수로 지운 경우가 많은데, 교수 화면이 '수신완료'로 남아 있으면 재배포 대상에서 빠져
+        // 파일을 다시 받을 길이 없다. 이 보고를 받으면 교수 표가 '파일 삭제됨'이 되어 다시 보낼 수 있다.
+        FileMissing      = 10,
+    }
+
+    // 학생 PC에서 실제로 켜진 감시. 비트를 세워 보낸다.
+    // 교수가 "감시가 도는 줄 알았는데 아니었다"를 시험이 끝난 뒤에 알게 되면 늦기 때문에,
+    // 학생이 시험 시작 직후 스스로 보고한다.
+    [Flags]
+    public enum MonitorFlags : uint
+    {
+        None           = 0,
+        ProcessMonitor = 1 << 0,
+        NetworkMonitor = 1 << 1,
+        // 답안 제출 뒤 네트워크 차단을 풀었다는 보고. 이 비트만 세워 한 번 더 보낸다.
+        // 교수는 이걸 받으면 인터넷 칸만 '해제됨'으로 바꾸고 나머지 감시 표시는 건드리지 않는다.
+        NetworkReleased = 1 << 2,
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  MonitorStatusReport 페이로드 (고정 260바이트)
+    //    [uint32 flags][char detail[256]]
+    //  detail 에는 켜지지 못한 이유를 담는다 (예: "관리자 권한 없음").
+    // ══════════════════════════════════════════════════════════════════
+    public static class MonitorStatusPayload
+    {
+        private const int DetailOffset = 4;
+        private const int DetailSize   = 256;
+        public  const int Size         = DetailOffset + DetailSize;   // 260
+
+        public static byte[] Encode(MonitorFlags flags, string detail = "")
+        {
+            byte[] payload = new byte[Size];
+            BitConverter.GetBytes((uint)flags).CopyTo(payload, 0);
+            ExamSubmitPayload.WriteFixedString(payload, DetailOffset, detail, DetailSize);
+            return payload;
+        }
+
+        public static bool TryDecode(IntPtr payload, uint payloadLen,
+                                     out MonitorFlags flags, out string detail)
+        {
+            flags = MonitorFlags.None;
+            detail = "";
+            if (payload == IntPtr.Zero || payloadLen < Size) return false;
+
+            byte[] buffer = new byte[Size];
+            Marshal.Copy(payload, buffer, 0, Size);
+
+            flags = (MonitorFlags)BitConverter.ToUInt32(buffer, 0);
+            detail = Encoding.UTF8.GetString(buffer, DetailOffset, DetailSize).Split('\0')[0];
+            return true;
+        }
+    }
+
+    // 부정행위 유형 (Protocol.h의 CheatingAlertType enum과 동일한 값)
+    public enum CheatingAlertType : uint
+    {
+        BlacklistedProcessLaunched = 0,
+        NetworkAccessAttempt       = 1,
+        UnauthorizedProcess        = 2,
+        ManualReport               = 3,
+        RequiredProcessTerminated  = 4,   // 시험에 필요한 프로그램을 학생이 강제 종료함
+    }
+
+    public enum DisconnectReason : int
+    {
+        ClientDisconnected = 0,
+        HeartbeatTimeout   = 1,
+        NetworkError       = 2,
+        ServerShutdown     = 3,
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  ProcessListUpdate(40) 페이로드 — 교수가 배포하는 프로세스 감시 목록
+    //
+    //  목록 개수가 정해져 있지 않아 구조체로 못 만든다. Protocol.h에 정의된 형식:
+    //    [uint32 화이트리스트 개수][uint32 블랙리스트 개수]
+    //    화이트리스트 문자열들: 각 [uint16 길이][길이만큼의 UTF-8 바이트]
+    //    블랙리스트 문자열들:   각 [uint16 길이][길이만큼의 UTF-8 바이트]
+    //
+    //  보내는 쪽(교수)과 읽는 쪽(학생)이 형식을 따로 구현하면 어긋나기 쉬우므로,
+    //  두 프로젝트가 공유하는 이 파일에 한 벌만 둔다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class ProcessListPayload
+    {
+        public static byte[] Encode(IReadOnlyList<string> whitelist, IReadOnlyList<string> blacklist)
+        {
+            using var stream = new MemoryStream();
+            using var writer = new BinaryWriter(stream);
+
+            writer.Write((uint)whitelist.Count);
+            writer.Write((uint)blacklist.Count);
+
+            foreach (string name in whitelist) WriteString(writer, name);
+            foreach (string name in blacklist) WriteString(writer, name);
+
+            writer.Flush();
+            return stream.ToArray();
+        }
+
+        // 네이티브 버퍼를 해석한다. 형식이 깨져 있으면 false를 돌려준다.
+        // (실패했을 때 목록을 반쯤 채운 채로 쓰면 감시가 헐거워지므로 호출한 쪽에서 통째로 버려야 한다)
+        public static bool TryDecode(IntPtr payload, uint payloadLen,
+                                     out List<string> whitelist, out List<string> blacklist)
+        {
+            whitelist = new List<string>();
+            blacklist = new List<string>();
+
+            // 최소한 개수 두 개(4+4바이트)는 있어야 한다
+            if (payload == IntPtr.Zero || payloadLen < 8) return false;
+
+            byte[] buffer = new byte[payloadLen];
+            Marshal.Copy(payload, buffer, 0, (int)payloadLen);
+
+            int offset = 0;
+            uint whiteCount = BitConverter.ToUInt32(buffer, offset); offset += 4;
+            uint blackCount = BitConverter.ToUInt32(buffer, offset); offset += 4;
+
+            return TryReadStrings(buffer, ref offset, whiteCount, whitelist)
+                && TryReadStrings(buffer, ref offset, blackCount, blacklist);
+        }
+
+        internal static void WriteString(BinaryWriter writer, string value)
+        {
+            byte[] utf8 = Encoding.UTF8.GetBytes(value);
+            writer.Write((ushort)utf8.Length);
+            writer.Write(utf8);
+        }
+
+        // 읽기 전에 매번 남은 크기를 확인한다.
+        // 길이 값을 그대로 믿으면 손상된 패킷 하나로 버퍼 밖을 읽게 된다.
+        internal static bool TryReadStrings(byte[] buffer, ref int offset, uint count, List<string> target)
+        {
+            for (uint i = 0; i < count; i++)
+            {
+                if (offset + 2 > buffer.Length) return false;
+                int length = BitConverter.ToUInt16(buffer, offset);
+                offset += 2;
+
+                if (offset + length > buffer.Length) return false;
+                target.Add(Encoding.UTF8.GetString(buffer, offset, length));
+                offset += length;
+            }
+            return true;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  InstalledProgramsReport(44) 페이로드 — 학생 PC 에 설치된 프로그램 목록
+    //
+    //  교수의 프로그램 선택창은 교수 PC 에 설치된 것만 알아서, 강의실 PC 에만 깔린 프로그램은
+    //  실행 파일 이름을 직접 쳐야 했다. 학생 PC 가 로그인할 때 자기 목록을 보내 이 빈틈을 메운다.
+    //
+    //  개수가 정해져 있지 않아 ProcessListUpdate 와 같은 문자열 방식을 쓴다:
+    //    [uint32 프로그램 개수]
+    //    프로그램마다 문자열 4개: 보이는 이름, 실행 파일 이름, 원래 이름, 파일 설명
+    //    문자열은 각 [uint16 길이][길이만큼의 UTF-8 바이트]
+    // ══════════════════════════════════════════════════════════════════
+
+    // 원래 이름과 파일 설명은 버전 정보가 없는 실행 파일이면 빈 문자열이다.
+    public record InstalledProgram(string DisplayName, string ExecutableName, string OriginalName, string Description);
+
+    public static class InstalledProgramsPayload
+    {
+        private const int FieldsPerProgram = 4;
+
+        public static byte[] Encode(IReadOnlyList<InstalledProgram> programs)
+        {
+            using var stream = new MemoryStream();
+            using var writer = new BinaryWriter(stream);
+
+            writer.Write((uint)programs.Count);
+            foreach (var program in programs)
+            {
+                ProcessListPayload.WriteString(writer, program.DisplayName);
+                ProcessListPayload.WriteString(writer, program.ExecutableName);
+                ProcessListPayload.WriteString(writer, program.OriginalName);
+                ProcessListPayload.WriteString(writer, program.Description);
+            }
+
+            writer.Flush();
+            return stream.ToArray();
+        }
+
+        // 형식이 깨져 있으면 false 를 돌려준다. 반쯤 읽힌 목록은 쓰지 않는다.
+        public static bool TryDecode(IntPtr payload, uint payloadLen, out List<InstalledProgram> programs)
+        {
+            programs = new List<InstalledProgram>();
+            if (payload == IntPtr.Zero || payloadLen < 4) return false;
+
+            byte[] buffer = new byte[payloadLen];
+            Marshal.Copy(payload, buffer, 0, (int)payloadLen);
+
+            int offset = 0;
+            uint count = BitConverter.ToUInt32(buffer, offset); offset += 4;
+
+            // 문자열 하나는 길이 칸만으로도 2바이트다. 남은 크기로 담을 수 없는 개수면 손상된 패킷이다.
+            // (이걸 먼저 보지 않으면 큰 개수에 4를 곱하다 넘쳐 엉뚱한 개수로 읽힌다)
+            if (count > (payloadLen - 4) / (FieldsPerProgram * 2)) return false;
+
+            var fields = new List<string>();
+            if (!ProcessListPayload.TryReadStrings(buffer, ref offset, count * FieldsPerProgram, fields))
+                return false;
+
+            for (int i = 0; i < fields.Count; i += FieldsPerProgram)
+                programs.Add(new InstalledProgram(fields[i], fields[i + 1], fields[i + 2], fields[i + 3]));
+            return true;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  ExamPhaseChange(20) 페이로드 — 교수가 알리는 시험 진행 단계
+    //
+    //  Protocol.h의 ExamPhaseChangePayload와 같은 형식(고정 260바이트):
+    //    [uint32 phase][char message[256]]
+    //
+    //  ProcessListPayload와 같은 이유로 여기에 한 벌만 둔다.
+    //  보내는 쪽(교수)과 읽는 쪽(학생)이 형식을 따로 구현하면 어긋나기 쉽다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class ExamPhasePayload
+    {
+        private const int MessageOffset = 4;
+        private const int MessageSize   = 256;
+        public  const int Size          = MessageOffset + MessageSize;   // 260
+
+        public static byte[] Encode(ExamPhase phase, string message)
+        {
+            byte[] payload = new byte[Size];
+            BitConverter.GetBytes((uint)phase).CopyTo(payload, 0);
+
+            // 메시지가 길면 잘라 담는다. 마지막 1바이트는 문자열 끝 표시로 남겨 둔다.
+            byte[] text = Encoding.UTF8.GetBytes(message);
+            Array.Copy(text, 0, payload, MessageOffset, Math.Min(text.Length, MessageSize - 1));
+
+            return payload;
+        }
+
+        // 크기가 모자라거나 모르는 단계 값이면 통째로 버린다.
+        // 단계를 잘못 읽으면 시험 도중에 감시가 꺼질 수 있어, 의심스러우면 무시하는 편이 안전하다.
+        public static bool TryDecode(IntPtr payload, uint payloadLen, out ExamPhase phase)
+        {
+            phase = ExamPhase.Waiting;
+            if (payload == IntPtr.Zero || payloadLen < Size) return false;
+
+            uint value = (uint)Marshal.ReadInt32(payload);
+            if (!Enum.IsDefined(typeof(ExamPhase), value)) return false;
+
+            phase = (ExamPhase)value;
+            return true;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  ExamSubmitRequest(34) 페이로드 — 교수가 보내는 답안 제출 요청
+    //
+    //  Protocol.h의 ExamSubmitRequestPayload와 같은 형식(고정 396바이트):
+    //    [char folderName[260]][char archivePassword[128]][int64 deadline]
+    //
+    //  folderName은 비워 보낸다. 학생마다 시험 폴더 경로가 다를 수 있어
+    //  교수가 지정할 수 없고, 학생이 자기 해제 폴더를 압축하면 되기 때문이다.
+    //  deadline(마감시각)은 아직 쓰지 않아 0으로 보낸다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class ExamSubmitPayload
+    {
+        private const int FolderNameSize = 260;
+        private const int PasswordSize   = 128;
+        public  const int Size           = FolderNameSize + PasswordSize + 8;   // 396
+
+        public static byte[] Encode(string folderName, string archivePassword, long deadline = 0)
+        {
+            byte[] payload = new byte[Size];
+            WriteFixedString(payload, 0,               folderName,      FolderNameSize);
+            WriteFixedString(payload, FolderNameSize,  archivePassword, PasswordSize);
+            BitConverter.GetBytes(deadline).CopyTo(payload, FolderNameSize + PasswordSize);
+            return payload;
+        }
+
+        public static bool TryDecode(IntPtr payload, uint payloadLen,
+                                     out string folderName, out string archivePassword, out long deadline)
+        {
+            folderName = "";
+            archivePassword = "";
+            deadline = 0;
+            if (payload == IntPtr.Zero || payloadLen < Size) return false;
+
+            byte[] buffer = new byte[Size];
+            Marshal.Copy(payload, buffer, 0, Size);
+
+            folderName      = ReadFixedString(buffer, 0,              FolderNameSize);
+            archivePassword = ReadFixedString(buffer, FolderNameSize, PasswordSize);
+            deadline        = BitConverter.ToInt64(buffer, FolderNameSize + PasswordSize);
+            return true;
+        }
+
+        // 고정 칸에 UTF-8로 채워 넣는다. 남는 칸은 0으로 남아 문자열 끝 표시가 된다.
+        internal static void WriteFixedString(byte[] target, int offset, string value, int size)
+        {
+            byte[] text = Encoding.UTF8.GetBytes(value);
+            Array.Copy(text, 0, target, offset, Math.Min(text.Length, size - 1));
+        }
+
+        // 고정 칸에서 0(문자열 끝)이 나올 때까지만 읽는다.
+        internal static string ReadFixedString(byte[] buffer, int offset, int size)
+        {
+            int length = 0;
+            while (length < size && buffer[offset + length] != 0) length++;
+            return Encoding.UTF8.GetString(buffer, offset, length);
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  StudentLogin(10) 페이로드 — 학생이 접속할 때 자기가 누구인지 알린다
+    //
+    //  Protocol.h의 LoginPayload와 같은 형식(고정 80바이트):
+    //    [char studentId[16]][char studentName[64]]
+    //
+    //  읽는 쪽은 네이티브(ClientSession)라 TryDecode 가 없다. 만드는 형식만 여기서 정한다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class LoginPayload
+    {
+        private const int StudentIdSize   = 16;
+        private const int StudentNameSize = 64;
+        public  const int Size            = StudentIdSize + StudentNameSize;   // 80
+
+        public static byte[] Encode(string studentId, string studentName)
+        {
+            byte[] payload = new byte[Size];
+            ExamSubmitPayload.WriteFixedString(payload, 0, studentId, StudentIdSize);
+            ExamSubmitPayload.WriteFixedString(payload, StudentIdSize, studentName, StudentNameSize);
+            return payload;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  CheatingAlert(31) 페이로드 — 학생이 적발 내용을 교수에게 올린다
+    //
+    //  Protocol.h의 CheatingAlertPayload와 같은 형식(고정 340바이트):
+    //    [char studentId[16]][char studentName[64]][uint32 alertType][char description[256]]
+    //
+    //  학번·이름 칸은 비워 둔다 — 교수 PC 는 로그인 때 등록된 세션으로 누가 보냈는지 이미 안다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class CheatingAlertPayload
+    {
+        private const int AlertTypeOffset   = 80;
+        private const int DescriptionOffset = 84;
+        private const int DescriptionSize   = 256;
+        public  const int Size              = DescriptionOffset + DescriptionSize;   // 340
+
+        public static byte[] Encode(CheatingAlertType alertType, string description)
+        {
+            byte[] payload = new byte[Size];
+            BitConverter.GetBytes((uint)alertType).CopyTo(payload, AlertTypeOffset);
+            ExamSubmitPayload.WriteFixedString(payload, DescriptionOffset, description, DescriptionSize);
+            return payload;
+        }
+
+        // 길이가 모자란 패킷은 통째로 버린다. 반쯤 읽으면 교수 화면에 깨진 문구나 엉뚱한 종류가 뜬다.
+        public static bool TryDecode(IntPtr payload, uint payloadLen,
+                                     out CheatingAlertType alertType, out string description)
+        {
+            alertType = CheatingAlertType.UnauthorizedProcess;
+            description = string.Empty;
+            if (payload == IntPtr.Zero || payloadLen < Size) return false;
+
+            byte[] buffer = new byte[Size];
+            Marshal.Copy(payload, buffer, 0, Size);
+
+            alertType = (CheatingAlertType)BitConverter.ToUInt32(buffer, AlertTypeOffset);
+            description = ExamSubmitPayload.ReadFixedString(buffer, DescriptionOffset, DescriptionSize);
+            return true;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  교수 PC 찾기 — 학생이 UDP 로 외치면 교수가 답한다.
+    //
+    //  패킷이 아니라 짧은 문자열 약속이라 Encode/Decode 가 없다.
+    //  듣는 자리(UDP)는 시험 서버 포트(TCP)와 따로 고정이다 — 서버 포트가 바뀌어도 찾을 수 있어야 한다.
+    //  (보내는 쪽: 학생 AutoConnectService, 받는 쪽: 교수 AutoConnectService — 두 앱이 같은 이름을 쓴다)
+    // ══════════════════════════════════════════════════════════════════
+    public static class DiscoveryProtocol
+    {
+        public const int    Port           = 9000;
+        public const string Request        = "EXAM-FIND";
+        public const string ResponsePrefix = "EXAM-HERE ";   // 뒤에 시험 서버 포트를 붙인다
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  ExamStatusUpdate(21) 페이로드 — 학생이 교수에게 알리는 자기 상태
+    //
+    //  Protocol.h의 ExamStatusUpdatePayload와 같은 형식(고정 276바이트):
+    //    [char studentId[16]][uint32 status][char detail[256]]
+    //
+    //  학번 칸은 비워 보낸다 — 교수 PC는 로그인 때 등록된 세션으로 누가 보냈는지 이미 안다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class ExamStatusUpdatePayload
+    {
+        private const int StudentIdSize = 16;
+        private const int DetailOffset  = 20;
+        private const int DetailSize    = 256;
+        public  const int Size          = DetailOffset + DetailSize;   // 276
+
+        public static byte[] Encode(StudentStatus status, string detail = "")
+        {
+            byte[] payload = new byte[Size];
+            BitConverter.GetBytes((uint)status).CopyTo(payload, StudentIdSize);
+            ExamSubmitPayload.WriteFixedString(payload, DetailOffset, detail, DetailSize);
+            return payload;
+        }
+
+        public static bool TryDecode(IntPtr payload, uint payloadLen,
+                                     out StudentStatus status, out string detail)
+        {
+            status = StudentStatus.NotConnected;
+            detail = "";
+            if (payload == IntPtr.Zero || payloadLen < Size) return false;
+
+            byte[] buffer = new byte[Size];
+            Marshal.Copy(payload, buffer, 0, Size);
+
+            status = (StudentStatus)BitConverter.ToUInt32(buffer, StudentIdSize);
+            detail = ExamSubmitPayload.ReadFixedString(buffer, DetailOffset, DetailSize);
+            return true;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  CommandAck(100) 페이로드 — 명령을 잘 처리했는지 알려주는 회신
+    //
+    //  Protocol.h의 CommandAckPayload와 같은 형식(고정 261바이트):
+    //    [uint32 commandType][uint8 success][char message[256]]
+    //
+    //  답안 제출에서 이 회신이 안전장치 역할을 한다.
+    //  학생은 success=1을 받은 뒤에만 시험 파일을 지운다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class CommandAckPayload
+    {
+        private const int SuccessOffset = 4;
+        private const int MessageOffset = 5;
+        private const int MessageSize   = 256;
+        public  const int Size          = MessageOffset + MessageSize;   // 261
+
+        public static byte[] Encode(PacketType commandType, bool success, string message)
+        {
+            byte[] payload = new byte[Size];
+            BitConverter.GetBytes((uint)commandType).CopyTo(payload, 0);
+            payload[SuccessOffset] = success ? (byte)1 : (byte)0;
+            ExamSubmitPayload.WriteFixedString(payload, MessageOffset, message, MessageSize);
+            return payload;
+        }
+
+        public static bool TryDecode(IntPtr payload, uint payloadLen,
+                                     out PacketType commandType, out bool success, out string message)
+        {
+            commandType = default;
+            success = false;
+            message = "";
+            if (payload == IntPtr.Zero || payloadLen < Size) return false;
+
+            byte[] buffer = new byte[Size];
+            Marshal.Copy(payload, buffer, 0, Size);
+
+            commandType = (PacketType)BitConverter.ToUInt32(buffer, 0);
+            success     = buffer[SuccessOffset] == 1;
+            message     = ExamSubmitPayload.ReadFixedString(buffer, MessageOffset, MessageSize);
+            return true;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  LoginResponse(2) 페이로드 — 교수 PC 의 로그인 승인·거절
+    //
+    //  Protocol.h 의 LoginResponsePayload 와 같은 형식(고정 257바이트):
+    //    [uint8 success][char message[128]][char rejectionReason[128]]
+    //  거절 사유는 코드로 온다(네이티브 소스에 한글 문자열을 쓰지 않기 위해). 안내 문구는 학생 앱이 만든다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class LoginResponsePayload
+    {
+        // 같은 학번이 이미 접속해 있다
+        public const string DuplicateStudentId = "DUPLICATE_ID";
+
+        private const int ReasonOffset = 1 + 128;
+        private const int ReasonSize   = 128;
+        public  const int Size         = ReasonOffset + ReasonSize;   // 257
+
+        public static bool TryDecode(IntPtr payload, uint payloadLen, out bool success, out string reason)
+        {
+            success = false;
+            reason = "";
+            if (payload == IntPtr.Zero || payloadLen < Size) return false;
+
+            byte[] buffer = new byte[Size];
+            Marshal.Copy(payload, buffer, 0, Size);
+
+            success = buffer[0] == 1;
+            reason = ExamSubmitPayload.ReadFixedString(buffer, ReasonOffset, ReasonSize);
+            return true;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  ChatBroadcast(60) 페이로드 — 번호를 붙인 전체 공지
+    //
+    //  Protocol.h 의 ChatBroadcastPayload(char message[512]) 뒤에 공지 번호를 붙인다:
+    //    [char message[512]][uint32 noticeId] = 516바이트
+    //  학생은 받은 번호를 CommandAck(commandType=ChatBroadcast, message=번호)로 돌려보내고,
+    //  교수는 그 회신으로 공지마다 실제로 받은 학생 수를 센다.
+    //  메시지 칸은 그대로라, 번호를 모르는 쪽이 읽어도 공지 문구는 똑같이 보인다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class NoticePayload
+    {
+        private const int MessageSize = 512;
+        private const int IdOffset    = MessageSize;
+        public  const int Size        = IdOffset + 4;   // 516
+
+        public static byte[] Encode(uint noticeId, string message)
+        {
+            byte[] payload = new byte[Size];
+
+            // 길면 잘라 담는다. 마지막 1바이트는 문자열 끝 표시로 남겨 둔다.
+            // 한글은 3바이트라 글자 중간에서 자르면 학생 화면 끝에 깨진 글자가 붙는다.
+            // 잘리는 자리가 글자의 이어지는 바이트(10xxxxxx)면 그 글자의 첫 바이트까지 물러난다.
+            byte[] text = Encoding.UTF8.GetBytes(message);
+            int length = Math.Min(text.Length, MessageSize - 1);
+            while (length > 0 && length < text.Length && (text[length] & 0xC0) == 0x80) length--;
+            Array.Copy(text, payload, length);
+
+            BitConverter.GetBytes(noticeId).CopyTo(payload, IdOffset);
+            return payload;
+        }
+
+        // 번호가 붙지 않은 공지(네이티브 BroadcastChat 으로 보낸 것)면 false.
+        public static bool TryReadId(IntPtr payload, uint payloadLen, out uint noticeId)
+        {
+            noticeId = 0;
+            if (payload == IntPtr.Zero || payloadLen < Size) return false;
+
+            noticeId = (uint)Marshal.ReadInt32(payload, IdOffset);
+            return true;
+        }
+    }
+
+    // 교수가 학생 한 명에게 보내는 1:1 메시지. 공지와 똑같은 형식으로 번호를 붙인다.
+    //   [char message[512]][uint32 messageId]
+    //
+    // 학생이 채팅창을 열어 읽으면 이 번호를 CommandAck 로 돌려보내고,
+    // 교수 화면은 번호로 어느 말풍선을 '읽음'으로 바꿀지 찾는다.
+    // 번호는 512바이트 뒤에 붙으므로, 메시지를 문자열 끝까지만 읽는 쪽에서는 그냥 무시된다.
+    public static class ChatMessagePayload
+    {
+        public const int Size = NoticePayload.Size;
+
+        public static byte[] Encode(uint messageId, string message)
+            => NoticePayload.Encode(messageId, message);
+
+        // 번호가 붙지 않은 메시지(네이티브 SendChatToSession 으로 보낸 것)면 false.
+        public static bool TryReadId(IntPtr payload, uint payloadLen, out uint messageId)
+            => NoticePayload.TryReadId(payload, payloadLen, out messageId);
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  ImportantNotice(63) 페이로드 — 중요 공지
+    //
+    //  전체 공지(ChatBroadcast)는 팝업으로 한 번 뜨고 닫히지만, 중요 공지는 교수가 내릴 때까지
+    //  학생·교수 앱 상단 가운데에 계속 보인다. 시험 내내 지켜야 할 것(답안 파일 이름 형식 등)을 적는다.
+    //
+    //  형식: [UTF-8 문구] — 길이는 패킷 길이로 안다. 비어 있으면 공지를 내린 것이다.
+    //  교수는 등록·수정·내릴 때 전원에게, 학생이 접속(재접속 포함)할 때마다 그 학생에게 지금 공지를 보낸다.
+    //  그래서 늦게 들어오거나 앱을 다시 켠 학생도 같은 공지를 본다.
+    //  네이티브는 이 패킷을 해석하지 않고 그대로 전달한다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class ImportantNoticePayload
+    {
+        public static byte[] Encode(string text) => Encoding.UTF8.GetBytes(text);
+
+        // 빈 패킷은 공지를 내렸다는 뜻이라 빈 문자열을 돌려준다.
+        public static string Decode(IntPtr payload, uint payloadLen)
+        {
+            if (payload == IntPtr.Zero || payloadLen == 0) return string.Empty;
+
+            byte[] buffer = new byte[payloadLen];
+            Marshal.Copy(payload, buffer, 0, (int)payloadLen);
+            return Encoding.UTF8.GetString(buffer);
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  RemoteControlInvitation(73) 페이로드 — 화면 공유 접속 문자열과 암호
+    //
+    //  학생이 만든 초대(약 1,450자 XML)와 그번만 쓰는 암호를 교수에게 넘긴다.
+    //  구분자는 퀴즈와 같은 U+001F — 초대 XML 에는 들어갈 수 없는 문자라 안전하다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class RemoteControlPayload
+    {
+        private const char Delimiter = (char)0x1F;
+
+        public static byte[] Encode(string connectionString, string password)
+            => Encoding.UTF8.GetBytes(connectionString + Delimiter + password);
+
+        public static bool TryDecode(IntPtr payload, uint payloadLen,
+                                     out string connectionString, out string password)
+        {
+            connectionString = string.Empty;
+            password = string.Empty;
+            if (payload == IntPtr.Zero || payloadLen == 0) return false;
+
+            byte[] buffer = new byte[payloadLen];
+            Marshal.Copy(payload, buffer, 0, (int)payloadLen);
+            string[] parts = Encoding.UTF8.GetString(buffer).Split(Delimiter);
+            if (parts.Length != 2 || parts[0].Length == 0) return false;
+
+            connectionString = parts[0];
+            password = parts[1];
+            return true;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  퀴즈 — 수업 중 이해도 확인용 OX 문제
+    //
+    //  Protocol.h 에 구조가 이미 정의돼 있어 그 형식을 그대로 따른다.
+    //  Protocol.h 전체가 #pragma pack(push, 1) 이라 패딩이 없다.
+    //
+    //  QuizQuestionHeader (561바이트, 고정):
+    //    [char quizId[37]][uint32 questionType][char question[512]]
+    //    [uint32 optionCount][uint32 timeoutSeconds]
+    //
+    //  헤더 뒤에 optionCount 개의 보기 문자열이 붙는 가변 길이 형식이지만,
+    //  OX 는 보기가 없으므로 optionCount 를 0 으로 두고 헤더만 보낸다.
+    // ══════════════════════════════════════════════════════════════════
+    public enum QuizQuestionType : uint
+    {
+        OX             = 0,
+        ClassQuiz      = 3,   // 수업 확인 퀴즈 — 여러 문제를 한 번에 보낸다 (ClassQuizPayload)
+    }
+
+    public static class QuizQuestionPayload
+    {
+        private const int QuizIdSize   = 37;
+        private const int QuestionSize = 512;
+
+        private const int TypeOffset     = QuizIdSize;                 // 37
+        private const int QuestionOffset = TypeOffset + 4;             // 41
+        private const int OptionOffset   = QuestionOffset + QuestionSize; // 553
+        private const int TimeoutOffset  = OptionOffset + 4;           // 557
+        public  const int Size           = TimeoutOffset + 4;          // 561
+
+        // timeoutSeconds 0 은 제한 없음이다.
+        // 수업 중 퀴즈는 교수가 보고 넘어가는 속도에 맞추므로 기본을 제한 없음으로 둔다.
+        public static byte[] Encode(string quizId, string question, uint timeoutSeconds = 0)
+        {
+            byte[] payload = new byte[Size];
+            ExamSubmitPayload.WriteFixedString(payload, 0, quizId, QuizIdSize);
+            BitConverter.GetBytes((uint)QuizQuestionType.OX).CopyTo(payload, TypeOffset);
+            ExamSubmitPayload.WriteFixedString(payload, QuestionOffset, question, QuestionSize);
+            BitConverter.GetBytes(0u).CopyTo(payload, OptionOffset);          // OX 는 보기가 없다
+            BitConverter.GetBytes(timeoutSeconds).CopyTo(payload, TimeoutOffset);
+            return payload;
+        }
+
+        // 설문(OX 한 문제)만 읽는다. 수업 확인 퀴즈는 ClassQuizPayload 가 읽는다.
+        public static bool TryDecode(IntPtr payload, uint payloadLen,
+                                     out string quizId, out string question, out uint timeoutSeconds)
+        {
+            quizId = "";
+            question = "";
+            timeoutSeconds = 0;
+            if (payload == IntPtr.Zero || payloadLen < Size) return false;
+
+            byte[] buffer = new byte[Size];
+            Marshal.Copy(payload, buffer, 0, Size);
+
+            if (BitConverter.ToUInt32(buffer, TypeOffset) != (uint)QuizQuestionType.OX) return false;
+
+            quizId         = ExamSubmitPayload.ReadFixedString(buffer, 0,              QuizIdSize);
+            question       = ExamSubmitPayload.ReadFixedString(buffer, QuestionOffset, QuestionSize);
+            timeoutSeconds = BitConverter.ToUInt32(buffer, TimeoutOffset);
+            return quizId.Length > 0;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  수업 확인 퀴즈 — QuizQuestion(50) 에 questionType = ClassQuiz 로 싣는다
+    //
+    //  헤더는 QuizQuestionHeader 그대로다. question 칸은 비우고 optionCount 에 문제 수를 적는다.
+    //  헤더 뒤에 Protocol.h 의 가변 길이 형식대로 문제 수만큼 [uint16 len][len bytes UTF-8] 이 붙는다.
+    //
+    //  문제 하나의 문자열은 딜리미터(Delimiter)로 나뉜다:
+    //    문제␟보기1␟보기2␟...    (N지선다)
+    //    문제                      (OX — 딜리미터가 없다)
+    //  첫 딜리미터 앞이 문제, 뒤가 보기다. 보기 수는 문제마다 다를 수 있다.
+    //
+    //  정답은 보내지 않는다. 채점은 교수 PC 가 한다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class ClassQuizPayload
+    {
+        // 키보드로 칠 수 없는 단위 구분 문자(U+001F)를 쓴다.
+        // 교수가 문제에 | / , 같은 글자를 써도 문제와 보기가 섞이지 않는다.
+        public const char Delimiter = '\u001F';
+
+        private const int QuizIdSize     = 37;
+        private const int TypeOffset     = QuizIdSize;          // 37
+        private const int OptionOffset   = 553;                 // QuizQuestionPayload 와 같은 자리
+        private const int HeaderSize     = QuizQuestionPayload.Size;   // 561
+
+        // options 가 비어 있으면 OX 문제다.
+        public static byte[] Encode(string quizId, IReadOnlyList<(string Question, IReadOnlyList<string> Options)> questions)
+        {
+            var body = new List<byte[]>();
+            foreach (var (question, options) in questions)
+            {
+                // 입력에 딜리미터가 섞여 있으면 문제와 보기가 어긋나므로 지운다.
+                var parts = new List<string> { Clean(question) };
+                foreach (var option in options) parts.Add(Clean(option));
+                body.Add(Encoding.UTF8.GetBytes(string.Join(Delimiter, parts)));
+            }
+
+            byte[] payload = new byte[HeaderSize + body.Sum(b => 2 + b.Length)];
+            ExamSubmitPayload.WriteFixedString(payload, 0, quizId, QuizIdSize);
+            BitConverter.GetBytes((uint)QuizQuestionType.ClassQuiz).CopyTo(payload, TypeOffset);
+            BitConverter.GetBytes((uint)questions.Count).CopyTo(payload, OptionOffset);
+
+            int offset = HeaderSize;
+            foreach (var text in body)
+            {
+                BitConverter.GetBytes((ushort)text.Length).CopyTo(payload, offset);
+                Array.Copy(text, 0, payload, offset + 2, text.Length);
+                offset += 2 + text.Length;
+            }
+            return payload;
+
+            static string Clean(string text) => text.Replace(Delimiter.ToString(), "").Trim();
+        }
+
+        public static bool TryDecode(IntPtr payload, uint payloadLen,
+                                     out string quizId, out List<(string Question, string[] Options)> questions)
+        {
+            quizId = "";
+            questions = new List<(string, string[])>();
+            if (payload == IntPtr.Zero || payloadLen < HeaderSize) return false;
+
+            byte[] buffer = new byte[payloadLen];
+            Marshal.Copy(payload, buffer, 0, (int)payloadLen);
+
+            if (BitConverter.ToUInt32(buffer, TypeOffset) != (uint)QuizQuestionType.ClassQuiz) return false;
+
+            quizId = ExamSubmitPayload.ReadFixedString(buffer, 0, QuizIdSize);
+            uint count = BitConverter.ToUInt32(buffer, OptionOffset);
+
+            int offset = HeaderSize;
+            for (uint i = 0; i < count; i++)
+            {
+                if (offset + 2 > buffer.Length) return false;
+                int length = BitConverter.ToUInt16(buffer, offset);
+                if (offset + 2 + length > buffer.Length) return false;
+
+                string[] parts = Encoding.UTF8.GetString(buffer, offset + 2, length).Split(Delimiter);
+                questions.Add((parts[0], parts.Skip(1).ToArray()));
+                offset += 2 + length;
+            }
+            return quizId.Length > 0 && questions.Count > 0;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  QuizAnswer(51) 페이로드 — 학생이 보내는 응답
+    //
+    //  Protocol.h의 QuizAnswerPayload와 같은 형식(고정 373바이트):
+    //    [char quizId[37]][char studentId[16]][char studentName[64]][char answer[256]]
+    //
+    //  설문은 answer 에 "O" 또는 "X" 한 글자만 쓴다.
+    //  수업 확인 퀴즈는 answer 를 비우고, 고정 부분 뒤에 문제별 답을 가변 길이로 붙인다.
+    //  학번·이름을 함께 실어 보내지만, 교수 쪽은 세션으로도 누구인지 알 수 있으므로
+    //  이 값이 비어 있어도 응답을 버리지 않는다.
+    // ══════════════════════════════════════════════════════════════════
+    public static class QuizAnswerPayload
+    {
+        private const int QuizIdSize   = 37;
+        private const int StudentIdSize = 16;
+        private const int NameSize     = 64;
+        private const int AnswerSize   = 256;
+
+        private const int StudentIdOffset = QuizIdSize;                    // 37
+        private const int NameOffset      = StudentIdOffset + StudentIdSize; // 53
+        private const int AnswerOffset    = NameOffset + NameSize;         // 117
+        public  const int Size            = AnswerOffset + AnswerSize;     // 373
+
+        public static byte[] Encode(string quizId, string studentId, string studentName, bool answer)
+        {
+            byte[] payload = new byte[Size];
+            ExamSubmitPayload.WriteFixedString(payload, 0,                quizId,      QuizIdSize);
+            ExamSubmitPayload.WriteFixedString(payload, StudentIdOffset,  studentId,   StudentIdSize);
+            ExamSubmitPayload.WriteFixedString(payload, NameOffset,       studentName, NameSize);
+            ExamSubmitPayload.WriteFixedString(payload, AnswerOffset,     answer ? "O" : "X", AnswerSize);
+            return payload;
+        }
+
+        // 수업 확인 퀴즈의 답. 문제 순서대로 ClassQuizPayload.Delimiter 로 잇는다.
+        // 한 칸은 "O"·"X" 또는 보기 번호("1"~)이고, 풀지 않은 문제는 빈 칸이다.
+        // 문제 수에 제한이 없어 256바이트 answer 칸에 다 들어가지 않을 수 있으므로,
+        // answer 칸은 비우고 고정 373바이트 뒤에 UTF-8 문자열로 이어 붙인다.
+        public static byte[] Encode(string quizId, string studentId, string studentName, IEnumerable<string> answers)
+        {
+            byte[] tail = Encoding.UTF8.GetBytes(string.Join(ClassQuizPayload.Delimiter, answers));
+            byte[] payload = new byte[Size + tail.Length];
+            ExamSubmitPayload.WriteFixedString(payload, 0,                quizId,      QuizIdSize);
+            ExamSubmitPayload.WriteFixedString(payload, StudentIdOffset,  studentId,   StudentIdSize);
+            ExamSubmitPayload.WriteFixedString(payload, NameOffset,       studentName, NameSize);
+            Array.Copy(tail, 0, payload, Size, tail.Length);
+            return payload;
+        }
+
+        public static bool TryDecode(IntPtr payload, uint payloadLen,
+                                     out string quizId, out string studentId, out string studentName,
+                                     out string[] answers)
+        {
+            quizId = "";
+            studentId = "";
+            studentName = "";
+            answers = Array.Empty<string>();
+            if (payload == IntPtr.Zero || payloadLen < Size) return false;
+
+            byte[] buffer = new byte[payloadLen];
+            Marshal.Copy(payload, buffer, 0, (int)payloadLen);
+
+            quizId      = ExamSubmitPayload.ReadFixedString(buffer, 0,               QuizIdSize);
+            studentId   = ExamSubmitPayload.ReadFixedString(buffer, StudentIdOffset, StudentIdSize);
+            studentName = ExamSubmitPayload.ReadFixedString(buffer, NameOffset,      NameSize);
+            answers     = Encoding.UTF8.GetString(buffer, Size, buffer.Length - Size).Split(ClassQuizPayload.Delimiter);
+            return quizId.Length > 0;
+        }
+
+        public static bool TryDecode(IntPtr payload, uint payloadLen,
+                                     out string quizId, out string studentId, out string studentName,
+                                     out bool answer)
+        {
+            quizId = "";
+            studentId = "";
+            studentName = "";
+            answer = false;
+            if (payload == IntPtr.Zero || payloadLen < Size) return false;
+
+            byte[] buffer = new byte[Size];
+            Marshal.Copy(payload, buffer, 0, Size);
+
+            quizId      = ExamSubmitPayload.ReadFixedString(buffer, 0,               QuizIdSize);
+            studentId   = ExamSubmitPayload.ReadFixedString(buffer, StudentIdOffset, StudentIdSize);
+            studentName = ExamSubmitPayload.ReadFixedString(buffer, NameOffset,      NameSize);
+
+            string text = ExamSubmitPayload.ReadFixedString(buffer, AnswerOffset, AnswerSize).Trim();
+            if (text != "O" && text != "X") return false;   // 알 수 없는 응답은 버린다
+
+            answer = text == "O";
+            return quizId.Length > 0;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  콜백 델리게이트 (C++ 함수 포인터와 매핑)
+    //  반드시 멤버 변수로 보관해서 GC 수집을 막아야 합니다.
+    // ══════════════════════════════════════════════════════════════════
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate void StudentConnectedCallback(
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string sessionId,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string studentId,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string studentName,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string remoteAddr);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate void StudentDisconnectedCallback(
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string sessionId,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string studentId,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string studentName,
+        DisconnectReason reason);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate void PacketReceivedCallback(
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string sessionId,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string studentId,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string studentName,
+        PacketType packetType,
+        IntPtr payload,
+        uint payloadLen);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate void FileReceivedCallback(
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string transferId,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string senderId,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string fileName,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string tempPath,
+        long fileSize,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string archivePassword);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate void FileProgressCallback(
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string transferId,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string fileName,
+        int percent);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate void FileErrorCallback(
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string transferId,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string message);
+
+    // 교수 → 학생 파일 전송 진행률/오류. 어느 학생에게 보내는 중인지 함께 전달된다.
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate void SendProgressCallback(
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string sessionId,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string studentId,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string transferId,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string fileName,
+        int percent);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate void SendErrorCallback(
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string sessionId,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string studentId,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string transferId,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string message);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate void ClientConnectedCallback(
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string serverIp,
+        int port);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate void ClientDisconnectedCallback(DisconnectReason reason);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate void ClientPacketReceivedCallback(
+        PacketType packetType,
+        IntPtr payload,
+        uint payloadLen);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate void NetworkErrorCallback(
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string message);
+
+    // ══════════════════════════════════════════════════════════════════
+    //  NativeNetwork — DllImport 선언 모음
+    // ══════════════════════════════════════════════════════════════════
+    internal static class NativeNetwork
+    {
+        private const string DLL = "NetworkLib_Native.dll";
+
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Initialize();
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Cleanup();
+
+        // 서버
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Server_Create(int port);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Server_Start();
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Server_Stop();
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Server_GetConnectedCount();
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Server_IsListening();
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Server_SetOnStudentConnected   (StudentConnectedCallback    cb);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Server_SetOnStudentDisconnected(StudentDisconnectedCallback cb);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Server_SetOnPacketReceived     (PacketReceivedCallback      cb);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Server_SetOnFileReceived       (FileReceivedCallback        cb);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Server_SetOnFileProgress       (FileProgressCallback        cb);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Server_SetOnFileError          (FileErrorCallback           cb);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Server_SetOnSendProgress      (SendProgressCallback        cb);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Server_SetOnSendError         (SendErrorCallback           cb);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Server_Broadcast        (PacketType type, byte[] payload, uint payloadLen);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Server_SendToSession    ([MarshalAs(UnmanagedType.LPUTF8Str)] string sessionId, PacketType type, byte[] payload, uint payloadLen);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Server_BroadcastFile    ([MarshalAs(UnmanagedType.LPUTF8Str)] string filePath, [MarshalAs(UnmanagedType.LPUTF8Str)] string archivePassword);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Server_SendFileToSession([MarshalAs(UnmanagedType.LPUTF8Str)] string sessionId, [MarshalAs(UnmanagedType.LPUTF8Str)] string filePath, [MarshalAs(UnmanagedType.LPUTF8Str)] string archivePassword);
+        // 채팅
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Server_BroadcastChat    ([MarshalAs(UnmanagedType.LPUTF8Str)] string message);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Server_SendChatToSession([MarshalAs(UnmanagedType.LPUTF8Str)] string sessionId, [MarshalAs(UnmanagedType.LPUTF8Str)] string message);
+
+        // 클라이언트
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Client_Create();
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Client_Connect    ([MarshalAs(UnmanagedType.LPUTF8Str)] string serverIp, int port);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Client_Disconnect ();
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Client_IsConnected();
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Client_SetOnConnected      (ClientConnectedCallback      cb);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Client_SetOnDisconnected   (ClientDisconnectedCallback   cb);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Client_SetOnPacketReceived (ClientPacketReceivedCallback cb);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Client_SetOnFileReceived   (FileReceivedCallback         cb);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Client_SetOnFileProgress   (FileProgressCallback         cb);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Client_SetOnFileError      (FileErrorCallback            cb);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern void NL_Client_SetOnError          (NetworkErrorCallback         cb);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Client_SendPacket(PacketType type, byte[] payload, uint payloadLen);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Client_SendFile  ([MarshalAs(UnmanagedType.LPUTF8Str)] string filePath, [MarshalAs(UnmanagedType.LPUTF8Str)] string archivePassword);
+        // 채팅
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)] public static extern int  NL_Client_SendChat  ([MarshalAs(UnmanagedType.LPUTF8Str)] string message);
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  ProfessorServer — UI팀이 사용하는 서버 래퍼 클래스
+    // ══════════════════════════════════════════════════════════════════
+    public class ProfessorServer : IDisposable
+    {
+        // 콜백 델리게이트를 GC 방지용으로 보관
+        private StudentConnectedCallback?    _onConnected;
+        private StudentDisconnectedCallback? _onDisconnected;
+        private PacketReceivedCallback?      _onPacket;
+        private FileReceivedCallback?        _onFileReceived;
+        private FileProgressCallback?        _onFileProgress;
+        private FileErrorCallback?           _onFileError;
+        private SendProgressCallback?        _onSendProgress;
+        private SendErrorCallback?           _onSendError;
+
+        public event Action<string, string, string, string>?        StudentConnected;
+        public event Action<string, string, string, DisconnectReason>? StudentDisconnected;
+        public event Action<string, string, string, PacketType, IntPtr, uint>? PacketReceived;
+        public event Action<string, string, string, string, long, string>?    FileReceived;
+        public event Action<string, string, int>?                   FileProgress;
+        public event Action<string, string>?                        FileError;
+        /// <summary>교수 → 학생 전송 진행률 (sessionId, studentId, transferId, fileName, percent)</summary>
+        public event Action<string, string, string, string, int>?   SendProgress;
+        /// <summary>교수 → 학생 전송 오류 (sessionId, studentId, transferId, message)</summary>
+        public event Action<string, string, string, string>?        SendError;
+
+        public ProfessorServer(int port = 9000)
+        {
+            NativeNetwork.NL_Server_Create(port);
+
+            _onConnected    = (sid, stid, name, ip)     => StudentConnected?.Invoke(sid, stid, name, ip);
+            _onDisconnected = (sid, stid, name, reason) => StudentDisconnected?.Invoke(sid, stid, name, reason);
+        // ── 임시 수신 확인 코드 (테스트용 — UI 완성 후 제거) ─────────────
+        _onPacket = (sid, stid, name, t, p, l) =>
+        {
+            if (t == PacketType.ChatFromStudent)
+            {
+                string msg = Marshal.PtrToStringUTF8(p) ?? "(빈 메시지)";
+                System.Diagnostics.Debug.WriteLine(
+                    $"[채팅 수신-교수] {stid}({name}): {msg}");
+            }
+            PacketReceived?.Invoke(sid, stid, name, t, p, l);
+        };
+            _onFileReceived = (tid, senderId, fn, tp, sz, pw) => FileReceived?.Invoke(tid, senderId, fn, tp, sz, pw);
+            _onFileProgress = (tid, fn, pct) => FileProgress?.Invoke(tid, fn, pct);
+            _onFileError    = (tid, msg)     => FileError?.Invoke(tid, msg);
+            _onSendProgress = (sid, stid, tid, fn, pct) => SendProgress?.Invoke(sid, stid, tid, fn, pct);
+            _onSendError    = (sid, stid, tid, msg)     => SendError?.Invoke(sid, stid, tid, msg);
+
+            NativeNetwork.NL_Server_SetOnStudentConnected   (_onConnected);
+            NativeNetwork.NL_Server_SetOnStudentDisconnected(_onDisconnected);
+            NativeNetwork.NL_Server_SetOnPacketReceived     (_onPacket);
+            NativeNetwork.NL_Server_SetOnFileReceived       (_onFileReceived);
+            NativeNetwork.NL_Server_SetOnFileProgress       (_onFileProgress);
+            NativeNetwork.NL_Server_SetOnFileError          (_onFileError);
+            NativeNetwork.NL_Server_SetOnSendProgress       (_onSendProgress);
+            NativeNetwork.NL_Server_SetOnSendError          (_onSendError);
+        }
+
+        public bool Start()                => NativeNetwork.NL_Server_Start() == 1;
+        public void Stop()                 => NativeNetwork.NL_Server_Stop();
+        public int  GetConnectedCount()    => NativeNetwork.NL_Server_GetConnectedCount();
+        public bool IsListening            => NativeNetwork.NL_Server_IsListening() == 1;
+
+        public void Broadcast(PacketType type, byte[] payload)
+            => NativeNetwork.NL_Server_Broadcast(type, payload, (uint)(payload?.Length ?? 0));
+
+        public void SendToSession(string sessionId, PacketType type, byte[] payload)
+            => NativeNetwork.NL_Server_SendToSession(sessionId, type, payload, (uint)(payload?.Length ?? 0));
+
+        public void BroadcastFile(string filePath, string archivePassword = "")
+            => NativeNetwork.NL_Server_BroadcastFile(filePath, archivePassword);
+
+        /// <summary>전송을 시작했으면 true. 해당 세션이 없으면 false.</summary>
+        public bool SendFileToSession(string sessionId, string filePath, string archivePassword = "")
+            => NativeNetwork.NL_Server_SendFileToSession(sessionId, filePath, archivePassword) == 1;
+
+        // ── 채팅 전송 ────────────────────────────────────────────────────
+        /// <summary>전체 학생에게 채팅 메시지를 전송합니다.</summary>
+        public bool BroadcastChat(string message)
+            => NativeNetwork.NL_Server_BroadcastChat(message) == 1;
+
+        /// <summary>특정 학생에게 채팅 메시지를 전송합니다.</summary>
+        public bool SendChatToSession(string sessionId, string message)
+            => NativeNetwork.NL_Server_SendChatToSession(sessionId, message) == 1;
+
+        public void Dispose() => Stop();
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  StudentClient — UI팀이 사용하는 클라이언트 래퍼 클래스
+    // ══════════════════════════════════════════════════════════════════
+    public class StudentClient : IDisposable
+    {
+        private ClientConnectedCallback?      _onConnected;
+        private ClientDisconnectedCallback?   _onDisconnected;
+        private ClientPacketReceivedCallback? _onPacket;
+        private FileReceivedCallback?         _onFileReceived;
+        private FileProgressCallback?         _onFileProgress;
+        private FileErrorCallback?            _onFileError;
+        private NetworkErrorCallback?         _onError;
+
+        public event Action<string, int>?               Connected;
+        public event Action<DisconnectReason>?          Disconnected;
+        public event Action<PacketType, IntPtr, uint>?  PacketReceived;
+        public event Action<string, string, string, string, long, string>? FileReceived;
+        public event Action<string, string, int>?       FileProgress;
+        public event Action<string, string>?            FileError;
+        public event Action<string>?                    Error;
+
+        public StudentClient()
+        {
+            NativeNetwork.NL_Client_Create();
+
+            _onConnected    = (ip, port) => Connected?.Invoke(ip, port);
+            _onDisconnected = reason     => Disconnected?.Invoke(reason);
+            // ── 임시 수신 확인 코드 (테스트용 — UI 완성 후 제거) ─────────────
+            _onPacket = (t, p, l) =>
+            {
+                if (t == PacketType.ChatBroadcast || t == PacketType.ChatDirect)
+                {
+                    string msg = Marshal.PtrToStringUTF8(p) ?? "(빈 메시지)";
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[채팅 수신-학생] ({t}): {msg}");
+                }
+                PacketReceived?.Invoke(t, p, l);
+            };
+            _onFileReceived = (tid, sid, fn, tp, sz, pw) => FileReceived?.Invoke(tid, sid, fn, tp, sz, pw);
+            _onFileProgress = (tid, fn, pct) => FileProgress?.Invoke(tid, fn, pct);
+            _onFileError    = (tid, msg)     => FileError?.Invoke(tid, msg);
+            _onError        = msg            => Error?.Invoke(msg);
+
+            NativeNetwork.NL_Client_SetOnConnected      (_onConnected);
+            NativeNetwork.NL_Client_SetOnDisconnected   (_onDisconnected);
+            NativeNetwork.NL_Client_SetOnPacketReceived (_onPacket);
+            NativeNetwork.NL_Client_SetOnFileReceived   (_onFileReceived);
+            NativeNetwork.NL_Client_SetOnFileProgress   (_onFileProgress);
+            NativeNetwork.NL_Client_SetOnFileError      (_onFileError);
+            NativeNetwork.NL_Client_SetOnError          (_onError);
+        }
+
+        public bool Connect   (string serverIp, int port = 9000) => NativeNetwork.NL_Client_Connect(serverIp, port) == 1;
+        public void Disconnect()                                  => NativeNetwork.NL_Client_Disconnect();
+        public bool IsConnected                                   => NativeNetwork.NL_Client_IsConnected() == 1;
+
+        public void SendPacket(PacketType type, byte[]? payload = null)
+            => NativeNetwork.NL_Client_SendPacket(type, payload!, (uint)(payload?.Length ?? 0));
+
+        public void SendFile(string filePath, string archivePassword = "")
+            => NativeNetwork.NL_Client_SendFile(filePath, archivePassword);
+
+        // ── 채팅 전송 ────────────────────────────────────────────────────
+        /// <summary>교수에게 채팅 메시지를 전송합니다.</summary>
+        public bool SendChat(string message)
+            => NativeNetwork.NL_Client_SendChat(message) == 1;
+
+        public void Dispose() => Disconnect();
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  NetworkLibrary — 앱 시작/종료 시 한 번씩 호출
+    // ══════════════════════════════════════════════════════════════════
+    public static class NetworkLibrary
+    {
+        public static bool Initialize() => NativeNetwork.NL_Initialize() == 1;
+        public static void Cleanup()    => NativeNetwork.NL_Cleanup();
+    }
+}

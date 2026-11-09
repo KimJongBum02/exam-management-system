@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -7,6 +7,99 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <Platforms>AnyCPU;x64</Platforms>
+    <!-- 시험 중 방화벽 규칙을 넣어야 해서 관리자 권한이 필요하다 (app.manifest 참고) -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- 작업표시줄·탐색기에 보이는 아이콘. 교수용(Professor.ico)과 같은 자리에 두고 색으로 구분한다 -->
+    <ApplicationIcon>..\Icon\Student.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="View\Login\Assets\loginbackground.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="View\Login\Assets\loginbackground.png" />
+  </ItemGroup>
+  <!-- 두 UI가 공유하는 글꼴 (ExamManager\Fonts) -->
+  <ItemGroup>
+    <Resource Include="..\Fonts\Pretendard-Regular.ttf" Link="Fonts\Pretendard-Regular.ttf" />
+    <Resource Include="..\Fonts\Pretendard-Bold.ttf" Link="Fonts\Pretendard-Bold.ttf" />
+    <!-- 창 아이콘으로도 쓰려면 리소스로 들어가 있어야 한다 -->
+    <Resource Include="..\Icon\Student.ico" Link="Icon\Student.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\NetworkInterop\NetworkInterop.cs" Link="NetworkInterop.cs" />
+    <!-- 교수 PC 선택창과 같은 방식으로 설치 프로그램을 읽고, 같은 프로그램 사전을 쓰도록 한 벌을 나눠 쓴다 -->
+    <Compile Include="..\Shared\StartMenuPrograms.cs" Link="StartMenuPrograms.cs" />
+    <Compile Include="..\Shared\KnownPrograms.cs" Link="KnownPrograms.cs" />
+    <!-- 시험 파일·채팅이 왔을 때 깜빡임과 작업표시줄 알림 -->
+    <Compile Include="..\Shared\UiSignal.cs" Link="UiSignal.cs" />
+    <!-- 모든 창의 기본 글꼴 -->
+    <Compile Include="..\Shared\UiFont.cs" Link="UiFont.cs" />
+    <!-- 주 창 크기(최대화로 시작, 복원 1180×720) -->
+    <Compile Include="..\Shared\UiWindow.cs" Link="UiWindow.cs" />
+    <!-- 상단바 배치(왼쪽 제목 · 가운데 중요 공지 · 오른쪽 메뉴) -->
+    <Compile Include="..\Shared\HeaderBarPanel.cs" Link="HeaderBarPanel.cs" />
+    <!-- 네이티브·배경 스레드에서 화면으로 넘길 때 거치는 한 곳 -->
+    <Compile Include="..\Shared\UiThread.cs" Link="UiThread.cs" />
+    <!-- 예외가 난 이유를 바탕화면 crash.log 에 남긴다 -->
+    <Compile Include="..\Shared\CrashLog.cs" Link="CrashLog.cs" />
+    <!-- 읽기 전용 파일까지 지우는 폴더 삭제 -->
+    <Compile Include="..\Shared\FileSystem.cs" Link="FileSystem.cs" />
+    <!-- 버튼·단축키를 ViewModel 에 잇는 다리 -->
+    <Compile Include="..\Shared\UiCommand.cs" Link="UiCommand.cs" />
+    <!-- 값이 바뀌었음을 화면에 알리는 바탕 클래스 -->
+    <Compile Include="..\Shared\UiBinding.cs" Link="UiBinding.cs" />
+    <!-- 키보드 · 마우스 저수준 훅 선언 한 벌 -->
+    <Compile Include="..\Shared\InputHook.cs" Link="InputHook.cs" />
+    <!-- 프로그램이 꺼져도 남아야 하는 작은 기록 (%LocalAppData%\ExamManager) -->
+    <Compile Include="..\Shared\AppRecord.cs" Link="AppRecord.cs" />
+    <!-- 교수 · 학생이 주고받는 말 한 건 (말풍선이 보는 값) -->
+    <Compile Include="..\Shared\ChatMessage.cs" Link="ChatMessage.cs" />
+    <!-- 교수 앱과 같은 글자 크기 한 벌 (App.xaml 이 합쳐 쓴다) -->
+    <Page Include="..\Shared\FontSizes.xaml" Link="FontSizes.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <!-- 두 앱이 함께 쓰는 스타일 한 벌 (고를 수 있는 글 · 스크롤 막대) -->
+    <Page Include="..\Shared\CommonStyles.xaml" Link="CommonStyles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+  </ItemGroup>
+  <!-- NetworkLib_Native.dll 자동 복사 (Debug/Release 구성에 맞게 자동 선택) -->
+  <ItemGroup>
+    <None Include="$(SolutionDir)x64\$(Configuration)\NetworkLib_Native.dll"
+          Condition="Exists('$(SolutionDir)x64\$(Configuration)\NetworkLib_Native.dll')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>NetworkLib_Native.dll</Link>
+    </None>
+  </ItemGroup>
+  <!-- 압축 해제용 FileControl.dll + 7za.exe 복사 -->
+  <ItemGroup>
+    <None Include="$(SolutionDir)x64\$(Configuration)\FileControl.dll"
+          Condition="Exists('$(SolutionDir)x64\$(Configuration)\FileControl.dll')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>FileControl.dll</Link>
+    </None>
+    <None Include="$(SolutionDir)7za.exe" Condition="Exists('$(SolutionDir)7za.exe')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>7za.exe</Link>
+    </None>
+  </ItemGroup>
+  <!-- 프로세스 감시용 ProcessControl.dll 복사 -->
+  <!-- 이게 없으면 감시를 켜는 순간 DllNotFoundException 이 난다 -->
+  <ItemGroup>
+    <None Include="$(SolutionDir)x64\$(Configuration)\ProcessControl.dll"
+          Condition="Exists('$(SolutionDir)x64\$(Configuration)\ProcessControl.dll')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>ProcessControl.dll</Link>
+    </None>
+  </ItemGroup>
+  <!-- 시험 중 학교 LMS 만 들어가게 해 주는 창(EclassWindow)이 쓰는 브라우저 컨트롤.
+       실행에는 WebView2 런타임이 필요한데 Windows 11 에는 기본으로 들어 있다 -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
+  </ItemGroup>
 
 </Project>

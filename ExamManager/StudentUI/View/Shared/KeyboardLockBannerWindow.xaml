@@ -1,0 +1,29 @@
+<Window x:Class="StudentUI.View.Shared.KeyboardLockBannerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="키보드 입력 제한 알림" Width="520"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ResizeMode="NoResize" SizeToContent="Height"
+        Focusable="False" ShowActivated="False" IsHitTestVisible="False">
+    <Border Background="#FEF2F2" BorderBrush="#DC2626" BorderThickness="2" CornerRadius="12" Margin="10">
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" Opacity="0.25" ShadowDepth="4" BlurRadius="16"/>
+        </Border.Effect>
+
+        <Grid Margin="18,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0" Text="🔒" FontSize="26" VerticalAlignment="Center" Margin="0,0,14,0"/>
+
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <TextBlock Text="교수님에 의해 키보드 입력이 일시 제한되었습니다."
+                           FontSize="15" FontWeight="Bold" Foreground="#991B1B"/>
+                <TextBlock Text="주의 또는 시험 조치로 키보드가 잠겼습니다. 마우스 조작은 가능합니다."
+                           FontSize="12" Foreground="#B91C1C" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

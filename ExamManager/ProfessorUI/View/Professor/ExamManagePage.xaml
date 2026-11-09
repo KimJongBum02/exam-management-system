@@ -1,0 +1,200 @@
+<UserControl x:Class="ProfessorUI.View.Professor.ExamManagePage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:ProfessorUI.View.Professor">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/ProfessorUI;component/View/Professor/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 제목과 종료 버튼을 한 줄에 둔다 (마지막 갱신·서버 상태는 상단바에 있다) -->
+        <Grid Grid.Row="0" Margin="0,0,0,18">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="시험 관리 창" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,16,0"
+                           Text="학생이 미리 보낸 답안은 시험 종료·답안 수집에서 확인 가능합니다."/>
+                <Button Content="시험 종료 및 답안 수집" Style="{StaticResource PrimaryButton}" Click="EndExam_Click"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- KPI 6종 -->
+        <UniformGrid Grid.Row="1" Columns="7" Margin="0,0,0,22">
+            <Border Style="{StaticResource KpiCard}" Margin="0,0,12,0">
+                <StackPanel>
+                    <TextBlock Text="전체 학생" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="{Binding Overview.TotalCount}" Style="{StaticResource KpiValue}"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource KpiCard}" Margin="0,0,12,0">
+                <StackPanel>
+                    <TextBlock Text="접속 중" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="{Binding Overview.ConnectedCount}" Style="{StaticResource KpiValue}"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource KpiCard}" Margin="0,0,12,0">
+                <StackPanel>
+                    <TextBlock Text="미접속" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="{Binding Overview.NotConnectedCount}" Style="{StaticResource KpiValue}"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource KpiCard}" Margin="0,0,12,0">
+                <StackPanel>
+                    <TextBlock Text="시험 진행 중" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="{Binding Overview.InProgressCount}" Style="{StaticResource KpiValue}"/>
+                </StackPanel>
+            </Border>
+            <!-- 학생이 먼저 제출하고 끝낸 경우. 시험 중에도 이 숫자가 올라간다 -->
+            <Border Style="{StaticResource KpiCard}" Margin="0,0,12,0">
+                <StackPanel>
+                    <TextBlock Text="제출 완료" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="{Binding Overview.SubmittedCount}" Style="{StaticResource KpiValue}"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource KpiCard}" Margin="0,0,12,0">
+                <StackPanel>
+                    <TextBlock Text="파일 미수신" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="{Binding Overview.FileMissingCount}" Style="{StaticResource KpiValue}"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource KpiCard}">
+                <StackPanel>
+                    <TextBlock Text="보안 경고" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="{Binding Overview.AlertCount}" Style="{StaticResource KpiValue}"/>
+                </StackPanel>
+            </Border>
+        </UniformGrid>
+
+        <!-- 보안 경고 | 재배포 대상.
+             채팅은 채팅 화면에서 보므로 여기서는 이 둘만 반씩 크게 쓴다.
+             보안 경고를 볼 수 있는 곳은 이 화면뿐이다 — 경고는 시험이 시작된 뒤에만 쌓이고
+             이 메뉴도 그때 열리므로 못 보는 구간은 없다.
+             두 칸의 높이를 맞추고, 경고가 쌓이거나 학생이 많으면 각자 안에서 넘긴다 -->
+        <Grid Grid.Row="2" Height="560">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="24"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 왼쪽: 보안 경고 (AlertListPanel) -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid Margin="0,0,0,10">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="보안 경고" Style="{StaticResource SectionTitle}" Margin="0"/>
+                        <TextBlock Style="{StaticResource Caption}" Margin="14,0,0,0" VerticalAlignment="Center">
+                            <Run Text="미확인" Foreground="{StaticResource AlertRed}" FontWeight="Bold"/><Run Text=" "/><Run Text="{Binding Overview.UnreadAlertCount, Mode=OneWay}" Foreground="{StaticResource AlertRed}" FontWeight="Bold"/><Run Text=" · 전체"/><Run Text=" "/><Run Text="{Binding Overview.AlertCount, Mode=OneWay}"/>
+                        </TextBlock>
+                    </StackPanel>
+                    <Button Content="프로그램 관리" Style="{StaticResource SecondaryButton}"
+                            HorizontalAlignment="Right" Click="SecurityPolicy_Click"/>
+                </Grid>
+                <local:AlertListPanel Grid.Row="1"/>
+            </Grid>
+
+            <!-- 오른쪽: 재배포 대상. 시험 파일이 아직 가지 않은 학생만 보인다
+                 (늦게 들어왔거나, 파일을 받기 전에 끊겼거나, 다시 켰는데 이어 받을 기록이 없는 학생).
+                 파일이 도착하는 순간 목록에서 빠진다 — 받은 학생에게 다시 보내면 작업하던 파일이 덮어써진다 -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <!-- 버튼 자리를 먼저 잡고 설명 글은 남는 폭 안에서 줄인다. 창이 좁을 때 둘이 겹치지 않게 한다 -->
+                <DockPanel Margin="0,0,0,10">
+                    <!-- 예전 [선택 학생 재배포]는 시험 준비 화면의 배포 목록(전원 선택이 기본)을 그대로 써서
+                         시험 중인 학생에게까지 파일을 다시 보냈다. 이 목록의 학생에게만 보낸다 -->
+                    <Button DockPanel.Dock="Right" Content="받지 못한 학생 모두 재배포" Style="{StaticResource SecondaryButton}"
+                            Click="RedeployAll_Click"/>
+                    <TextBlock Text="재배포 대상" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center"/>
+                    <TextBlock Style="{StaticResource Caption}" Margin="14,0,10,0" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" Text="시험 파일을 받지 못한 학생"/>
+                </DockPanel>
+
+                <!-- 검색 · 필터 -->
+                <Grid Grid.Row="1" Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <!-- 학생 이름으로 찾는 칸이라 한글 자판으로 들어간다. 학번은 숫자라 그대로 쳐진다 -->
+                    <TextBox x:Name="SearchBox" Style="{StaticResource SearchBox}" VerticalAlignment="Bottom"
+                             InputMethod.PreferredImeState="On" InputMethod.PreferredImeConversionMode="Native"
+                             Foreground="{StaticResource TextPrimary}" TextChanged="Filter_Changed"/>
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                        <TextBlock Text="접속 상태" Style="{StaticResource FieldLabel}"/>
+                        <ComboBox x:Name="ConnFilter" Style="{StaticResource FilterCombo}" SelectedIndex="0"
+                                  SelectionChanged="Filter_Changed">
+                            <ComboBoxItem Content="전체"/>
+                            <ComboBoxItem Content="접속 중"/>
+                            <ComboBoxItem Content="미접속"/>
+                        </ComboBox>
+                    </StackPanel>
+                </Grid>
+
+                <!-- 학생 목록. 재배포에 필요한 것만 둔다 -->
+                <Grid Grid.Row="2">
+                    <ListView x:Name="StudentTable" Style="{StaticResource FlatTable}">
+                        <ListView.View>
+                            <GridView ColumnHeaderContainerStyle="{StaticResource TableHeader}">
+                                <GridViewColumn Header="학번" Width="105">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate><TextBlock Text="{Binding StudentId}" Style="{StaticResource Cell}"/></DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="이름" Width="85">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate><TextBlock Text="{Binding Name}" Style="{StaticResource Cell}"/></DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="접속 상태" Width="85">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate><TextBlock Text="{Binding ConnectionText}" Style="{StaticResource Cell}"/></DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="시험 상태" Width="120">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate><TextBlock Text="{Binding Status}" Style="{StaticResource CellStatus}"/></DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="마지막 갱신" Width="90">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate><TextBlock Text="{Binding LastUpdate}" Style="{StaticResource Cell}"/></DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="조치" Width="70">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="재배포" Style="{StaticResource CellLink}"
+                                                    CommandParameter="{Binding}"
+                                                    Command="{Binding DataContext.Distribute.RedeployOneCommand,
+                                                              RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                    <TextBlock x:Name="EmptyNote" Style="{StaticResource Caption}" Text="재배포할 학생이 없습니다."
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

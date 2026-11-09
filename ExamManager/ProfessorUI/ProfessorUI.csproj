@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -6,7 +6,96 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <Platforms>AnyCPU;x64</Platforms>
+    <!-- 원격 제어 화면(RDPViewer)은 ActiveX 라 WPF 에 바로 못 얹는다. WindowsFormsHost 를 거친다 -->
+    <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
+
+  <!-- WinForms 를 켜면 System.Windows.Forms · System.Drawing 이 암시적 using 으로 들어와
+       WPF 의 Controls · Media 와 이름이 부딪힌다(UserControl · Button · Brush …).
+       원격 제어 창 하나 때문에 기존 화면 15개를 고칠 수는 없으니, 그 둘만 떼어 둔다.
+       그 창은 System.Windows.Forms.AxHost 처럼 전체 이름으로 적는다. -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <Platforms>AnyCPU;x64</Platforms>
+    <!-- 작업표시줄·탐색기에 보이는 아이콘. 학생용(Student.ico)과 같은 자리에 두고 색으로 구분한다 -->
+    <ApplicationIcon>..\Icon\Professor.ico</ApplicationIcon>
+  </PropertyGroup>
+
+
+
+  <ItemGroup>
+    <Compile Include="..\NetworkInterop\NetworkInterop.cs" Link="NetworkInterop.cs" />
+    <!-- 학생 PC 와 같은 방식으로 설치 프로그램을 읽고, 같은 프로그램 사전을 쓰도록 한 벌을 나눠 쓴다 -->
+    <Compile Include="..\Shared\StartMenuPrograms.cs" Link="StartMenuPrograms.cs" />
+    <Compile Include="..\Shared\KnownPrograms.cs" Link="KnownPrograms.cs" />
+    <!-- 경고·채팅이 왔을 때 깜빡임과 작업표시줄 알림 -->
+    <Compile Include="..\Shared\UiSignal.cs" Link="UiSignal.cs" />
+    <!-- 모든 창의 기본 글꼴 -->
+    <Compile Include="..\Shared\UiFont.cs" Link="UiFont.cs" />
+    <!-- 주 창 크기(최대화로 시작, 복원 1180×720) -->
+    <Compile Include="..\Shared\UiWindow.cs" Link="UiWindow.cs" />
+    <!-- 상단바 배치(왼쪽 제목 · 가운데 중요 공지 · 오른쪽 메뉴) -->
+    <Compile Include="..\Shared\HeaderBarPanel.cs" Link="HeaderBarPanel.cs" />
+    <!-- 네이티브·배경 스레드에서 화면으로 넘길 때 거치는 한 곳 -->
+    <Compile Include="..\Shared\UiThread.cs" Link="UiThread.cs" />
+    <!-- 예외가 난 이유를 바탕화면 crash.log 에 남긴다 -->
+    <Compile Include="..\Shared\CrashLog.cs" Link="CrashLog.cs" />
+    <!-- 읽기 전용 파일까지 지우는 폴더 삭제 -->
+    <Compile Include="..\Shared\FileSystem.cs" Link="FileSystem.cs" />
+    <!-- 버튼·단축키를 ViewModel 에 잇는 다리 -->
+    <Compile Include="..\Shared\UiCommand.cs" Link="UiCommand.cs" />
+    <!-- 값이 바뀌었음을 화면에 알리는 바탕 클래스 -->
+    <Compile Include="..\Shared\UiBinding.cs" Link="UiBinding.cs" />
+    <!-- 키보드 · 마우스 저수준 훅 선언 한 벌 -->
+    <Compile Include="..\Shared\InputHook.cs" Link="InputHook.cs" />
+    <!-- 프로그램이 꺼져도 남아야 하는 작은 기록 (%LocalAppData%\ExamManager) -->
+    <Compile Include="..\Shared\AppRecord.cs" Link="AppRecord.cs" />
+    <!-- 교수 · 학생이 주고받는 말 한 건 (말풍선이 보는 값) -->
+    <Compile Include="..\Shared\ChatMessage.cs" Link="ChatMessage.cs" />
+    <!-- 글자 크기 한 벌 (Styles.xaml 이 합쳐 쓴다) -->
+    <Page Include="..\Shared\FontSizes.xaml" Link="FontSizes.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <!-- 두 앱이 함께 쓰는 스타일 한 벌 (고를 수 있는 글 · 스크롤 막대) -->
+    <Page Include="..\Shared\CommonStyles.xaml" Link="CommonStyles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+  </ItemGroup>
+
+  <!-- 두 UI가 공유하는 글꼴 (ExamManager\Fonts) -->
+  <ItemGroup>
+    <Resource Include="..\Fonts\Pretendard-Regular.ttf" Link="Fonts\Pretendard-Regular.ttf" />
+    <Resource Include="..\Fonts\Pretendard-Bold.ttf" Link="Fonts\Pretendard-Bold.ttf" />
+    <!-- 창 아이콘으로도 쓰려면 리소스로 들어가 있어야 한다 -->
+    <Resource Include="..\Icon\Professor.ico" Link="Icon\Professor.ico" />
+    <!-- 화면 안에 그리는 아이콘은 .ico 를 쓰면 안 된다. WPF 는 .ico 에서 늘 가장 작은
+         16px 프레임을 골라서 상단바(22px)·창 제목줄(18px)에 늘려 그리는 바람에 흐려진다 -->
+    <Resource Include="..\Icon\Professor64.png" Link="Icon\Professor64.png" />
+  </ItemGroup>
+
+  <!-- NetworkLib_Native.dll 자동 복사 (Debug/Release 구성에 맞게 자동 선택) -->
+  <ItemGroup>
+    <None Include="$(SolutionDir)x64\$(Configuration)\NetworkLib_Native.dll" Condition="Exists('$(SolutionDir)x64\$(Configuration)\NetworkLib_Native.dll')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>NetworkLib_Native.dll</Link>
+    </None>
+    <None Include="$(SolutionDir)x64\$(Configuration)\FileControl.dll" Condition="Exists('$(SolutionDir)x64\$(Configuration)\FileControl.dll')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>FileControl.dll</Link>
+    </None>
+    <None Include="$(SolutionDir)7za.exe" Condition="Exists('$(SolutionDir)7za.exe')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>7za.exe</Link>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.1" />
+  </ItemGroup>
 
 </Project>

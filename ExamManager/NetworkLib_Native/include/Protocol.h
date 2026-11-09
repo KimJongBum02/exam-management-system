@@ -1,0 +1,301 @@
+#pragma once
+#include <cstdint>
+
+// ══════════════════════════════════════════════════════════════════════
+//  Protocol.h — 바이너리 패킷 프로토콜 정의
+//
+//  패킷 와이어 포맷:
+//    [uint32_t type (4 bytes)] [uint32_t payloadLen (4 bytes)] [payload (N bytes)]
+//
+//  JSON/Base64 없음 — 구조체를 메모리 그대로 전송합니다.
+// ══════════════════════════════════════════════════════════════════════
+
+// ─── 패킷 타입 ─────────────────────────────────────────────────────
+enum class PacketType : uint32_t
+{
+    // 연결 (1~9)
+    StudentLogin             = 1,
+    LoginResponse            = 2,
+    Heartbeat                = 3,
+    Disconnect               = 4,
+    NotInRoster              = 5,   // 교수 → 학생. 명단과 대조해 받지 않음 (payload 1바이트). 번호만 예약한다 —
+                                    // 보내는 쪽도 받는 쪽도 C# 이고, 네이티브는 모르는 번호를 그대로 올린다
+
+    // 출결 (10~19)
+
+
+    // 채팅 (60~69)
+    ChatBroadcast            = 60,  // 교수 → 전체 학생
+    ChatDirect               = 61,  // 교수 → 특정 학생
+    ChatFromStudent          = 62,  // 학생 → 교수
+    ImportantNotice          = 63,  // 교수 → 학생. 앱 상단에 계속 떠 있는 중요 공지 (가변 길이, 비면 내림)
+                                    // 형식은 NetworkInterop.cs 의 ImportantNoticePayload, 네이티브는 그대로 전달한다
+    // 시험 제어 (20~29)
+    ExamPhaseChange          = 20,
+    ExamStatusUpdate         = 21,
+    CheatingAlert            = 22,
+
+    // 파일 전송 (30~39)
+    FileTransferStart        = 30,
+    FileChunk                = 31,
+    FileTransferComplete     = 32,
+    ExtractArchive           = 33,
+    ExamSubmitRequest        = 34,
+
+    // 프로세스 제어 (40~49)
+    ProcessListUpdate        = 40,   // 가변 길이 페이로드
+    MonitorStatusReport      = 43,   // 학생 → 교수. 감시가 실제로 켜졌는지 알린다
+                                     // (네이티브는 해석하지 않고 그대로 전달한다)
+    InstalledProgramsReport  = 44,   // 학생 → 교수. 학생 PC 에 설치된 프로그램 목록 (가변 길이)
+                                     // 형식은 NetworkInterop.cs 의 InstalledProgramsPayload, 네이티브는 그대로 전달한다
+    LockKeyboard             = 45,   // 교수 → 특정 학생. payload = uint8_t (1=잠금, 0=해제)
+    ClassModeChange          = 46,   // 교수 → 학생. payload = uint8_t (0=자유, 1=통제, 2=시험). 네이티브는 그대로 전달한다
+
+    // 화면 모니터링 (70~79)
+    ScreenCapture            = 70,  // 학생 → 교수, payload = JPEG 바이너리
+    ScreenQualityMode        = 71,  // 교수 → 특정 학생, payload = uint8_t (0=기본 320x180, 1=고화질 1920x1080)
+    RemoteControlStart       = 72,  // 교수 → 특정 학생. 원격 제어 시작 요청 (payload 없음)
+    RemoteControlInvitation  = 73,  // 학생 → 교수. 접속 문자열 + 암호 (가변 길이)
+                                    // 형식은 NetworkInterop.cs 의 RemoteControlPayload, 네이티브는 그대로 전달한다
+    RemoteControlStop        = 74,  // 교수 → 특정 학생. 원격 제어 종료 (payload 없음)
+    RemoteControlFailed      = 75,  // 학생 → 교수. 원격 제어를 하지 못한 이유 (UTF-8 문자열, 교수 화면에 그대로 띄운다)
+    RemoteControlImeKey      = 76,  // 교수 → 특정 학생. 한/영·한자 키 (payload = uint8_t, 0=한/영, 1=한자)
+                                    // IME 키는 스캔코드가 표준 밖이라 화면 공유로는 전달되지 않는다
+
+    // 퀴즈 (50~59)
+    QuizQuestion             = 50,   // 가변 길이 페이로드
+    QuizAnswer               = 51,
+
+    // 공통 응답
+    CommandAck               = 100,
+};
+
+// ─── 시험 단계 ─────────────────────────────────────────────────────
+enum class ExamPhase : uint32_t
+{
+    Waiting        = 0,
+    Ready          = 1,
+    InProgress     = 2,
+    SubmitRequested= 3,
+    Closed         = 4,
+};
+
+// ─── 학생 상태 ─────────────────────────────────────────────────────
+enum class StudentStatus : uint32_t
+{
+    NotConnected   = 0,
+    Connected      = 1,
+    FileReceived   = 2,
+    InProgress     = 3,
+    Submitted      = 4,
+    Approved       = 5,
+    CheatingDetected = 6,
+    Absent         = 7,
+    CleanupFailed  = 8,   // 답안은 냈으나 시험 파일 삭제에 실패함
+    CleanupSucceeded = 9, // 시험 파일까지 지웠음 (학생 → 교수)
+};
+
+// ─── 부정행위 유형 ─────────────────────────────────────────────────
+enum class CheatingAlertType : uint32_t
+{
+    BlacklistedProcessLaunched = 0,
+    NetworkAccessAttempt       = 1,
+    UnauthorizedProcess        = 2,
+    ManualReport               = 3,
+    RequiredProcessTerminated  = 4,   // 시험에 필요한 프로그램을 학생이 강제 종료함
+};
+
+// ─── 연결 해제 사유 ────────────────────────────────────────────────
+enum class DisconnectReason : int
+{
+    ClientDisconnected = 0,
+    HeartbeatTimeout   = 1,
+    NetworkError       = 2,
+    ServerShutdown     = 3,
+};
+
+// ─── 한 패킷의 몸통 최대 크기 ─────────────────────────────────────
+//  받는 쪽은 헤더의 payloadLen 만큼 메모리를 잡는데, 그 값은 상대가 적어 보낸 것이다.
+//  전송이 한 번 어긋나 쓰레기 바이트를 헤더로 읽거나, 누가 일부러 큰 값을 적어 보내면
+//  수 GB 를 할당하려다 프로그램이 죽는다. 교수 PC 의 서버 포트는 강의실 모든 PC 에 열려 있어
+//  헤더 8바이트만 보내도 시험 전체를 멈출 수 있으므로, 이 값보다 크면 그 연결을 끊는다.
+//
+//  정상 패킷 중 제일 큰 것은 화면 캡처(JPEG)다 — 고화질 1920 폭 품질 80 에서 실측 약 172KB,
+//  품질 95 라도 330KB. 파일은 64KB 조각으로 쪼개 보낸다. 넉넉히 10배 이상 잡았다.
+constexpr uint32_t MAX_PAYLOAD_SIZE = 4 * 1024 * 1024;   // 4MB
+
+// ─── 한 번의 보내기를 이만큼까지만 기다린다 ───────────────────────
+//  타임아웃이 없으면, 최대절전·전원 차단으로 TCP 가 반쯤 열린 PC 에 보낼 때
+//  커널 안에서 재전송이 끝날 때까지(몇 분) 멈춘다. 전체 전송은 세션을 하나씩 돌며 보내므로
+//  그런 PC 한 대가 보내는 쪽 스레드를 그만큼 묶는다.
+//
+//  강의실 랜에서 정상이라면 64KB 조각 하나나 고화질 캡처 한 장(약 300KB)은 1초 안에 나간다.
+//  10초는 혼잡할 때도 넉넉하면서, 멈춘 PC 를 기다리는 시간은 눈에 보일 만큼 짧은 값이다.
+constexpr int SEND_TIMEOUT_MS = 10 * 1000;   // 10초
+
+// ─── 연결을 이만큼까지만 기다린다 ─────────────────────────────────
+//  블로킹 connect 는 상대가 아무 답도 주지 않으면 윈도우 기본값으로 약 21초를 기다린다.
+//  없는 주소를 학생이 잘못 치면 그동안 학생 앱 화면이 통째로 멈춰 '응답 없음'이 뜨고,
+//  자동 재연결도 3초 간격이 무의미해진다 — 한 번 시도에 21초가 잡히기 때문이다.
+//
+//  같은 강의실 랜에서 TCP 손짓(3-way handshake)은 1/100초 안에 끝난다. 3초는 혼잡할 때도
+//  넉넉하면서, 주소를 잘못 쳤을 때 실패를 바로 알려 줄 만큼 짧은 값이다.
+constexpr int CONNECT_TIMEOUT_MS = 3 * 1000;   // 3초
+
+// ══════════════════════════════════════════════════════════════════════
+//  바이너리 페이로드 구조체
+//  #pragma pack(push, 1) 으로 패딩 없이 직렬화합니다.
+// ══════════════════════════════════════════════════════════════════════
+#pragma pack(push, 1)
+
+// ─── 패킷 헤더 (모든 패킷 앞에 붙음) ──────────────────────────────
+struct NlPacketHeader
+{
+    uint32_t type;       // PacketType
+    uint32_t payloadLen; // 뒤따르는 payload 바이트 수
+};
+
+// ─── 연결 관련 ────────────────────────────────────────────────────
+struct LoginPayload
+{
+    char studentId[16];    // 학번 (UTF-8, null 종료)
+    char studentName[64];  // 이름 (UTF-8, null 종료)
+};
+
+struct LoginResponsePayload
+{
+    uint8_t success;          // 1=승인, 0=거부
+    char    message[128];     // 안내 메시지
+    char    rejectionReason[128]; // 거부 사유 코드 (success=0일 때). "DUPLICATE_ID" = 같은 학번이 이미 접속 중. 안내 문구는 학생 앱이 만든다
+};
+
+struct DisconnectPayload
+{
+    char reason[128];
+};
+
+
+
+// ─── 시험 제어 ────────────────────────────────────────────────────
+struct ExamPhaseChangePayload
+{
+    uint32_t phase;       // ExamPhase
+    char     message[256];
+};
+
+struct ExamStatusUpdatePayload
+{
+    char     studentId[16];
+    uint32_t status;      // StudentStatus
+    char     detail[256];
+};
+
+struct CheatingAlertPayload
+{
+    char     studentId[16];
+    char     studentName[64];
+    uint32_t alertType;   // CheatingAlertType
+    char     description[256];
+};
+
+// ─── 파일 전송 ────────────────────────────────────────────────────
+
+// FileTransferStart: 파일 메타데이터 (실제 바이트 전에 전송)
+struct FileTransferStartPayload
+{
+    char    transferId[37];     // UUID 문자열
+    char    fileName[260];      // 파일 이름 (MAX_PATH)
+    int64_t totalSize;          // 파일 전체 크기 (bytes)
+    uint32_t totalChunks;       // 전체 청크 수
+    char    sha256Hash[65];     // SHA-256 hex 문자열 (64 + null)
+    char    archivePassword[128]; // 압축 암호 (메타데이터 전달용)
+};
+
+// FileChunk: 가변 길이 — 이 헤더 뒤에 dataSize 바이트의 원본 파일 데이터가 붙음
+struct NlFileChunkHeader
+{
+    char     transferId[37];
+    uint32_t chunkIndex;
+    uint32_t dataSize;    // 뒤따르는 raw 파일 데이터 크기
+    // 이 구조체 뒤에 dataSize 바이트의 raw 파일 바이트가 붙음
+};
+
+struct FileTransferCompletePayload
+{
+    char transferId[37];
+    char fileName[260];
+};
+
+struct ExtractArchivePayload
+{
+    char    fileName[260];
+    char    destinationFolderName[260];
+    char    password[128];
+    uint8_t deleteAfterExtract; // 1=압축 해제 후 zip 삭제
+};
+
+struct ExamSubmitRequestPayload
+{
+    char    folderName[260];
+    char    archivePassword[128];
+    int64_t deadline;           // Unix timestamp (0 = 기한 없음)
+};
+
+// ─── 프로세스 제어 ────────────────────────────────────────────────
+// ProcessListUpdate는 가변 길이입니다.
+// 페이로드 형식:
+//   [uint32_t whitelistCount]
+//   [uint32_t blacklistCount]
+//   whitelistCount 개의 문자열: 각 [uint16_t len][len bytes UTF-8]
+//   blacklistCount 개의 문자열: 각 [uint16_t len][len bytes UTF-8]
+
+// ─── 퀴즈 ─────────────────────────────────────────────────────────
+// QuizQuestion은 가변 길이입니다.
+// 페이로드 형식:
+//   [QuizQuestionHeader]
+//   optionCount 개의 문자열: 각 [uint16_t len][len bytes UTF-8]
+
+struct QuizQuestionHeader
+{
+    char     quizId[37];
+    uint32_t questionType;    // 0=OX, 3=ClassQuiz(여러 문제, NetworkInterop.cs ClassQuizPayload)
+    char     question[512];
+    uint32_t optionCount;
+    uint32_t timeoutSeconds;  // 0 = 제한 없음
+};
+
+struct QuizAnswerPayload
+{
+    char quizId[37];
+    char studentId[16];
+    char studentName[64];
+    char answer[256];
+};
+
+// ─── 공통 응답 ────────────────────────────────────────────────────
+struct CommandAckPayload
+{
+    uint32_t commandType; // PacketType
+    uint8_t  success;
+    char     message[256];
+};
+
+// ─── 채팅 ────────────────────────────────────────────────────────────
+struct ChatBroadcastPayload
+{
+    char message[512];   // 교수가 전체에게 보내는 메시지
+};
+
+struct ChatDirectPayload
+{
+    char message[512];   // 교수가 특정 학생에게 보내는 메시지
+};
+
+struct ChatFromStudentPayload
+{
+    char message[512];   // 학생이 교수에게 보내는 메시지
+    // 발신자 정보는 ProfessorServer의 onPacketReceived 콜백에서
+    // sessionId / studentId / studentName 으로 자동 제공됩니다.
+};
+
+#pragma pack(pop)

@@ -1,9 +1,14 @@
-﻿<Application x:Class="ProfessorUI.App"
+<Application x:Class="ProfessorUI.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:ProfessorUI"
-             StartupUri="MainWindow.xaml">
+             >
     <Application.Resources>
-         
+        <!-- 앱 전체 기본 글꼴 — 글꼴을 바꿀 때는 이 줄과 csproj의 Resource 항목만 수정하면 된다 -->
+        <FontFamily x:Key="AppFont">pack://application:,,,/Fonts/#Pretendard</FontFamily>
+
+        <!-- bool 을 보임/숨김으로 바꾸는 변환기. 창마다 따로 선언하던 것을 여기 한 곳에 둔다 -->
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
     </Application.Resources>
 </Application>

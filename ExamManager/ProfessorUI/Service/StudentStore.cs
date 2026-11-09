@@ -1,0 +1,231 @@
+﻿using System.Collections.ObjectModel;
+using ProfessorUI.ViewModel;
+
+namespace ProfessorUI.Service
+{
+    public class StudentStore
+    {
+        // ⭐ 싱글톤 인스턴스 (어디서나 접근 가능)
+        public static StudentStore Instance { get; } = new StudentStore();
+
+        // ⭐ 단 하나의 학생 리스트 원본 (실제 접속한 학생만 채워짐, 늘 학번 순)
+        public ObservableCollection<StudentStatusViewModel> Students { get; }
+
+        // 이 목록은 화면 스레드가 넣고 뺀다. 그런데 답안을 받아 저장하는 쪽(AnswerCollectService)은
+        // 네이티브 수신 스레드에서 이 목록을 훑어 누구 답안인지 찾는다.
+        // 훑는 도중에 다른 학생이 접속하거나 끊기면 열거가 깨져 예외가 나는데, 그 예외는
+        // 네이티브 콜백 위로 올라가 교수 앱을 통째로 죽인다 — 학생 전원이 한꺼번에 끊긴다.
+        // 넣고 빼는 자리와 밖에서 훑는 자리를 이 자물쇠 하나로 묶는다.
+        // 화면 스레드끼리의 읽기(데이터 바인딩)는 서로 읽기만 하므로 묶지 않아도 된다.
+        private static readonly object Gate = new object();
+
+        // 특정 학생이 파일 수신 완료 응답을 보냈을 때 알림 (배포 화면 갱신용) — 인자: 학번
+        public event Action<string>? FileReceivedConfirmed;
+
+        private StudentStore()
+        {
+            Students = new ObservableCollection<StudentStatusViewModel>();
+        }
+
+        // 학생 접속: 같은 학번이 이미 있으면 정보 갱신, 없으면 새로 추가
+        public void AddOrUpdateConnected(string sessionId, string studentId, string name, string ip)
+        {
+            var existing = Students.FirstOrDefault(s => s.StudentId == studentId);
+            if (existing != null)
+            {
+                existing.SessionId = sessionId;
+                existing.Name = name;
+                existing.Ip = ip;
+                existing.Status = "대기";
+                existing.IsConnected = true;
+
+                // 다시 들어온 학생이 시험 파일을 갖고 있는지는 아직 모른다(앱을 다시 켰으면 없다).
+                // 갖고 있으면 로그인 직후 '수신 완료'를 다시 알려 오므로(학생 LoginService) 그때 되돌아간다.
+                existing.IsFileReceived = false;
+                existing.DeployStatus = "대기 중";
+                existing.DeployProgress = 0;
+                existing.LastConnectedAt = DateTime.Now;
+            }
+            else
+            {
+                // 접속한 순서가 아니라 학번 순 자리에 넣는다. 이 목록을 그대로 쓰는
+                // 배포 표·재배포 표·답안 수집 표가 모두 학번 순으로 보이게 하려는 것이다.
+                int at = 0;
+                while (at < Students.Count && string.CompareOrdinal(Students[at].StudentId, studentId) < 0)
+                    at++;
+
+                lock (Gate)
+                {
+                    Students.Insert(at, new StudentStatusViewModel
+                    {
+                        SessionId = sessionId,
+                        StudentId = studentId,
+                        Name = name,
+                        Ip = ip,
+                        Status = "대기",
+                        IsConnected = true,
+                        LastConnectedAt = DateTime.Now
+                    });
+                }
+            }
+
+            // 접속 기록은 따로 쌓는다. 위 목록은 한 학생에 한 줄이라
+            // 다시 접속하면 앞의 접속 시각이 덮여, 몇 번 끊겼다 들어왔는지 알 수 없다.
+            ConnectionLogStore.Instance.Record(studentId, name, ip, isFirst: existing == null);
+        }
+
+        // 학생 접속 종료: 답안을 냈는지에 따라 다르게 표시한다.
+        //
+        // 시험 20분 뒤부터 학생이 개별 제출하고 나가므로, 미접속에는 두 경우가 섞인다.
+        //   제출하고 정상적으로 나감  → 그대로 두면 된다
+        //   못 내고 연결이 끊김        → 교수가 찾아가 봐야 한다
+        // 둘을 구분하지 않으면 답안을 못 걷은 학생을 '나갔나 보다' 하고 넘기게 된다.
+        public void MarkDisconnected(string sessionId)
+        {
+            var student = Students.FirstOrDefault(s => s.SessionId == sessionId);
+            if (student == null) return;
+
+            student.IsConnected = false;
+
+            // 배포 표도 끊겼음을 보여 준다. 그대로 두면 끊긴 학생이 '수신완료 100%'로 남는다.
+            // 보내던 중이었다면 그 전송은 끝난 것이라 보내는 중 표시도 지운다(늦게 오는 실패 알림은 무시된다).
+            student.SendingSessionId = null;
+            student.DeployStatus = "접속 끊김";
+            student.DeployProgress = 0;
+
+            // 다시 접속했을 때 시험을 이어 받았는지는 학생의 새 감시 보고로 판단한다.
+            student.ClearMonitorStatus();
+
+            // 이미 제출한 학생의 상태는 덮어쓰지 않는다 (제출완료 / 정리실패를 유지).
+            if (!student.IsAnswerSubmitted)
+                student.Status = "미제출(연결 끊김)";
+
+            // 아무것도 남기지 않은 접속은 줄째로 지운다.
+            // 학번을 잘못 쳐서 들어왔다 바로 나가는 일이 있는데, 그 줄을 남겨 두면 대시보드·채팅뿐 아니라
+            // 배포 표·답안 수집·시험 결과의 미수집 인원·시험 로그에까지 끝까지 따라다닌다.
+            // 시험 파일을 받았거나 시험을 시작했거나 답안을 낸 접속은 흔적이 있으므로 남긴다(IsActive).
+            // 명단에 있는 학번도 남긴다 — 빠진 자리가 그대로 보여야 한다.
+            // 몇 번 들어왔다 나갔는지는 접속 기록(ConnectionLogStore)에 그대로 남는다.
+            if (StudentExcelStore.Find(student.StudentId) == null && !StudentCardViewModel.IsActive(student))
+            {
+                lock (Gate) { Students.Remove(student); }
+            }
+        }
+
+        // ── 다음 시험 준비: 모든 학생의 시험 기록을 되돌린다 ──
+        // 줄은 넣지도 빼지도 않는다. 지금 접속해 있는 학생은 그대로 두고 이번 시험에서 생긴 표시만 지운다.
+        // 목록 자체를 건드리지 않으므로 자물쇠(Gate)는 필요하지 않다.
+        // 접속이 끊긴 학생 줄도 남는다 — 지난 시험에 누가 있었는지는 표에서 그대로 보인다.
+        public void ResetForNextExam()
+        {
+            foreach (var student in Students)
+                student.ResetForNextExam();
+        }
+
+        // 세션 번호로 학번과 이름을 찾는다. 답안을 받아 저장하는 쪽이 네이티브 수신 스레드에서 부르므로
+        // 넣고 빼는 자리와 같은 자물쇠로 묶는다(Gate 설명 참고).
+        // 못 찾으면 false — 부르는 쪽이 세션 번호라도 써서 파일은 반드시 남기게 한다.
+        public bool TryResolveBySession(string sessionId, out string studentId, out string name)
+        {
+            lock (Gate)
+            {
+                foreach (var student in Students)
+                {
+                    if (student.SessionId == sessionId && student.StudentId.Length > 0)
+                    {
+                        studentId = student.StudentId;
+                        name = student.Name;
+                        return true;
+                    }
+                }
+            }
+
+            studentId = string.Empty;
+            name = string.Empty;
+            return false;
+        }
+
+        // 파일 수신 완료 응답 처리: 해당 학번 학생을 '수신완료'로 표시
+        public void MarkFileReceived(string studentId)
+        {
+            var student = Students.FirstOrDefault(s => s.StudentId == studentId);
+            if (student != null)
+            {
+                student.IsFileReceived = true;
+                student.Status = "수신완료";
+                FileReceivedConfirmed?.Invoke(studentId);
+            }
+        }
+
+        // 받았던 시험 파일이 학생 PC 에서 사라졌다는 보고 처리.
+        // '미수신'으로 되돌려 재배포 대상 목록에 다시 올린다(ExamManagePage 는 IsFileReceived 로 거른다).
+        // 지운 학생에게 다시 보내는 것은 덮어쓸 작업물이 없다는 뜻이라 안전하다.
+        public void MarkFileMissing(string studentId)
+        {
+            var student = Students.FirstOrDefault(s => s.StudentId == studentId);
+            if (student == null) return;
+
+            student.IsFileReceived = false;
+            student.Status = "파일 삭제됨";
+            student.DeployStatus = "파일 삭제됨";
+            student.DeployProgress = 0;
+        }
+
+        // 답안 수신 처리: 해당 학번 학생을 '제출완료'로 표시
+        // 이 기록은 학생이 접속을 끊어도 남는다. 그래야 시험 끝에
+        // '제출하고 나간 학생'과 '못 내고 끊긴 학생'을 구분할 수 있다.
+        public void MarkAnswerSubmitted(string studentId)
+        {
+            var student = Students.FirstOrDefault(s => s.StudentId == studentId);
+            if (student != null)
+            {
+                student.IsAnswerSubmitted = true;
+                student.SubmittedAt = DateTime.Now;
+                student.Status = "제출완료";
+            }
+        }
+
+        // 정리 실패 처리: 답안은 받았으나 학생 PC에 시험 파일이 남은 상태
+        // 답안 자체는 안전하므로 IsAnswerSubmitted는 그대로 둔다.
+        public void MarkCleanupFailed(string studentId)
+        {
+            var student = Students.FirstOrDefault(s => s.StudentId == studentId);
+            if (student != null)
+            {
+                student.IsCleanupFailed = true;
+                student.Status = "정리실패";
+            }
+        }
+
+        // 학생 PC 가 보고한 감시 상태를 그 학생 줄에 적는다.
+        public void MarkMonitorStatus(string studentId, bool processOn, bool networkOn, string detail)
+        {
+            foreach (var student in Students)
+                if (student.StudentId == studentId)
+                {
+                    student.SetMonitorStatus(processOn, networkOn, detail);
+                    return;
+                }
+        }
+
+        // 학생 PC 가 시험 파일을 지웠다고 알려 왔을 때.
+        public void MarkCleanupSucceeded(string studentId)
+        {
+            var student = Students.FirstOrDefault(s => s.StudentId == studentId);
+            if (student != null)
+            {
+                student.IsCleanupFailed = false;
+                student.IsCleanupDone = true;
+            }
+        }
+
+        // 부정행위 알림 처리: 해당 학번 학생을 '부정행위 감지'로 표시
+        // (어떤 프로그램이었는지는 부정행위 알림 목록에서 본다)
+        public void MarkCheatingDetected(string studentId)
+        {
+            var student = Students.FirstOrDefault(s => s.StudentId == studentId);
+            if (student != null)
+                student.Status = "부정행위 감지";
+        }
+    }
+}

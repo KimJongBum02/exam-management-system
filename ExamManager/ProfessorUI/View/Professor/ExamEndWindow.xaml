@@ -1,0 +1,258 @@
+<UserControl x:Class="ProfessorUI.View.Professor.ExamEndWindow"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/ProfessorUI;component/View/Professor/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- 부정행위 내역은 건수만큼 줄이 늘어난다. 다른 표와 달리 행 높이를 고정하지 않는다 -->
+            <Style x:Key="LogRow" TargetType="ListViewItem" BasedOn="{StaticResource TableRow}">
+                <Setter Property="Height" Value="Auto"/>
+                <Setter Property="MinHeight" Value="42"/>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 제목 (마지막 갱신·서버 상태는 상단바에 있다).
+             [종료 완료 현황 보기]로 따로 넘어가던 화면은 없앴다 — 거기서만 보이던 '흔적 삭제'는
+             아래 표의 칸으로 옮겼다. 한 화면에서 끝낸다. -->
+        <Grid Grid.Row="0" Margin="0,0,0,18">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="시험 종료 및 답안 수집" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- KPI 5종 -->
+        <UniformGrid Grid.Row="1" Columns="5" Margin="0,0,0,22">
+            <Border Style="{StaticResource KpiCard}" Margin="0,0,12,0">
+                <StackPanel>
+                    <TextBlock Text="전체 학생" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="{Binding Overview.TotalCount}" Style="{StaticResource KpiValue}"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource KpiCard}" Margin="0,0,12,0">
+                <StackPanel>
+                    <TextBlock Text="수집 완료" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="{Binding Overview.CollectedCount}" Style="{StaticResource KpiValue}"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource KpiCard}" Margin="0,0,12,0">
+                <StackPanel>
+                    <TextBlock Text="미수집" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="{Binding Overview.NotCollectedCount}" Style="{StaticResource KpiValue}"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource KpiCard}" Margin="0,0,12,0">
+                <StackPanel>
+                    <TextBlock Text="정리 실패" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="{Binding Overview.CleanupFailedCount}" Style="{StaticResource KpiValue}"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource KpiCard}">
+                <StackPanel>
+                    <TextBlock Text="완료율" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="{Binding Overview.CompletionRate}" Style="{StaticResource KpiValue}"/>
+                </StackPanel>
+            </Border>
+        </UniformGrid>
+
+        <!-- 표 머리 -->
+        <Grid Grid.Row="3" Margin="0,0,0,12">
+            <TextBlock Text="학생별 답안 수집 현황" Style="{StaticResource SectionTitle}" VerticalAlignment="Bottom" Margin="0"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                <!-- 답안을 끝까지 내지 않은 학생만 남겨 본다. 접속해 있는지, 응시 후 나갔는지는 '접속 상태' 칸이 구분한다 -->
+                <CheckBox x:Name="OnlyMissing" Content="미수집만 보기"
+                          Style="{StaticResource AppCheckBox}"
+                          Checked="OnlyMissing_Changed" Unchecked="OnlyMissing_Changed"
+                          VerticalAlignment="Center" Margin="0,0,16,0"/>
+                <Button Content="전체 선택" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0"
+                        Click="SelectAll_Click"/>
+                <Button Content="전체 해제" Style="{StaticResource SecondaryButton}" Click="DeselectAll_Click"/>
+            </StackPanel>
+        </Grid>
+
+        <ListView Grid.Row="4" x:Name="CollectTable" Style="{StaticResource FlatTable}" Height="360" Margin="0,0,0,12">
+            <ListView.View>
+                <GridView ColumnHeaderContainerStyle="{StaticResource TableHeader}">
+                    <GridViewColumn Header="확인 대상" Width="90">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <!-- 미수집·이미 처리한 학생은 고를 수 없게 막는다. 줄은 남겨 수집 현황은 계속 보이게 한다 -->
+                                <CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding CanApprove}"
+                                          Style="{StaticResource CellCheck}"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="학번" Width="140">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate><TextBlock Text="{Binding StudentId}" Style="{StaticResource Cell}"/></DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="이름" Width="130">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate><TextBlock Text="{Binding Name}" Style="{StaticResource Cell}"/></DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <!-- '응시 후 종료'가 … 으로 잘리지 않을 만큼 넓게 잡는다 (폭은 칸끼리의 비율로만 쓰인다) -->
+                    <GridViewColumn Header="접속 상태" Width="170">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate><TextBlock Text="{Binding ConnectionText}" Style="{StaticResource Cell}"/></DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="수집 상태" Width="130">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate><TextBlock Text="{Binding CollectText}" Style="{StaticResource CellStatus}"/></DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <!-- 흔적 삭제. 답안을 걷은 뒤 학생 PC 에 시험 파일이 남았는지다 — '오류'면 그 자리에 가 봐야 한다.
+                         수집 바로 옆에 둔다(수집 → 흔적 삭제 순서로 읽힌다) -->
+                    <GridViewColumn Header="흔적 삭제" Width="130">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate><TextBlock Text="{Binding CleanupText}" Style="{StaticResource CellStatus}"/></DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="제출 시각" Width="190">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate><TextBlock Text="{Binding SubmitTimeText}" Style="{StaticResource Cell}"/></DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="마지막 갱신" Width="130">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate><TextBlock Text="{Binding LastUpdate}" Style="{StaticResource Cell}"/></DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="비고" Width="170">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate><TextBlock Text="{Binding Status}" Style="{StaticResource CellStatus}"/></DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                </GridView>
+            </ListView.View>
+        </ListView>
+
+        <!-- 표에서 학생을 고른 뒤 바로 누르도록 표 아래에 둔다 -->
+        <Grid Grid.Row="5" Margin="0,0,0,24">
+            <Button Content="미수집 학생 다시 수집" Style="{StaticResource SecondaryButton}"
+                    HorizontalAlignment="Left" Command="{Binding ExamEnd.RecollectCommand}"/>
+            <Button Content="{Binding Overview.ApproveTargetText}" Style="{StaticResource PrimaryButton}"
+                    HorizontalAlignment="Right" Command="{Binding ExamEnd.ApproveSelectedCommand}"/>
+        </Grid>
+
+        <!-- ═══ 시험 로그 ═══
+             따로 있던 [시험 로그] 메뉴를 여기로 옮겼다. 시험을 정리하면 이 기록이 사라지므로
+             정리하는 자리와 같은 화면에 둔다. [엑셀로 저장]을 눌러야 맨 아래 [처음 화면으로]가 열린다.
+             '전체 학생' 수는 맨 위 KPI 에 이미 있어 여기서는 빼고 출석·부정행위만 둔다 -->
+        <Grid Grid.Row="6" Margin="0,0,0,12">
+            <TextBlock Text="시험 로그 (출석 · 부정행위)" Style="{StaticResource SectionTitle}" VerticalAlignment="Bottom" Margin="0"/>
+            <Button Content="엑셀로 저장" Style="{StaticResource PrimaryButton}"
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Click="SaveExcel_Click"/>
+        </Grid>
+
+        <UniformGrid Grid.Row="7" Columns="2" Margin="0,0,0,12">
+            <Border Style="{StaticResource KpiCard}" Margin="0,0,12,0">
+                <StackPanel>
+                    <TextBlock Text="출석" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="{Binding ExamLog.AttendedCount}" Style="{StaticResource KpiValue}"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource KpiCard}">
+                <StackPanel>
+                    <TextBlock Text="부정행위 적발" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="{Binding ExamLog.CheatedCount}" Style="{StaticResource KpiValue}"/>
+                </StackPanel>
+            </Border>
+        </UniformGrid>
+
+        <TextBlock Grid.Row="8" Style="{StaticResource Caption}" Margin="0,0,0,12" TextWrapping="Wrap"
+                   Text="출석은 시험에 접속해 시험을 시작한 기록으로 판단합니다. 이 기록은 프로그램을 끄거나 아래 [처음 화면으로]를 누르면 사라지므로, 남겨 두려면 [엑셀로 저장]을 눌러 주세요. 부정행위 횟수는 금지 프로그램 실행처럼 학생 PC 가 실제로 막은 건만 셉니다 — 허용 프로그램을 닫은 기록이나 감시 확인 경고는 세지 않습니다."/>
+
+        <ListView Grid.Row="9" x:Name="LogTable" Style="{StaticResource FlatTable}" Height="320" Margin="0,0,0,24"
+                  ItemContainerStyle="{StaticResource LogRow}"
+                  ItemsSource="{Binding ExamLog.Rows}">
+            <ListView.View>
+                <GridView ColumnHeaderContainerStyle="{StaticResource TableHeader}">
+                    <GridViewColumn Header="학번" Width="150">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate><TextBlock Text="{Binding StudentId}" Style="{StaticResource Cell}"/></DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="이름" Width="130">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate><TextBlock Text="{Binding Name}" Style="{StaticResource Cell}"/></DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="출석 여부" Width="120">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate><TextBlock Text="{Binding AttendanceText}" Style="{StaticResource Cell}"/></DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="부정행위 횟수" Width="130">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding CheatCount}" Style="{StaticResource Cell}"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <!-- 부정행위를 한 학생만 무엇을 했는지 옆에 적힌다.
+                         한 건이 아닐 수 있어 줄을 나눠 모두 보여 준다 -->
+                    <GridViewColumn Header="부정행위 내용" Width="620">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource AlertSoft}" CornerRadius="4"
+                                        Padding="10,6" Margin="6,4" HorizontalAlignment="Stretch"
+                                        Visibility="{Binding HasCheated, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="{Binding CheatDetail}" FontSize="{StaticResource FontSmall}"
+                                               Foreground="{StaticResource TextPrimary}" TextWrapping="Wrap"/>
+                                </Border>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                </GridView>
+            </ListView.View>
+        </ListView>
+
+        <!-- 이번 시험을 정리하고 다음 시험을 준비하는 마무리 버튼. 오른쪽 아래에 둔다.
+             잠긴 이유(🔒 줄)를 버튼 바로 왼쪽에 두어 왜 못 누르는지 바로 보이게 한다
+             (시험 준비 마법사 3단계와 같은 모양이다) -->
+        <Grid Grid.Row="11" Margin="0,0,0,24">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Setter Property="Visibility" Value="Visible"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Overview.CanReset}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+                <TextBlock Text="&#x1F512;" Style="{StaticResource LockNote}" Margin="0,0,6,0"/>
+                <TextBlock Text="{Binding Overview.ResetLockReason}" Style="{StaticResource LockNote}"/>
+            </StackPanel>
+            <Button Grid.Column="1" Content="처음 화면으로" Style="{StaticResource PrimaryButton}"
+                    IsEnabled="{Binding Overview.CanReset}" Click="Reset_Click"/>
+        </Grid>
+    </Grid>
+</UserControl>

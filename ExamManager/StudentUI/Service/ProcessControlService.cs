@@ -1,0 +1,80 @@
+using System.Runtime.InteropServices;
+
+namespace StudentUI.Service
+{
+    public class ProcessControlService : IDisposable
+    {
+        private const string DllName = "ProcessControl.dll";
+
+        [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode)]
+        public delegate void CheatCallbackDelegate(int type, string processName);
+
+        // Native Methods
+        [DllImport(DllName, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode)]
+        private static extern bool PM_SetBlacklist(string blacklist);
+
+        [DllImport(DllName, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode)]
+        private static extern bool PM_SetWhitelist(string whitelist);
+
+        [DllImport(DllName, CallingConvention = CallingConvention.StdCall)]
+        private static extern void PM_RegisterCallback(CheatCallbackDelegate callback);
+
+        [DllImport(DllName, CallingConvention = CallingConvention.StdCall)]
+        private static extern bool PM_Start();
+
+        [DllImport(DllName, CallingConvention = CallingConvention.StdCall)]
+        private static extern void PM_Stop();
+
+        // 델리게이트 참조를 유지하여 GC(가비지 컬렉터)에 의해 회수되지 않도록 방지
+        private CheatCallbackDelegate? _cheatCallback;
+
+        // C# 이벤트로 노출
+        // type: 0 = 블랙리스트 프로세스 실행 시도, 1 = 필수 화이트리스트 프로세스 강제 종료됨,
+        //       2 = 목록에 없는 프로세스가 시험 시작 이후 실행됨 (종료되지 않음, 교수 확인 필요)
+        // processName: 알림에 보일 이름 (예: "Visual Studio Code (Code.exe)", ProcessControl.h 참고)
+        public event Action<int, string>? CheatDetected;
+
+        public ProcessControlService()
+        {
+            _cheatCallback = new CheatCallbackDelegate(OnCheatDetected);
+            PM_RegisterCallback(_cheatCallback);
+        }
+
+        private void OnCheatDetected(int type, string processName)
+        {
+            CheatDetected?.Invoke(type, processName);
+        }
+
+        public bool SetBlacklist(string blacklist)
+        {
+            // 예: "notepad.exe|chrome.exe"
+            return PM_SetBlacklist(blacklist);
+        }
+
+        public bool SetWhitelist(string whitelist)
+        {
+            return PM_SetWhitelist(whitelist);
+        }
+
+        public bool StartMonitoring()
+        {
+            // PM_Stop이 네이티브 쪽 콜백을 끊으므로, 시작할 때마다 다시 등록한다.
+            // (등록 안 하면 감시는 돌지만 알림이 하나도 안 온다)
+            if (_cheatCallback != null) PM_RegisterCallback(_cheatCallback);
+
+            return PM_Start();
+        }
+
+        public void StopMonitoring()
+        {
+            PM_Stop();
+        }
+
+        public void Dispose()
+        {
+            StopMonitoring();
+            // GC가 회수할 수 있도록 참조 제거
+            _cheatCallback = null;
+        }
+    }
+}

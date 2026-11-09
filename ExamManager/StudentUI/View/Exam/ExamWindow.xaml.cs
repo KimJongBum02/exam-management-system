@@ -1,0 +1,371 @@
+using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Interop;
+using ExamManager.Shared;
+using NetworkLib;
+using StudentUI.ViewModel;
+
+namespace StudentUI.View.Exam
+{
+    public partial class ExamWindow : Window
+    {
+        public ExamWindow()
+        {
+            InitializeComponent();
+
+            // 이 큰 창은 '시험' 상태의 앞뒤에만 덮개로 뜬다(시작 전=대기, 끝난 뒤=종료 잠금).
+            // 시험이 도는 동안과 자유·통제에서는 숨어 있고, 자유에서는 작은 PIP 창(FreePipWindow)이 대신 떠 있다.
+            // 숨어 있어야 할 때는 이 창을 아예 띄우지 않는다 — App 이 Show() 대신 Present() 를 부른다.
+            //
+            // ShowActivated 를 false 로 둔 채 이 창을 **최대화 상태로 보이게 하면 안 된다** —
+            // WPF 가 "ShowActivated가 false이고 WindowState가 Maximized로 설정되어 있으면 창을 표시할 수
+            // 없습니다"로 막고, 화면 스레드 예외라 학생 앱이 그대로 죽는다(2026-10-28 에 겪었다).
+            // 지금은 보이는 모습이 전부 덮개(WindowState.Normal + 직접 크기 지정)라 걸릴 일이 없다.
+            ShowActivated = false;
+            Width = 1180; Height = 720;
+
+            // 상태 전환(자유·통제·시험) + 시험 시작/종료에 따라 덮개·작업창·숨김·PIP 을 전환한다.
+            Service.ClassControlService.Instance.ModeChanged += OnClassModeChanged;
+            Closed += (_, _) => Service.ClassControlService.Instance.ModeChanged -= OnClassModeChanged;
+            Service.ExamTimeStore.Instance.PropertyChanged += OnExamTimeChanged;
+            Closed += (_, _) => Service.ExamTimeStore.Instance.PropertyChanged -= OnExamTimeChanged;
+            // 자유 PIP 창도 큰 창이 닫힐 때 함께 정리한다.
+            Closed += (_, _) => { _freePip?.Close(); _freePip = null; };
+
+            // 답안을 내고 시험 파일 정리까지 끝나면 이 학생의 시험은 완전히 끝이다. 덮개를 걷고 앱을 닫는다.
+            Service.AnswerSubmitService.Instance.CleanupFinished += OnCleanupFinished;
+            Closed += (_, _) => Service.AnswerSubmitService.Instance.CleanupFinished -= OnCleanupFinished;
+
+            // 교수의 채팅·공지가 오면 채팅 버튼을 깜빡인다.
+            SharedChatViewModel.Instance.MessageArrived += OnMessageArrived;
+            Closed += (_, _) => SharedChatViewModel.Instance.MessageArrived -= OnMessageArrived;
+
+            // 채팅창처럼 새 말이 오면 맨 아래로 따라 내려간다.
+            SharedChatViewModel.Instance.Messages.CollectionChanged += OnChatMessagesChanged;
+            Closed += (_, _) => SharedChatViewModel.Instance.Messages.CollectionChanged -= OnChatMessagesChanged;
+
+            // 떠 있는 시간 창은 시험 화면에 딸린 것이라 같이 닫는다.
+            Closed += (_, _) => { _pip?.Close(); _pip = null; };
+
+            // 창 크기가 바뀔 때(최대화·복원·끌어서 줄이기) 알림·채팅 패널을 놓는 방식을 다시 정한다.
+            SizeChanged += (_, _) => PlaceSideDrawer();
+
+            // 채팅 패널을 열면 바로 칠 수 있게 입력칸에 커서를 둔다.
+            DataContextChanged += (_, e) =>
+            {
+                if (e.OldValue is INotifyPropertyChanged oldVm) oldVm.PropertyChanged -= OnViewModelChanged;
+                if (e.NewValue is INotifyPropertyChanged newVm) newVm.PropertyChanged += OnViewModelChanged;
+            };
+            Closed += (_, _) =>
+            {
+                if (DataContext is INotifyPropertyChanged vm) vm.PropertyChanged -= OnViewModelChanged;
+            };
+        }
+
+        // 새 말풍선이 쌓이면 맨 아래를 보여 준다. 줄이 그려진 뒤라야 끝까지 내려간다.
+        // (Loaded 우선순위라 UiThread.Post 로 바꾸면 안 된다 — 그리기 전에 실행돼 엉뚱한 위치에 멈춘다)
+        private void OnChatMessagesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.Action != NotifyCollectionChangedAction.Add) return;
+            Dispatcher.BeginInvoke(new Action(() => ChatScroll.ScrollToEnd()),
+                System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        // 남은 시간을 항상 위에 뜨는 작은 창으로 띄운다. 이미 떠 있으면 닫는다.
+        private ExamTimerPipWindow? _pip;
+
+        private void OnTogglePip(object sender, RoutedEventArgs e)
+        {
+            if (_pip is { Visibility: Visibility.Visible }) { _pip.Visibility = Visibility.Hidden; return; }
+            ShowExamPip();
+        }
+
+        // 타이머 + '답안 제출 · 시험 종료' 플로팅 위젯. 만들었다 닫기를 반복하면(투명 창)
+        // 간헐적으로 렌더링 크래시가 날 수 있어, 한 번만 만들고 보이기/숨기기만 한다.
+        // 주인 창을 두지 않는다 — 주인을 두면 시험 창을 내렸을 때 이 창도 같이 사라져 뜻이 없다.
+        private void ShowExamPip()
+        {
+            if (_pip == null)
+            {
+                var submit = (DataContext as ExamViewModel)?.SubmitAnswerCommand;
+                _pip = new ExamTimerPipWindow(submit);
+                _pip.Closed += (_, _) => _pip = null;
+                _pip.Show();
+            }
+            else
+            {
+                _pip.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void HideExamPip()
+        {
+            if (_pip != null) _pip.Visibility = Visibility.Hidden;
+        }
+
+        // 패널이 보이게 된 뒤라야 입력칸이 포커스를 받는다. (Loaded 우선순위 — UiThread.Post 로 바꾸면 안 된다)
+        private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ExamViewModel.IsChatOpen) && sender is ExamViewModel { IsChatOpen: true })
+                Dispatcher.BeginInvoke(new Action(() => ChatInput.Focus()), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        // 알림·채팅 패널이 본문을 밀어도 본문이 이 폭은 남아야 표가 제 모양을 유지하고 세로 스크롤도 생기지 않는다.
+        // 이보다 좁으면 표의 설명 칸이 눌려 줄이 늘어나고, 1440 화면에서는 그만큼 본문이 길어져 스크롤이 생긴다.
+        // 본문을 가운데 한 줄(MaxWidth 1180)로 모은 뒤의 값 — 1180 + 좌우 여백 32×2.
+        private const double MinMainWidthWithDrawer = 1244;
+
+        private static readonly System.Windows.Media.Effects.DropShadowEffect DrawerShadow = new()
+        {
+            BlurRadius = 24, ShadowDepth = 0, Opacity = 0.18, Color = System.Windows.Media.Colors.Black,
+        };
+
+        // 창이 넓으면 패널을 본문 옆에 둔다(본문과 함께 보인다).
+        // 좁으면 본문 위에 겹쳐 띄운다. 본문 폭이 그대로라 표 모양이 흐트러지지 않고, 닫으면 가린 부분이 다시 보인다.
+        private void PlaceSideDrawer()
+        {
+            // 창 테두리를 뺀 안쪽 폭으로 따진다
+            double inner = (Content as FrameworkElement)?.ActualWidth ?? ActualWidth;
+            bool overlay = inner - SideDrawer.Width < MinMainWidthWithDrawer;
+
+            System.Windows.Controls.Grid.SetColumn(SideDrawer, overlay ? 0 : 1);
+            SideDrawer.HorizontalAlignment = overlay ? HorizontalAlignment.Right : HorizontalAlignment.Stretch;
+            System.Windows.Controls.Panel.SetZIndex(SideDrawer, overlay ? 1 : 0);
+            SideDrawer.Effect = overlay ? DrawerShadow : null;
+        }
+
+        // 채팅 창을 열어 두고 있으면 이미 보이므로 깜빡이지 않는다.
+        private void OnMessageArrived()
+        {
+            if (DataContext is ExamViewModel { IsChatOpen: true }) return;
+            UiSignal.Blink(ChatButton, BackgroundProperty, UiSignal.MessageSoftColor, times: 4);
+        }
+
+        // 화면 전환에 의한 닫힘이면 true — 이때는 종료 확인창을 띄우지 않는다.
+        public bool IsNavigating { get; set; }
+
+        // 제출·정리를 마치고 스스로 닫는 중. 이때도 종료 확인창을 묻지 않는다.
+        private bool _finishing;
+
+        // Close() 가 시작된 뒤 — 이 시점부터 WPF 도 Visibility=Visible 을 예외로 막는다.
+        // 아래 종료 확인창이 떠 있는 동안에도 시험 시작·종료 알림은 계속 들어오므로,
+        // 그 사이에 덮개를 띄우려 하면 학생 앱이 통째로 죽는다(2026-11-06 crash.log).
+        private bool _closing;
+
+        // 창을 닫으면 앱이 그대로 종료되고 수신한 시험 파일 상태도 사라지므로,
+        // 사용자가 직접 닫을 때만(전환도 아니고 마무리도 아닐 때) 실수 방지 확인을 한 번 한다.
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            _closing = true;
+
+            if (IsNavigating || _finishing)
+            {
+                base.OnClosing(e);
+                return;
+            }
+
+            // 소유자를 넘긴다 — 주지 않으면 이 확인창이 덮개(Topmost) 뒤로 숨고,
+            // 덮개의 버튼이 그대로 눌려 닫는 도중에 로그아웃·제출이 돌아간다.
+            var answer = MessageBox.Show(this,
+                "시험 화면을 닫으면 프로그램이 종료됩니다.\n정말 종료하시겠습니까?",
+                "종료 확인", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+            if (answer != MessageBoxResult.Yes)
+            {
+                e.Cancel = true;
+                _closing = false;
+                // 확인창이 떠 있는 동안 건너뛴 상태 변화를 따라잡는다.
+                // 여기서 바로 부르면 WPF 가 아직 '닫는 중'이라 덮개를 띄우지 못한다 — 취소가 끝난 뒤로 넘긴다.
+                UiThread.Post(UpdatePresentation);
+            }
+
+            base.OnClosing(e);
+        }
+
+        // ── 제출·정리를 마친 뒤의 마무리 ──
+        // 몇 초 세고 덮개를 걷은 뒤 앱을 닫는다. 앱이 닫히면 키보드 잠금과 인터넷 차단도 함께 풀려
+        // (App.OnExit) 그 PC 가 자유로워진다.
+        private const int FarewellSeconds = 5;
+        private System.Windows.Threading.DispatcherTimer? _farewellTimer;
+        private int _farewellLeft;
+
+        // 제출을 끝낸 배경 작업에서 올라오므로 화면 스레드로 넘긴다.
+        private void OnCleanupFinished(bool cleaned) => UiThread.Post(() =>
+        {
+            // 파일을 지우지 못했으면 덮개를 걷지 않는다. 시험 파일이 남아 있어 교수가 그 자리를
+            // 확인해야 하는데, 앱을 닫아 버리면 다음 학생이 앞사람 답안을 그대로 보게 된다.
+            // 종료 화면의 상태 줄이 "교수님께 알려 주세요"로 남는다(AnswerSubmitService).
+            if (!cleaned || _farewellTimer != null) return;
+
+            FarewellBox.Visibility = Visibility.Visible;
+            _farewellLeft = FarewellSeconds;
+            ShowFarewellCount();
+
+            _farewellTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            _farewellTimer.Tick += OnFarewellTick;
+            _farewellTimer.Start();
+        });
+
+        private void OnFarewellTick(object? sender, EventArgs e)
+        {
+            _farewellLeft--;
+            if (_farewellLeft > 0) { ShowFarewellCount(); return; }
+
+            _farewellTimer!.Stop();
+            _farewellTimer.Tick -= OnFarewellTick;
+            _farewellTimer = null;
+
+            // 덮개부터 걷는다. 맨 위에 뜬 창을 띄워 둔 채로 끝내면 닫히는 동안 화면을 가린다.
+            _finishing = true;
+            Topmost = false;
+            Visibility = Visibility.Hidden;
+
+            Application.Current.Shutdown();
+        }
+
+        private void ShowFarewellCount()
+            => FarewellCount.Text = $"{_farewellLeft}초 뒤 프로그램이 닫힙니다. 수고하셨습니다.";
+
+        private FreePipWindow? _freePip;
+
+        private void OnClassModeChanged(ClassMode mode) => UpdatePresentation();
+
+        private void OnExamTimeChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            // 교수가 '시험 시작'을 누르면(IsRunning) 덮개를 걷어 작업 창으로, 종료(IsFinished)돼도 작업 창을 유지한다.
+            if (e.PropertyName is nameof(Service.ExamTimeStore.IsRunning) or nameof(Service.ExamTimeStore.IsFinished))
+                UpdatePresentation();
+        }
+
+        // 로그인 직후 App 이 Show() 대신 이것을 부른다. 지금 상태에 맞는 모습만 띄운다.
+        //
+        // Show() 를 부르면 WPF 가 실제 창을 만들어 화면에 올린다. 그 뒤에 숨겨도 이미 늦어,
+        // 내용을 그리기 전의 검은 창이 0.2초쯤 떴다 사라졌다(2026-10-29 사용자가 발견).
+        // 숨길 창은 만들지 않는 것이 유일하게 확실한 방법이다. 덮개가 필요해지면 PresentCover 가
+        // 그때 띄운다 — WPF 에서 Visibility 를 Visible 로 주는 것은 Show() 를 부르는 것과 같다.
+        public void Present() => UpdatePresentation();
+
+        // 지금 상태 + 시험 진행 여부에 맞춰 큰 창의 모습을 정한다.
+        //   자유             → 숨김 + 작은 PIP 창
+        //   통제             → 숨김(서비스의 어두운 덮개가 가린다)
+        //   시험, 시작 전     → 전체화면 덮개(대기 화면, 파일은 받는다)
+        //   시험, 진행 중     → 숨김 + 남은 시간·제출 PIP 만
+        //   시험, 끝난 뒤     → 전체화면 덮개(종료 잠금 화면에서 답안을 낸다)
+        private void UpdatePresentation()
+        {
+            if (_closing) return;   // 닫는 중에 덮개를 띄우면 WPF 가 예외를 던져 학생 앱이 끝난다
+            switch (Service.ClassControlService.Instance.CurrentMode)
+            {
+                case ClassMode.Exam:
+                    // 시험이 도는 동안에만 큰 창을 숨긴다. 그때 학생에게 필요한 것은 남은 시간과 제출뿐이고
+                    // 그 둘은 PIP 가 들고 있다(아래 wantPip). 큰 창까지 띄우면 시작하는 순간 덮개가
+                    // 전체 작업 창으로 바뀌어 바탕화면을 가리고, PIP 와 둘 다 떠 있게 된다.
+                    //
+                    // 앞뒤로는 덮개다 — 시작 전에는 대기 화면, 끝난 뒤에는 종료 잠금 화면(IsExamEnded)이
+                    // 덮개를 가득 채운다. 끝난 뒤를 덮개로 두어야 늦게 내는 학생이 [답안 제출]을 찾을 수 있고,
+                    // 시험이 끝난 PC 가 그대로 열린 바탕화면이 되지 않는다.
+                    if (Service.ExamTimeStore.Instance.IsRunning) PresentHidden();
+                    else PresentCover();
+                    break;
+                case ClassMode.Locked:
+                    PresentHidden();
+                    break;
+                default:
+                    PresentFree();
+                    break;
+            }
+
+            // 시험이 실제 진행 중일 때만(시작 후~종료 전) 바탕화면 위에 타이머+제출 위젯을 띄운다.
+            // 그러면 학생은 창을 내리고 바탕화면에서 응시하다가 여기서 바로 답안을 낼 수 있다.
+            bool wantPip = Service.ClassControlService.Instance.CurrentMode == ClassMode.Exam
+                           && Service.ExamTimeStore.Instance.IsRunning;
+            if (wantPip) ShowExamPip();
+            else HideExamPip();
+        }
+
+        // 자유: 큰 창을 숨기고 작은 PIP 창만 띄운다.
+        // 아직 한 번도 뜬 적이 없으면 Visibility 를 Hidden 으로 두는 것만으로 창이 만들어지지 않는다.
+        private void PresentFree()
+        {
+            Topmost = false;
+            Visibility = Visibility.Hidden;
+            ShowFreePip();
+        }
+
+        // 큰 창도 자유 PIP 도 숨긴다. 두 자리에서 쓴다 —
+        //   통제: 화면은 서비스가 띄우는 어두운 덮개가 가린다.
+        //   시험 진행 중: 남은 시간·제출 PIP 만 남기고 바탕화면을 비워 준다.
+        private void PresentHidden()
+        {
+            Topmost = false;
+            Visibility = Visibility.Hidden;
+            _freePip?.Hide();
+        }
+
+        // 시험 덮개로. 테두리를 없애고 모니터 전체 크기로 직접 맞춘 뒤 맨 위로 띄운다.
+        // WindowState(최대화·최소화)를 건드리지 않아, 시험↔자유를 여러 번 오가도 상태가 꼬이지 않는다.
+        // (예전엔 최대화 토글 + WM_GETMINMAXINFO 를 썼는데, 재진입 때 예외가 나 앱이 통째로 죽었다)
+        private void PresentCover()
+        {
+            _freePip?.Hide();
+            WindowStyle = WindowStyle.None;
+            ResizeMode = ResizeMode.NoResize;
+            WindowState = WindowState.Normal;
+            ApplyFullScreenBounds();        // 숨김 상태에서 이미 Normal 이면 깜빡임 없이 바로 전체화면
+            Topmost = true;
+            Visibility = Visibility.Visible;
+            ApplyFullScreenBounds();        // 최대화 등에서 온 경우, 보인 뒤 복원 크기를 다시 덮어쓴다
+            Activate();
+        }
+
+        // 창을 지금 모니터 전체(작업표시줄 자리 포함)에 딱 맞춘다.
+        // 물리 픽셀을 DPI 로 나눠 WPF 단위로 바꾼다(다중 모니터 대응은 테스트 범위 밖).
+        private void ApplyFullScreenBounds()
+        {
+            IntPtr hwnd = new WindowInteropHelper(this).Handle;
+            IntPtr monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+            if (monitor == IntPtr.Zero) return;
+
+            var mi = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+            if (!GetMonitorInfo(monitor, ref mi)) return;
+
+            double dpiX = 1, dpiY = 1;
+            if (PresentationSource.FromVisual(this)?.CompositionTarget is { } ct)
+            {
+                System.Windows.Media.Matrix m = ct.TransformToDevice;
+                dpiX = m.M11;
+                dpiY = m.M22;
+            }
+
+            Left = mi.rcMonitor.left / dpiX;
+            Top = mi.rcMonitor.top / dpiY;
+            Width = (mi.rcMonitor.right - mi.rcMonitor.left) / dpiX;
+            Height = (mi.rcMonitor.bottom - mi.rcMonitor.top) / dpiY;
+        }
+
+        private void ShowFreePip()
+        {
+            if (_freePip == null)
+            {
+                if (DataContext is not ExamViewModel vm) return;
+                _freePip = new FreePipWindow(vm.Student);
+                _freePip.Closed += (_, _) => _freePip = null;
+            }
+            _freePip.Show();
+            _freePip.Activate();
+        }
+
+        private const int MONITOR_DEFAULTTONEAREST = 0x2;
+
+        [DllImport("user32.dll")] private static extern IntPtr MonitorFromWindow(IntPtr hwnd, int flags);
+        [DllImport("user32.dll")] private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT { public int left, top, right, bottom; }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MONITORINFO { public int cbSize; public RECT rcMonitor; public RECT rcWork; public uint dwFlags; }
+    }
+}

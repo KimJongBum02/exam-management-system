@@ -1,0 +1,207 @@
+using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Input;
+using System.Windows.Threading;
+using ProfessorUI.ViewModel;
+using ProfessorUI.Common;
+
+namespace ProfessorUI.View.Professor
+{
+    // 채팅 화면. 학생 채팅은 학생별로 한 줄씩 묶고, 전체 공지는 누가 받았는지까지 보여 준다.
+    // 보안 경고는 여기 있다가 시험 관리 화면 한 곳으로 옮겼다(메뉴 배지가 무엇을 뜻하는지 흐려져서).
+    // 그때 이름도 AlertAndChat 에서 바꿨다. 따로 뜨는 창은 아니지만 교수 화면은 끼워 넣는 것도
+    // …Window 로 부른다(DashboardWindow · ExamEndWindow 등, 이름 규칙 문서 참고).
+    //
+    // 시간순으로 한 줄씩 쌓으면 학생 여럿이 동시에 말을 걸 때 누가 몇 번 불렀는지 알 수 없다.
+    // 그래서 들어온 학생마다 한 줄을 두고(말이 오가기 전이라도 골라서 먼저 말을 건다),
+    // 안 읽은 대화가 있는 학생 → 최근에 말이 오간 학생 → 나머지는 학번순으로 놓는다.
+    public partial class ChatWindow : UserControl
+    {
+        private readonly UiContext _ctx = UiContext.Instance;
+        private readonly ListCollectionView _conversations;
+
+        // 오른쪽에 열어 둔 대화. 새 메시지가 오면 맨 아래로 내려 주려고 들고 있는다.
+        private ChatTabViewModel? _openTab;
+
+        public ChatWindow() : this(null) { }
+
+        // 대시보드 말풍선처럼 다른 화면에서 학생을 집어 들어오면 그 대화를 열어 둔 채로 시작한다.
+        public ChatWindow(ChatTabViewModel? openTab)
+        {
+            InitializeComponent();
+            DataContext = _ctx;
+
+            // 원본 목록은 건드리지 않고 보기만 거르고 줄 세운다.
+            _conversations = (ListCollectionView)CollectionViewSource.GetDefaultView(_ctx.Chat.Tabs);
+            _conversations.Filter = MatchesFilter;
+            _conversations.SortDescriptions.Clear();
+            _conversations.SortDescriptions.Add(new SortDescription(nameof(ChatTabViewModel.HasUnread), ListSortDirection.Descending));
+            _conversations.SortDescriptions.Add(new SortDescription(nameof(ChatTabViewModel.LastTimestamp), ListSortDirection.Descending));
+            _conversations.SortDescriptions.Add(new SortDescription(nameof(ChatTabViewModel.StudentId), ListSortDirection.Ascending));
+
+            // 새 메시지가 오거나 읽음 상태가 바뀌면 줄 순서와 필터를 바로 다시 맞춘다.
+            _conversations.IsLiveSorting = true;
+            _conversations.LiveSortingProperties.Clear();
+            _conversations.LiveSortingProperties.Add(nameof(ChatTabViewModel.HasUnread));
+            _conversations.LiveSortingProperties.Add(nameof(ChatTabViewModel.LastTimestamp));
+            _conversations.IsLiveFiltering = true;
+            _conversations.LiveFilteringProperties.Clear();
+            _conversations.LiveFilteringProperties.Add(nameof(ChatTabViewModel.HasUnread));
+            _conversations.LiveFilteringProperties.Add(nameof(ChatTabViewModel.HasMessages));
+
+            ConversationList.ItemsSource = _conversations;
+            ((INotifyCollectionChanged)_conversations).CollectionChanged += OnConversationsChanged;
+            UpdateConversationEmpty();
+
+            if (openTab != null) OpenConversation(openTab);
+        }
+
+        private bool MatchesFilter(object item)
+        {
+            // 전체 공지 탭(SessionId 없음)은 학생 대화가 아니다.
+            if (item is not ChatTabViewModel tab || tab.SessionId == null) return false;
+
+
+            // '읽음'은 말이 오갔고 다 읽은 대화다. 아직 말이 오간 적 없는 학생은 '전체'에만 보인다.
+            if (FilterUnread?.IsChecked == true && !tab.HasUnread) return false;
+            if (FilterRead?.IsChecked == true && (tab.HasUnread || !tab.HasMessages)) return false;
+
+            // 이름으로 찾는다. 학번 일부로도 찾힌다.
+            string keyword = SearchBox?.Text?.Trim() ?? string.Empty;
+            if (keyword.Length > 0 &&
+                !tab.StudentName.Contains(keyword) &&
+                !tab.StudentId.Contains(keyword))
+                return false;
+
+            return true;
+        }
+
+        // 필터 버튼은 화면을 만드는 도중에도 한 번 눌린다(전체가 기본 선택). 그때는 목록이 아직 없다.
+        private void Filter_Changed(object sender, RoutedEventArgs e)
+        {
+            _conversations?.Refresh();
+            UpdateConversationEmpty();
+        }
+
+        private void OnConversationsChanged(object? sender, NotifyCollectionChangedEventArgs e) => UpdateConversationEmpty();
+
+        private void UpdateConversationEmpty()
+        {
+            if (_conversations == null || ConversationEmpty == null) return;
+            ConversationEmpty.Visibility = _conversations.IsEmpty ? Visibility.Visible : Visibility.Collapsed;
+            ConversationEmpty.Text = _ctx.Chat.Tabs.Any(t => t.SessionId != null)
+                ? "조건에 맞는 학생이 없습니다."
+                : "아직 들어온 학생이 없습니다. 학생이 접속하면 여기에 학번순으로 한 줄씩 생깁니다.";
+        }
+
+        // ── 1:1 대화 ──
+        // 목록의 [대화] 버튼과 줄 전체를 누르는 것, 둘 다 같은 대화를 연다.
+        private void OpenConversation_Click(object sender, RoutedEventArgs e)
+            => OpenTabOf(sender);
+
+        private void ConversationRow_Click(object sender, MouseButtonEventArgs e)
+            => OpenTabOf(sender);
+
+        private void OpenTabOf(object sender)
+        {
+            if ((sender as FrameworkElement)?.DataContext is ChatTabViewModel tab) OpenConversation(tab);
+        }
+
+        private void OpenConversation(ChatTabViewModel tab)
+        {
+            DetachConversation();
+            _openTab = tab;
+            _ctx.Chat.OpenConversation(tab);
+
+            ConversationTitle.Text = $"{tab.StudentName} ({tab.StudentId}) 학생과의 대화";
+            MessageList.ItemsSource = tab.Messages;
+            tab.Messages.CollectionChanged += OnOpenMessagesChanged;
+
+            ComposeCard.Visibility = Visibility.Collapsed;
+            NoticePanel.Visibility = Visibility.Collapsed;
+            ConversationPanel.Visibility = Visibility.Visible;
+            ScrollConversationToEnd();
+
+            // 대화를 열면 바로 답장을 칠 수 있게 입력칸에 커서를 둔다. 보이게 된 뒤라야 포커스를 받는다.
+            // (Loaded 우선순위라 UiThread.Post 로 바꾸면 안 된다 — 그리기 전에 실행돼 포커스가 가지 않는다)
+            Dispatcher.BeginInvoke(new Action(() => MessageBox.Focus()), DispatcherPriority.Loaded);
+        }
+
+        private void CloseConversation_Click(object sender, RoutedEventArgs e) => CloseConversation();
+
+        private void CloseConversation()
+        {
+            DetachConversation();
+            _ctx.Chat.CloseConversation();
+
+            ConversationPanel.Visibility = Visibility.Collapsed;
+            NoticePanel.Visibility = Visibility.Visible;
+        }
+
+        private void DetachConversation()
+        {
+            if (_openTab != null) _openTab.Messages.CollectionChanged -= OnOpenMessagesChanged;
+            _openTab = null;
+        }
+
+        private void OnOpenMessagesChanged(object? sender, NotifyCollectionChangedEventArgs e) => ScrollConversationToEnd();
+
+        // 새 메시지가 붙고 배치가 끝난 뒤라야 끝까지 내려갈 수 있다. (Loaded 우선순위 — UiThread.Post 로 바꾸면 안 된다)
+        private void ScrollConversationToEnd()
+            => Dispatcher.BeginInvoke(new Action(() => ConversationScroll.ScrollToEnd()), DispatcherPriority.Loaded);
+
+        // ── 전체 공지 ──
+        private void Compose_Click(object sender, RoutedEventArgs e)
+        {
+            // 공지 칸은 공지 내역 위에 열린다. 대화를 보고 있었다면 닫고 돌아온다.
+            if (ConversationPanel.Visibility == Visibility.Visible) CloseConversation();
+
+            ComposeCard.Visibility = Visibility.Visible;
+            NoticeBox.Focus();
+        }
+
+        private void CancelCompose_Click(object sender, RoutedEventArgs e)
+            => ComposeCard.Visibility = Visibility.Collapsed;
+
+        private void SendNotice_Click(object sender, RoutedEventArgs e) => SendNotice();
+
+        private void SendNotice()
+        {
+            if (_ctx.Chat.SendNotice()) ComposeCard.Visibility = Visibility.Collapsed;
+        }
+
+        // 엔터를 치면 바로 보낸다. 줄을 바꾸려면 Shift 를 함께 누른다.
+        // 한글을 조합하는 중의 엔터는 Key.ImeProcessed 로 와서 여기에 걸리지 않는다 —
+        // 첫 엔터로 글자를 확정하고, 다음 엔터에 보내진다.
+        private static bool IsSendKey(KeyEventArgs e)
+            => e.Key == Key.Enter && (Keyboard.Modifiers & ModifierKeys.Shift) == 0;
+
+        private void MessageBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (!IsSendKey(e)) return;
+
+            e.Handled = true;
+            var send = _ctx.Chat.SendMessageCommand;
+            if (send.CanExecute(null)) send.Execute(null);
+        }
+
+        // 전체 공지도 같은 규칙으로 보낸다.
+        private void NoticeBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (!IsSendKey(e)) return;
+
+            e.Handled = true;
+            SendNotice();
+        }
+
+        // 화면을 떠나면 대화도 닫는다. 열린 채로 두면 그 학생의 새 메시지가 안 읽음으로 잡히지 않는다.
+        private void Page_Unloaded(object sender, RoutedEventArgs e)
+        {
+            CloseConversation();
+            ((INotifyCollectionChanged)_conversations).CollectionChanged -= OnConversationsChanged;
+        }
+    }
+}

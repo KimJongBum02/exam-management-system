@@ -1,0 +1,129 @@
+<UserControl x:Class="ProfessorUI.View.Professor.DashboardWindow"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/ProfessorUI;component/View/Professor/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- 학생 칸의 말풍선. 누르면 그 학생과의 1:1 대화가 바로 열린다 -->
+            <Style x:Key="ChatBubble" TargetType="Button">
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="ToolTip" Value="이 학생과 1:1 채팅"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="4,1">
+                                <TextBlock Text="&#x1F4AC;" FontSize="16" FontFamily="Segoe UI Emoji"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgSubtle}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 제목과 이동 버튼을 한 줄에 둔다. 버튼을 찾으려고 화면 끝까지 내려가지 않아도 된다 -->
+        <Grid Grid.Row="0" Margin="0,0,0,18">
+            <TextBlock Text="실시간 학생 현황" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Button Content="접속 기록" Style="{StaticResource SecondaryButton}"
+                        Margin="0,0,10,0" Click="OpenConnectionLog_Click"/>
+                <!-- 학교 포털에서 받은 수강생 명단(엑셀). 불러오면 명단 순서대로 칸이 미리 깔린다 -->
+                <Button Content="명단 불러오기" Style="{StaticResource SecondaryButton}"
+                        Margin="0,0,10,0" Click="LoadRoster_Click"/>
+                <Button Content="강의실 현황판 열기" Style="{StaticResource SecondaryButton}"
+                        Margin="0,0,10,0" Click="OpenMonitorBoard_Click"/>
+                <Button Content="시험 준비 화면으로 이동" Style="{StaticResource PrimaryButton}"
+                        Click="StartWizard_Click"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- 명단을 불러왔을 때만 보인다. 몇 명이 빠졌고 잘못 들어온 학생이 있는지 칸을 세지 않고 본다 -->
+        <TextBlock Grid.Row="1" Text="{Binding Board.RosterSummaryText}" Style="{StaticResource Caption}"
+                   Margin="0,-6,0,16" TextWrapping="Wrap"
+                   Visibility="{Binding Board.HasRoster, Converter={StaticResource BoolToVis}}"/>
+
+        <!-- 한 명이 한 칸. 강의실을 훑듯이 훑어 누가 빠졌는지 바로 찾는다.
+             Top 으로 붙이지 않으면 UniformGrid 가 남는 세로 공간을 행마다 나눠 가져
+             학생이 적을 때 칸이 우스꽝스럽게 길어진다. -->
+        <ItemsControl Grid.Row="2" x:Name="StudentCards" VerticalAlignment="Top">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Columns="5"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <!-- 기본은 접속한 학생의 초록 칸이다. 아래 트리거가 미접속(빨강)·명단과 다름(주황 테두리)으로 바꾼다 -->
+                    <Border x:Name="CardBox" Style="{StaticResource StudentCard}"
+                            Background="{StaticResource GoodSoft}" BorderBrush="{StaticResource GoodBorder}">
+                        <Grid>
+                            <StackPanel Margin="0,0,26,0">
+                                <TextBlock x:Name="IdText" Text="{Binding StudentId}" Style="{StaticResource StudentCardId}"/>
+                                <!-- 마지막으로 접속한 시각. 재접속하면 그때로 바뀐다 -->
+                                <TextBlock x:Name="ConnectedText" Text="{Binding LastConnectedText}"
+                                           Style="{StaticResource Caption}" Margin="0,0,0,6"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock x:Name="NameText" Text="{Binding Name}" Style="{StaticResource StudentCardName}"
+                                           Margin="0,0,0,10"/>
+                                <Border x:Name="Badge" Style="{StaticResource StudentCardBadge}" Margin="0,0,0,7">
+                                    <TextBlock x:Name="BadgeText" Text="{Binding ConnectionText}" FontSize="{StaticResource FontMini}"
+                                               FontWeight="Bold" Foreground="White"/>
+                                </Border>
+                                <!-- 명단과 다르게 들어왔으면 상태 대신 그 이유를 적는다. 줄을 늘리면 모든 칸이 같이 길어진다 -->
+                                <TextBlock x:Name="StatusText" Text="{Binding Status}" Style="{StaticResource CaptionStatus}"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                            <!-- 접속한 적이 없는 명단 학생에게는 보낼 곳이 없어 숨긴다 -->
+                            <Button Style="{StaticResource ChatBubble}" Click="Chat_Click"
+                                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                                    Visibility="{Binding HasStudent, Converter={StaticResource BoolToVis}}"/>
+                        </Grid>
+                    </Border>
+
+                    <DataTemplate.Triggers>
+                        <!-- 미접속(명단에만 있거나 연결이 끊김)이면 빨강. 접속한 학생 사이에서 빠진 자리가 바로 보인다 -->
+                        <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                            <Setter TargetName="CardBox" Property="Background" Value="{StaticResource AlertSoft}"/>
+                            <Setter TargetName="CardBox" Property="BorderBrush" Value="{StaticResource AlertBorder}"/>
+                            <Setter TargetName="Badge" Property="Background" Value="{StaticResource AlertRed}"/>
+                        </DataTrigger>
+                        <!-- 명단에 없는 학번이거나 이름이 명단과 다르면 주황 테두리와 경고 줄. 다시 로그인하게 한다.
+                             경고는 … 으로 잘리면 뜻을 잃어 좁은 창(1180)에서는 두 줄로 넘긴다 -->
+                        <DataTrigger Binding="{Binding HasWarning}" Value="True">
+                            <Setter TargetName="CardBox" Property="BorderBrush" Value="{StaticResource WarnBorder}"/>
+                            <Setter TargetName="CardBox" Property="BorderThickness" Value="2"/>
+                            <Setter TargetName="StatusText" Property="Text" Value="{Binding WarningText}"/>
+                            <Setter TargetName="StatusText" Property="Foreground" Value="{StaticResource WarnText}"/>
+                            <Setter TargetName="StatusText" Property="FontWeight" Value="Bold"/>
+                            <Setter TargetName="StatusText" Property="TextWrapping" Value="Wrap"/>
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- 학생이 한 명도 붙지 않았을 때. 빈 화면만 두면 고장인지 대기인지 알 수 없다.
+             첫 줄은 지금 상태, 둘째 줄은 미리 깔아 두는 방법 — &#38;#10; 으로 끊는다.
+             둘째 줄은 Pretendard 15 로 743 DIP 라 가장 작은 창(1180, 페이지 폭 847)에서도 한 줄에 들어간다.
+             그보다 좁아지면 TextWrapping 이 받아 준다 -->
+        <TextBlock Grid.Row="2" x:Name="EmptyNote" Style="{StaticResource Caption}"
+                   HorizontalAlignment="Center" Margin="0,60,0,0" Visibility="Collapsed"
+                   TextWrapping="Wrap" TextAlignment="Center"
+                   Text="수강생 명단을 먼저 불러와 주세요. 명단에 있는 학번만 접속할 수 있습니다.&#10;학교 포털에서 받은 엑셀을 [명단 불러오기]로 읽으면 명단 순서대로 칸이 미리 깔리고, 학생이 접속하면 그 칸이 채워집니다."/>
+    </Grid>
+</UserControl>

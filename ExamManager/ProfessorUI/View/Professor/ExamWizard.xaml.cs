@@ -1,0 +1,152 @@
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using ProfessorUI.Service;
+using ProfessorUI.Common;
+
+namespace ProfessorUI.View.Professor
+{
+    // 시험 준비 → 파일 배포 → 시험 시작 3단계 마법사.
+    // 단계별 화면은 같은 XAML 안에 있고 보이기/숨기기로만 전환한다.
+    //
+    // 단계 이동에는 조건을 걸지 않는다. 스텝퍼를 눌러 어느 단계든 미리 볼 수 있고,
+    // 실제로 실행할 수 있는지는 각 단계 안의 버튼과 자물쇠 안내가 알려 준다.
+    public partial class ExamWizard : UserControl
+    {
+        private static readonly SolidColorBrush ActiveBorder = new(Color.FromRgb(0x2A, 0x2D, 0x31));
+        private static readonly SolidColorBrush IdleBorder = new(Color.FromRgb(0x8C, 0x94, 0xA0));
+
+        // 잠긴 칸의 바탕. 흰 칸과 나란히 놓였을 때 눌러 봐야 소용없음이 한눈에 보이게 한다.
+        private static readonly SolidColorBrush LockedBox = new(Color.FromRgb(0xE4, 0xE5, 0xE7));
+        private static readonly SolidColorBrush OpenBox = new(Color.FromRgb(0xFF, 0xFF, 0xFF));
+
+        private const int LastStep = 3;
+
+        private readonly UiContext _ctx = UiContext.Instance;
+        private int _step;
+
+        public ExamWizard()
+        {
+            InitializeComponent();
+
+            DataContext = _ctx;
+            DownloadTable.ItemsSource = _ctx.Distribute.Students; // 배포 전용 행(진행률·선택 포함)
+
+            // 앞 단계를 끝내야 열리는 단계에 자물쇠를 붙였다 뗀다.
+            SendFileState.StateChanged += UpdateStepLocks;
+            Unloaded += (_, _) => SendFileState.StateChanged -= UpdateStepLocks;
+
+            ShowStep(1);
+        }
+
+        // ── 단계 이동 ─────────────────────────────────────────
+
+        private void GoStep1_Click(object sender, RoutedEventArgs e) => ShowStep(1);
+        private void GoStep2_Click(object sender, RoutedEventArgs e) => ShowStep(2);
+        private void GoStep3_Click(object sender, RoutedEventArgs e) => ShowStep(3);
+
+        private void GoPrev_Click(object sender, RoutedEventArgs e) => ShowStep(_step - 1);
+        private void GoNext_Click(object sender, RoutedEventArgs e) => ShowStep(_step + 1);
+
+        private void GoDashboard_Click(object sender, RoutedEventArgs e)
+            => MainWindow.From(this)?.Navigate(new DashboardWindow(), 0);
+
+        private void ShowStep(int step)
+        {
+            if (step < 1 || step > LastStep) return;
+            _step = step;
+
+            Step1Panel.Visibility = step == 1 ? Visibility.Visible : Visibility.Collapsed;
+            Step2Panel.Visibility = step == 2 ? Visibility.Visible : Visibility.Collapsed;
+            Step3Panel.Visibility = step == 3 ? Visibility.Visible : Visibility.Collapsed;
+
+            MarkStep(Step1Box, Step1Name, step == 1);
+            MarkStep(Step2Box, Step2Name, step == 2);
+            MarkStep(Step3Box, Step3Name, step == 3);
+
+            UpdateFooter();
+            UpdateStepLocks();
+        }
+
+        // 현재 단계만 테두리와 글자를 진하게 해서 스텝퍼에서 구분되게 한다.
+        private static void MarkStep(Button box, TextBlock name, bool active)
+        {
+            box.BorderBrush = active ? ActiveBorder : IdleBorder;
+            box.BorderThickness = new Thickness(active ? 1.6 : 1);
+            name.FontWeight = active ? FontWeights.Bold : FontWeights.Normal;
+        }
+
+        // 첫 단계에서는 이전이, 마지막 단계에서는 다음이 없다.
+        // '시험 시작 실행'은 제목 줄이 아니라 3단계 안내 칸 오른쪽 아래에 있다.
+        private void UpdateFooter()
+        {
+            PrevButton.IsEnabled = _step > 1;
+            PrevButton.Content = _step switch
+            {
+                2 => "이전: 시험 준비 단계",
+                3 => "이전: 파일 배포 단계",
+                _ => "이전"
+            };
+
+            NextButton.Visibility = _step == LastStep ? Visibility.Collapsed : Visibility.Visible;
+
+            NextButton.Content = _step == 1 ? "다음: 파일 배포 단계로 이동"
+                                            : "다음: 시험 시작 단계로 이동";
+        }
+
+        // 아직 실행할 수 없는 단계에는 스텝퍼에 자물쇠를 띄운다.
+        // 이동 자체는 막지 않는다 — 무엇이 남았는지 보러 갈 수 있어야 한다.
+        private void UpdateStepLocks()
+        {
+            SetLock(Step2Box, Step2Lock, SendFileState.IsFilePrepared);
+            SetLock(Step3Box, Step3Lock, SendFileState.IsFileDistributed);
+        }
+
+        // 잠긴 칸은 자물쇠를 띄우고 바탕을 회색으로 바꾼다.
+        private static void SetLock(Button box, TextBlock lockMark, bool open)
+        {
+            lockMark.Visibility = open ? Visibility.Collapsed : Visibility.Visible;
+            box.Background = open ? OpenBox : LockedBox;
+        }
+
+        // ── 시험 시작 ─────────────────────────────────────────
+
+        // 목록 전달 · 시작 신호 · 압축 해제 요청은 ExamStartViewModel 이 순서대로 보낸다.
+        // 그 안에서 단계가 InProgress 로 올라가야 좌측 메뉴의 시험 관리가 열리므로,
+        // 명령을 먼저 실행하고 실제로 시작됐을 때만 화면을 옮긴다.
+        private void StartExam_Click(object sender, RoutedEventArgs e)
+        {
+            var command = _ctx.ExamStart.StartExamCommand;
+            if (!command.CanExecute(null)) return;
+
+            command.Execute(null);
+
+            if (ExamState.IsExamStarted)
+                MainWindow.From(this)?.Navigate(new ExamManagePage(), 2);
+        }
+
+        // 실행 파일 이름을 외우지 않아도 되도록 프로그램 목록에서 고르게 한다.
+        private void PickWhite_Click(object sender, RoutedEventArgs e)
+            => ProgramPickerWindow.PickInto(this, toWhiteList: true);
+
+        private void PickBlack_Click(object sender, RoutedEventArgs e)
+            => ProgramPickerWindow.PickInto(this, toWhiteList: false);
+
+        // 목록은 길어서 화면에 펼치지 않고 팝업으로 띄운다.
+        private void ShowBlackDefaults_Click(object sender, RoutedEventArgs e)
+            => new ProgramListWindow("기본 제공 항목 (생성형 AI)", _ctx.BlackList.DefaultItems, _ctx.BlackList.RemoveCommand)
+               { Owner = Window.GetWindow(this) }.ShowDialog();
+
+        private void ShowBlackAdded_Click(object sender, RoutedEventArgs e)
+            => new ProgramListWindow("직접 추가한 금지 항목", _ctx.BlackList.AddedItems, _ctx.BlackList.RemoveCommand)
+               { Owner = Window.GetWindow(this) }.ShowDialog();
+
+        private void ShowWhiteDefaults_Click(object sender, RoutedEventArgs e)
+            => new ProgramListWindow("기본 허용 항목 (개발 도구)", _ctx.WhiteList.DefaultItems, _ctx.WhiteList.RemoveCommand)
+               { Owner = Window.GetWindow(this) }.ShowDialog();
+
+        private void ShowWhiteAdded_Click(object sender, RoutedEventArgs e)
+            => new ProgramListWindow("직접 추가한 허용 항목", _ctx.WhiteList.AddedItems, _ctx.WhiteList.RemoveCommand)
+               { Owner = Window.GetWindow(this) }.ShowDialog();
+    }
+}

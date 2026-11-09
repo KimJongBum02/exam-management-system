@@ -1,0 +1,108 @@
+using System.Collections.Specialized;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using ProfessorUI.ViewModel;
+using ProfessorUI.Common;
+
+namespace ProfessorUI.View.Professor
+{
+    // 시험 진행 중 허브 화면. 경고 상세 / 프로그램 관리 / 종료 화면으로 갈라진다.
+    public partial class ExamManagePage : UserControl
+    {
+        private readonly UiContext _ctx = UiContext.Instance;
+        private readonly ListCollectionView _studentView;
+
+        public ExamManagePage()
+        {
+            InitializeComponent();
+
+            DataContext = _ctx;
+
+            // 재배포가 필요한 학생만 거른다.
+            // 시험 종료·답안 수집 화면도 같은 학생 목록을 쓰므로 기본 보기(GetDefaultView)에 필터를 걸면
+            // 그 화면 표까지 걸러진다. 이 화면만의 보기를 따로 만든다.
+            _studentView = new ListCollectionView(_ctx.Overview.Students) { Filter = MatchesFilter };
+
+            // 학생이 시험을 시작하거나 끊기면 목록에서 바로 빠지고 들어온다.
+            _studentView.IsLiveFiltering = true;
+            _studentView.LiveFilteringProperties.Add(nameof(StudentStatusViewModel.IsAnswerSubmitted));
+            _studentView.LiveFilteringProperties.Add(nameof(StudentStatusViewModel.IsConnected));
+            // 파일이 도착하는 순간 그 학생은 목록에서 빠져야 한다. 남아 있으면 받은 학생에게 또 보내게 된다
+            _studentView.LiveFilteringProperties.Add(nameof(StudentStatusViewModel.IsFileReceived));
+
+            StudentTable.ItemsSource = _studentView;
+            ((INotifyCollectionChanged)_studentView).CollectionChanged += (_, _) => UpdateEmptyNote();
+            UpdateEmptyNote();
+        }
+
+        private bool MatchesFilter(object item)
+        {
+            if (item is not StudentStatusViewModel student) return false;
+
+            // 재배포 대상: 지금 시험 파일을 갖고 있지 않은 학생.
+            // (늦게 들어왔거나, 파일을 받기 전에 끊겼거나, 받은 뒤 지웠거나, 다시 켰는데 이어 받을 기록이 없는 학생)
+            //
+            // '시험을 시작했는지'로는 거르지 않는다 — 시험을 시작한 뒤에 파일을 지운 학생이 바로 그 경우인데,
+            // 그렇게 거르면 그 학생은 파일을 다시 받을 길이 없어진다.
+            // 받아서 작업 중인 학생은 IsFileReceived 로 걸러진다. 학생 앱이 5초마다 파일이 그대로인지
+            // 확인해 알려 주므로(StudentStatus.FileMissing) 이 값은 실제 상태를 따라간다.
+            if (student.IsFileReceived || student.IsAnswerSubmitted) return false;
+
+            string keyword = SearchBox?.Text?.Trim() ?? string.Empty;
+            if (keyword.Length > 0 &&
+                !student.StudentId.Contains(keyword) &&
+                !student.Name.Contains(keyword))
+                return false;
+
+            string conn = SelectedText(ConnFilter);
+            if (conn == "접속 중" && !student.IsConnected) return false;
+            if (conn == "미접속" && student.IsConnected) return false;
+
+            return true;
+        }
+
+        private static string SelectedText(ComboBox? box)
+            => (box?.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? string.Empty;
+
+        private void Filter_Changed(object sender, RoutedEventArgs e) => _studentView?.Refresh();
+
+        private void UpdateEmptyNote()
+            => EmptyNote.Visibility = _studentView.IsEmpty ? Visibility.Visible : Visibility.Collapsed;
+
+        // 목록(= 파일을 받지 못한 학생)에서 접속 중인 학생에게 다시 보낸다.
+        // 끊긴 학생은 보낼 수 없으므로 뺀다 — 다시 들어오면 그때 보낸다.
+        // 이미 받은 학생은 애초에 목록에 없고, 그래도 섞여 들어오면 RedeployMany 가 한 번 더 거른다.
+        private void RedeployAll_Click(object sender, RoutedEventArgs e)
+        {
+            var targets = _studentView.Cast<StudentStatusViewModel>().Where(s => s.IsConnected).ToList();
+            if (targets.Count == 0)
+            {
+                MessageBox.Show("다시 보낼 학생이 없습니다.\n접속 중인 학생은 모두 시험 파일을 받았습니다.\n" +
+                                "(접속이 끊긴 학생은 다시 접속한 뒤에 보낼 수 있습니다.)",
+                                "재배포", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            _ctx.Distribute.RedeployMany(targets);
+        }
+
+        private void SecurityPolicy_Click(object sender, RoutedEventArgs e)
+            => MainWindow.From(this)?.Navigate(new ProgramManageWindow(), 5);
+
+        // 시험 종료 실행. 학생 PC의 감시를 멈추는 신호까지 ExamEndViewModel 이 보낸다.
+        // 교수가 확인 창에서 취소하면 단계가 그대로이므로 화면도 옮기지 않는다.
+        // 끝난 뒤에는 답안 수집 현황과 승인이 있는 시험 종료·답안 수집 화면으로 넘어간다.
+        // 다음 시험 준비는 승인까지 끝난 뒤 종료 완료 현황의 [처음 화면으로] 에서 시작한다.
+        private void EndExam_Click(object sender, RoutedEventArgs e)
+        {
+            var command = _ctx.ExamEnd.EndExamCommand;
+            if (!command.CanExecute(null)) return;
+
+            command.Execute(null);
+
+            if (Service.ExamState.CurrentPhase >= NetworkLib.ExamPhase.SubmitRequested)
+                MainWindow.From(this)?.Navigate(new ExamEndWindow(), 3);
+        }
+    }
+}

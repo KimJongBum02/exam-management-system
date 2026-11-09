@@ -1,0 +1,354 @@
+using ExamManager.Shared;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Windows.Input;
+using ProfessorUI.Service;
+using ProfessorUI.Model;
+
+namespace ProfessorUI.ViewModel
+{
+    public class ChatViewModel : UiBinding
+    {
+        private readonly ChatService _chat = ChatService.Instance;
+
+        public string Title => "채팅창";
+
+        private ObservableCollection<ChatTabViewModel> _tabs;
+        private ChatTabViewModel? _selectedTab;
+        private string _inputMessage = string.Empty;
+
+        public ObservableCollection<ChatTabViewModel> Tabs
+        {
+            get => _tabs;
+            set { _tabs = value; OnPropertyChanged(); }
+        }
+
+        public ChatTabViewModel? SelectedTab
+        {
+            get => _selectedTab;
+            set
+            {
+                _selectedTab = value;
+                if (_selectedTab != null)
+                {
+                    _selectedTab.UnreadCount = 0; // 탭을 선택하면 안 읽음 뱃지 초기화
+                }
+                OnPropertyChanged();
+            }
+        }
+
+        public string InputMessage
+        {
+            get => _inputMessage;
+            set { _inputMessage = value; OnPropertyChanged(); }
+        }
+
+        public ICommand SendMessageCommand { get; }
+
+        // 전체 공지 입력. 1:1 대화 입력(InputMessage)과 따로 둔다.
+        // 하나를 같이 쓰면, 채팅 화면에서 학생과 대화하는 동안 공지 칸에 적은 글이 그 학생에게만 간다.
+        private string _noticeInput = string.Empty;
+        public string NoticeInput
+        {
+            get => _noticeInput;
+            set { _noticeInput = value; OnPropertyChanged(); }
+        }
+
+        // 보낸 전체 공지. 최근 것이 위로 오도록 앞에 넣는다.
+        public ObservableCollection<NoticeViewModel> Notices { get; } = new();
+        public NoticeViewModel? LatestNotice => Notices.FirstOrDefault();
+
+        // 중요 공지. 상단바 가운데에 보이고, 누르면 등록·수정·내리기 창이 뜬다(ImportantNoticeWindow).
+        public string ImportantNotice => _chat.ImportantNotice;
+        public bool HasImportantNotice => ImportantNotice.Length > 0;
+
+        // 빈 문구면 내린다. 학생에게 보내는 것은 ChatService 가 한다.
+        public void SetImportantNotice(string text)
+        {
+            _chat.SetImportantNotice(text);
+            OnPropertyChanged(nameof(ImportantNotice));
+            OnPropertyChanged(nameof(HasImportantNotice));
+        }
+
+        // 탭과 무관하게 모아 둔 학생 수신 메시지.
+        // 셸은 여기에 새 메시지가 들어오는 것만 보고 작업표시줄을 깜빡인다.
+        public ObservableCollection<ChatMessageModel> RecentMessages { get; } = new();
+
+        // 상단 메뉴 배지에 보일, 안 읽은 학생 메시지 총수.
+        //
+        // 따로 세지 않고 대화 줄들의 합으로 낸다. 예전에는 받을 때 +1, 열 때 −1 로 직접 셌는데
+        // 빼는 자리를 하나라도 빠뜨리면 숫자가 남은 채 굳었다 — 학생이 명단에서 빠져 대화 줄이 사라지면
+        // (RemoveTabFor) 그 줄 몫이 영영 안 빠져서, 안 읽은 대화가 하나도 없는데 배지에 1 이 남았다.
+        // 합으로 내면 줄이 사라지든 읽히든 저절로 맞는다.
+        public int UnreadCount => Tabs.Sum(t => t.UnreadCount);
+
+        // 줄 하나의 안 읽음이 바뀌거나 줄이 생기고 사라지면 합도 다시 읽혀야 한다.
+        private void RefreshUnreadCount() => OnPropertyChanged(nameof(UnreadCount));
+
+        private void OnTabChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ChatTabViewModel.UnreadCount)) RefreshUnreadCount();
+        }
+
+        private void OnTabsChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems != null)
+                foreach (ChatTabViewModel tab in e.OldItems) tab.PropertyChanged -= OnTabChanged;
+            if (e.NewItems != null)
+                foreach (ChatTabViewModel tab in e.NewItems) tab.PropertyChanged += OnTabChanged;
+
+            RefreshUnreadCount();
+        }
+
+        public ChatViewModel()
+        {
+            _tabs = new ObservableCollection<ChatTabViewModel>();
+
+            // 배지는 줄들의 합이라, 줄이 생기고 사라지는 것과 줄마다의 안 읽음 변화를 모두 들어야 한다.
+            _tabs.CollectionChanged += OnTabsChanged;
+
+            // 기본 전체 공지 탭 추가
+            var globalTab = new ChatTabViewModel { TabName = "전체 공지 (Global)", SessionId = null };
+            _tabs.Add(globalTab);
+            SelectedTab = globalTab;
+
+            SendMessageCommand = new UiCommand(o => SendMessage());
+
+            // 받은 메시지·공지 회신 구독 (보내고 받는 일은 ChatService 가 맡는다)
+            _chat.MessageReceived += OnMessageReceived;
+            _chat.NoticeAcknowledged += OnNoticeAcknowledged;
+            _chat.ChatRead += OnChatRead;
+
+            // 들어온 학생마다 대화 줄을 미리 만든다. 채팅 화면에서 말이 오가기 전이라도 학생을 골라 먼저 말을 건다.
+            foreach (var student in StudentStore.Instance.Students) AddTabFor(student);
+            StudentStore.Instance.Students.CollectionChanged += (_, e) =>
+            {
+                // 아무것도 남기지 않은 접속은 StudentStore 가 줄째로 지운다(잘못 친 학번).
+                // 대화 줄도 같이 지워야 목록에 유령이 남지 않는다.
+                if (e.OldItems != null)
+                    foreach (StudentStatusViewModel student in e.OldItems) RemoveTabFor(student);
+                if (e.NewItems != null)
+                    foreach (StudentStatusViewModel student in e.NewItems) AddTabFor(student);
+            };
+        }
+
+        // 로그인을 거절한 접속은 학번이 비어 있다 — 학생이 아니므로 줄을 만들지 않는다.
+        private void AddTabFor(StudentStatusViewModel student)
+        {
+            if (string.IsNullOrEmpty(student.StudentId)) return;
+            GetOrCreateTab(student.StudentId, student.Name, student.SessionId);
+
+            // 이름을 잘못 쳤다가 고쳐서 다시 로그인하면 StudentStore 가 그 줄의 이름만 바꾼다.
+            // 그때는 학생이 새로 들어온 것이 아니라 대화 줄을 다시 만들 일이 없으므로,
+            // 이름 변화를 직접 받아 줄 이름도 따라 고친다.
+            student.PropertyChanged -= OnStudentChanged;
+            student.PropertyChanged += OnStudentChanged;
+        }
+
+        // 이름이 바뀌었거나, 나갔던 학생이 다시 들어왔을 때 대화 줄을 맞춘다.
+        // 다시 접속까지 보는 이유는 ResetForNextExam 이 나간 학생의 줄을 뺐기 때문이다 —
+        // 그 학생이 다음 시험에 들어오면 학생 목록은 이미 그 줄을 갖고 있어
+        // CollectionChanged 가 뜨지 않고, 여기서 만들지 않으면 채팅 목록에 영영 나타나지 않는다.
+        private void OnStudentChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (sender is not StudentStatusViewModel student || student.StudentId.Length == 0) return;
+
+            if (e.PropertyName == nameof(StudentStatusViewModel.Name) ||
+                (e.PropertyName == nameof(StudentStatusViewModel.IsConnected) && student.IsConnected))
+                GetOrCreateTab(student.StudentId, student.Name, student.SessionId);
+        }
+
+        // ── 다음 시험 준비 ── [처음 화면으로] 가 부른다.
+        //
+        // 지난 시험을 치르고 나간 학생이 대화 목록에 그대로 남아 있지 않게 한다.
+        // 지금 접속해 있는 학생 줄은 남기고 주고받은 말만 비운다 — 수업이 이어지는 중이라
+        // 교수가 먼저 말을 걸 수 있어야 하기 때문이다.
+        // 나간 학생이 다시 접속하면 줄이 되살아난다(OnStudentChanged 가 접속을 보고 다시 만든다).
+        //
+        // 전체 공지 줄(SessionId == null)은 목록의 붙박이라 지우지 않는다.
+        // 상단바의 중요 공지도 건드리지 않는다 — 내리는 일은 학생 PC 로 패킷이 가는 일이라 교수가 직접 한다.
+        public void ResetForNextExam()
+        {
+            foreach (var tab in Tabs.Where(t => t.SessionId != null).ToList())
+            {
+                var student = StudentStore.Instance.Students.FirstOrDefault(s => s.StudentId == tab.StudentId);
+                if (student != null && student.IsConnected)
+                {
+                    tab.Messages.Clear();
+                    tab.UnreadCount = 0;
+                    continue;
+                }
+
+                // 학생 줄에 걸어 둔 구독은 그대로 둔다 — 그 학생이 다시 접속할 때 줄을 되살리는 길이다.
+                if (SelectedTab == tab) SelectedTab = Tabs.FirstOrDefault(t => t.SessionId == null);
+                Tabs.Remove(tab);
+            }
+
+            Notices.Clear();
+            OnPropertyChanged(nameof(LatestNotice));
+        }
+
+        // 줄째로 빠진 학생의 대화를 지운다. 주고받은 말도 함께 사라지지만,
+        // 아무것도 남기지 않고 나간 접속이라 지울 것이 사실상 없다.
+        private void RemoveTabFor(StudentStatusViewModel student)
+        {
+            student.PropertyChanged -= OnStudentChanged;
+
+            var tab = Tabs.FirstOrDefault(t => t.SessionId != null && t.StudentId == student.StudentId);
+            if (tab == null) return;
+
+            if (SelectedTab == tab) SelectedTab = null;
+            Tabs.Remove(tab);
+        }
+
+        private void SendMessage()
+        {
+            if (string.IsNullOrWhiteSpace(InputMessage) || SelectedTab == null) return;
+
+            string msgToSend = InputMessage;
+            InputMessage = string.Empty; // 보낸 후 지우기
+
+            // 1:1 은 메시지마다 번호를 받아 둔다. 학생이 읽었다는 회신이 그 번호로 온다.
+            // 전체 공지(SessionId == null)는 받는 사람이 여럿이라 말풍선 하나로 읽음을 셀 수 없다 —
+            // 공지의 수신 인원은 [공지 전송 결과 요약]이 따로 센다.
+            uint messageId = 0;
+            if (SelectedTab.SessionId == null) _chat.SendToAll(msgToSend);
+            else messageId = _chat.SendTo(SelectedTab.SessionId, msgToSend);
+
+            SelectedTab.Messages.Add(new ChatMessageModel
+            {
+                SenderName = "나(교수)",
+                Message = msgToSend,
+                Timestamp = DateTime.Now,
+                IsMine = true,
+                MessageId = messageId
+            });
+        }
+
+        // 전체 공지를 보낸다. 받은 학생을 세기 위해 번호를 붙인다(NoticePayload 참고).
+        public bool SendNotice()
+        {
+            if (string.IsNullOrWhiteSpace(NoticeInput)) return false;
+
+            string text = NoticeInput;
+            NoticeInput = string.Empty;
+
+            uint noticeId = _chat.SendNotice(text);
+
+            var notice = new NoticeViewModel(noticeId, text,
+                                        StudentStore.Instance.Students.Where(s => s.IsConnected));
+            Notices.Insert(0, notice);
+            OnPropertyChanged(nameof(LatestNotice));
+            return true;
+        }
+
+        // 학생 한 명의 대화 줄을 찾는다. 없으면 만든다.
+        // 학생이 말을 걸어 올 때도, 교수가 먼저 말을 걸 때도 같은 줄을 쓴다 —
+        // 다시 접속해 세션이 바뀌어도 학번으로 찾으므로 대화가 이어진다.
+        public ChatTabViewModel GetOrCreateTab(string studentId, string studentName, string? sessionId)
+        {
+            var tab = Tabs.FirstOrDefault(t => t.SessionId != null && t.StudentId == studentId);
+            if (tab == null)
+            {
+                tab = new ChatTabViewModel
+                {
+                    TabName = $"{studentName}({studentId})",
+                    SessionId = sessionId ?? string.Empty,
+                    StudentName = studentName,
+                    StudentId = studentId,
+                };
+                Tabs.Add(tab);
+            }
+            else
+            {
+                // 답장은 지금 접속해 있는 세션으로 가야 한다
+                if (!string.IsNullOrEmpty(sessionId)) tab.SessionId = sessionId;
+
+                // 이름을 잘못 쳤다가 고쳐서 다시 로그인하면 대화 줄의 이름도 따라 고친다.
+                // 줄은 학번으로 찾으므로, 고치지 않으면 처음 친 이름이 끝까지 남는다.
+                if (studentName.Length > 0 && tab.StudentName != studentName)
+                {
+                    tab.StudentName = studentName;
+                    tab.TabName = $"{studentName}({studentId})";
+                }
+            }
+
+            return tab;
+        }
+
+        // 채팅 화면에서 한 학생과의 대화를 연다. 그 학생 몫의 안 읽음은 줄들의 합이라 배지에서도 함께 준다.
+        public void OpenConversation(ChatTabViewModel tab)
+        {
+            // 다시 접속하면 세션이 바뀐다. 목록에서 미리 만든 줄을 고를 때도 지금 세션으로 맞춰야 메시지가 간다.
+            var student = StudentStore.Instance.Students.FirstOrDefault(s => s.StudentId == tab.StudentId);
+            if (!string.IsNullOrEmpty(student?.SessionId)) tab.SessionId = student.SessionId;
+
+            // 전역 배지는 줄들의 합이라 여기서 따로 뺄 것이 없다 — 아래에서 이 줄이 0 이 되면 저절로 준다.
+            SelectedTab = tab;
+        }
+
+        // 대화를 닫는다. 열린 대화가 없어야 새 메시지가 안 읽음으로 쌓인다.
+        public void CloseConversation() => SelectedTab = null;
+
+        // 학생이 보낸 메시지. 네이티브 수신 스레드에서 올라오므로 화면 스레드로 넘겨 처리한다.
+        // 동기 Invoke는 종료 중 수신 스레드를 붙잡아 앱이 멈추므로 BeginInvoke를 쓴다.
+        private void OnMessageReceived(string sessionId, string studentId, string studentName, string message)
+        {
+            UiThread.Post(() =>
+            {
+                // 학생 한 명에 대화 한 줄. 다시 접속해 세션이 바뀌어도 같은 줄을 이어 쓴다.
+                var tab = GetOrCreateTab(studentId, studentName, sessionId);
+
+                // 메시지 추가
+                tab.Messages.Add(new ChatMessageModel
+                {
+                    SenderName = studentName,
+                    Message = message,
+                    Timestamp = DateTime.Now,
+                    IsMine = false
+                });
+
+                // 열어 둔 대화가 아니면 안 읽음으로 센다. 보고 있는 대화는 바로 읽은 것이다.
+                // 전역 배지는 줄들의 합이라 여기만 올리면 따라 오른다.
+                if (SelectedTab != tab) tab.UnreadCount++;
+
+                // 셸이 새 메시지 도착을 알아채는 목록. 최근 것이 위로 오게 넣는다.
+                RecentMessages.Insert(0, new ChatMessageModel
+                {
+                    SenderName = $"{studentName}({studentId})",
+                    Message = message,
+                    Timestamp = DateTime.Now,
+                    IsMine = false
+                });
+            });
+        }
+
+        // 학생이 공지를 받았다는 회신. 그 공지의 '수신 N명'을 올린다.
+        private void OnNoticeAcknowledged(uint noticeId, string studentId)
+        {
+            UiThread.Post(() => Notices.FirstOrDefault(n => n.Id == noticeId)?.MarkReceived(studentId));
+        }
+
+        // 학생이 1:1 메시지를 읽었다는 회신. 그 말풍선을 '읽음'으로 바꾼다.
+        //
+        // 학생은 채팅창을 열 때 그때까지 쌓인 것을 한꺼번에 회신하므로 여러 건이 잇따라 들어온다.
+        // 접속이 끊긴 채 보낸 메시지는 회신이 오지 않아 '안 읽음'으로 남는다 — 실제로 못 본 것이 맞다.
+        private void OnChatRead(uint messageId, string studentId)
+        {
+            UiThread.Post(() =>
+            {
+                var tab = Tabs.FirstOrDefault(t => t.SessionId != null && t.StudentId == studentId);
+                var message = tab?.Messages.FirstOrDefault(m => m.MessageId == messageId);
+                if (message != null) message.IsRead = true;
+            });
+        }
+
+        // 메모리 누수 방지를 위해 이벤트 구독 해제 (UiContext 가 싱글턴으로 들고 있어 안 불릴 수도 있음)
+        public void Cleanup()
+        {
+            _chat.MessageReceived -= OnMessageReceived;
+            _chat.NoticeAcknowledged -= OnNoticeAcknowledged;
+            _chat.ChatRead -= OnChatRead;
+        }
+    }
+}

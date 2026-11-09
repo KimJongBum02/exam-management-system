@@ -1,0 +1,287 @@
+using ExamManager.Shared;
+
+namespace ProfessorUI.ViewModel
+{
+    public class StudentStatusViewModel : UiBinding
+    {
+        private string _studentId = string.Empty;
+        private string _name = string.Empty;
+        private string _status = string.Empty; // 메인 화면용 (대기, 미접속, 시험중 등)
+        private string _ip = string.Empty;
+
+        // 파일 수신 · 답안 제출 · 승인 상태
+        private bool _isSelected;
+        private bool _isFileReceived = false; // 💡 기본값 false -> 무조건 "미수집"으로 시작!
+        private bool _isApproved;
+        private bool _isAnswerSubmitted;
+
+        public string StudentId { get => _studentId; set { _studentId = value; OnPropertyChanged(); } }
+        public string Name { get => _name; set { _name = value; OnPropertyChanged(); } }
+        // 상태가 바뀔 때마다 시각을 함께 찍는다. 현황 표의 '마지막 갱신' 열이 이 값을 쓴다.
+        public string Status
+        {
+            get => _status;
+            set
+            {
+                _status = value;
+                LastUpdate = DateTime.Now.ToString("HH:mm:ss");
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CleanupText));
+            }
+        }
+
+        private string _lastUpdate = "-";
+        public string LastUpdate { get => _lastUpdate; private set { _lastUpdate = value; OnPropertyChanged(); } }
+        public string Ip { get => _ip; set { _ip = value; OnPropertyChanged(); } }
+
+        // 서버가 부여한 세션 식별자 (접속 종료·개별 전송 매핑용)
+        public string SessionId { get; set; } = string.Empty;
+
+        // ── 시험 파일 배포 상태 (시험 준비 2단계 표) ──
+
+        // 배포 표의 체크. 승인 화면의 승인 체크(IsSelected)와 따로 둔다 —
+        // 하나를 같이 쓰면 배포 때 전체 선택한 것이 승인 화면의 승인 대상까지 바꿔 놓는다.
+        private bool _isDeployTarget = true;   // 접속한 학생은 기본적으로 모두 보낸다
+        public bool IsDeployTarget
+        {
+            get => _isDeployTarget;
+            set { _isDeployTarget = value; OnPropertyChanged(); }
+        }
+
+        private int _deployProgress;
+        public int DeployProgress
+        {
+            get => _deployProgress;
+            set { _deployProgress = value; OnPropertyChanged(); OnPropertyChanged(nameof(DeployProgressText)); }
+        }
+
+        private string _deployStatus = "대기 중";
+        public string DeployStatus
+        {
+            get => _deployStatus;
+            set { _deployStatus = value; OnPropertyChanged(); OnPropertyChanged(nameof(DeployProgressText)); }
+        }
+
+        // 표에 그대로 나갈 진행률.
+        // 압축 단계와 같은 0~100% 표기로 맞추고, 실패했을 때만 숫자 대신 실패로 적는다.
+        // 실패하면 DeployProgress 가 0으로 되돌아가는데, 그 0%를 그냥 보여 주면
+        // 아직 시작 안 한 학생과 구분되지 않는다.
+        public string DeployProgressText => _deployStatus switch
+        {
+            "전송 실패" => "실패",
+            "미접속"   => "-",
+            "대기 중"  => "-",
+            _          => $"{_deployProgress}%"
+        };
+
+        // 전송을 시작한 세션 ID (수신 완료 응답이 오면 비운다).
+        // 같은 세션에 중복 전송하는 것을 막는 용도 — 학생이 재접속하면 세션이 바뀌어 자연히 풀린다.
+        public string? SendingSessionId { get; set; }
+
+        // 지금 실제로 접속돼 있는지.
+        // 접속이 끊겨도 SessionId는 남아 있으므로, 전송 가능 여부는 이 값으로 판단한다.
+        private bool _isConnected;
+        public bool IsConnected
+        {
+            get => _isConnected;
+            set { _isConnected = value; OnPropertyChanged(); OnPropertyChanged(nameof(ConnectionText)); }
+        }
+
+        // 표에 그대로 나갈 접속 상태 문구.
+        // 끊긴 학생을 둘로 나눈다 — 치르고 나간 학생과 아예 들어오지 않은 학생.
+        // 둘 다 '미접속'으로 적으면 시험을 끝까지 치른 학생이 응시하지 않은 것처럼 보인다.
+        // 응시 기준은 시험 로그의 출석과 같다(HasEverStarted 는 접속이 끊겨도 남는다).
+        public string ConnectionText => _isConnected ? "접속 중"
+                                     : HasEverStarted || IsAnswerSubmitted ? "응시 후 종료"
+                                     : "미접속";
+
+        // 마지막으로 접속한 시각. 다시 접속하면 그때로 바뀐다.
+        //
+        // 상태가 바뀔 때마다 찍히는 LastUpdate 와 다르다 — 그쪽은 제출·정리 같은 사건까지 포함해
+        // "언제부터 들어와 있었나"를 알 수 없다. 자리를 찾아가야 할 때 필요한 것은 이쪽이다.
+        private DateTime? _lastConnectedAt;
+        public DateTime? LastConnectedAt
+        {
+            get => _lastConnectedAt;
+            set { _lastConnectedAt = value; OnPropertyChanged(); OnPropertyChanged(nameof(LastConnectedText)); }
+        }
+
+        // 학생 칸에 그대로 나갈 문구. 날짜까지 적는다 —
+        // 시각만 적으면 앞 교시에 들어온 기록인지 방금인지 구분되지 않는다.
+        public string LastConnectedText => _lastConnectedAt is { } at
+                                         ? at.ToString("yyyy-MM-dd HH:mm:ss")
+                                         : "접속 기록 없음";
+
+        // ── 학생 PC 에서 감시가 실제로 켜졌는지 ──
+        // 학생이 시험 시작 직후 스스로 보고한 값이다.
+        // 보고가 오기 전에는 셋 다 기본값이라 "확인 전"으로 보인다.
+        private bool _monitorReported;
+        private bool _processMonitorOn;
+        private bool _networkMonitorOn;
+        private string _monitorDetail = string.Empty;
+
+        public bool NetworkMonitorOn => _networkMonitorOn;
+        public string MonitorDetail => _monitorDetail;
+
+        public string MonitorText => !_monitorReported ? "확인 전"
+                                   : _processMonitorOn && _networkMonitorOn ? "정상"
+                                   : _networkMonitorOn ? "네트워크만"
+                                   : _processMonitorOn ? "프로그램만"
+                                   : "꺼짐";
+
+        public void SetMonitorStatus(bool processOn, bool networkOn, string detail)
+        {
+            _monitorReported = true;
+            HasEverStarted = true;
+            _processMonitorOn = processOn;
+            _networkMonitorOn = networkOn;
+            _monitorDetail = detail;
+
+            OnPropertyChanged(nameof(NetworkMonitorOn));
+            OnPropertyChanged(nameof(MonitorDetail));
+            OnPropertyChanged(nameof(MonitorText));
+            OnPropertyChanged(nameof(HasExamStarted));
+        }
+
+        // 이 접속에서 학생 PC 가 시험을 시작했는지. 시험 관리 화면의 재배포 대상이 이 값으로 갈린다.
+        // 학생은 시험을 시작하면(이어 받기 포함) 감시 상태를 보고하므로, 보고가 왔으면 시작한 것이다.
+        // 끊기면 모르는 상태로 돌린다 — 다시 켠 학생이 이어 받았는지는 새 보고로 안다.
+        public bool HasExamStarted => _monitorReported;
+
+        // 이 시험에서 한 번이라도 시험을 시작했는지. 접속이 끊겨도 남는다.
+        // 시험 로그의 출석 여부는 "지금 접속해 있는가"가 아니라 "응시했는가"를 봐야 하므로,
+        // 끊길 때 지워지는 HasExamStarted 와 따로 둔다.
+        private bool _hasEverStarted;
+        public bool HasEverStarted
+        {
+            get => _hasEverStarted;
+            // 접속 상태 문구가 이 값으로 갈리므로 같이 알린다.
+            // 시험을 치른 적이 없는 학생은 접속이 끊기면 '미접속'으로 보여야 한다.
+            set { _hasEverStarted = value; OnPropertyChanged(); OnPropertyChanged(nameof(ConnectionText)); }
+        }
+
+        public void ClearMonitorStatus()
+        {
+            _monitorReported = false;
+            OnPropertyChanged(nameof(MonitorText));
+            OnPropertyChanged(nameof(HasExamStarted));
+        }
+
+        // 학생 PC 에 시험 파일이 남았다는 보고를 받았는지.
+        //
+        // 예전에는 Status 문자열이 "정리실패" 인지로 판단했는데, 그 뒤에 부정행위 알림이
+        // 오면 Status 가 "부정행위 감지" 로 덮여 실패 표시가 사라졌다.
+        // 지워졌는지 여부는 다른 사건에 묻히면 안 되므로 따로 들고 있는다.
+        private bool _isCleanupFailed;
+        public bool IsCleanupFailed
+        {
+            get => _isCleanupFailed;
+            set { _isCleanupFailed = value; OnPropertyChanged(); OnPropertyChanged(nameof(CleanupText)); }
+        }
+
+        // 학생이 "지웠다"고 알려 왔는지.
+        // 이 보고가 있어야 완료로 본다. 답안을 걷은 것만으로 지워졌다고 단정하면,
+        // 보고 전에 학생 PC 가 꺼진 경우를 지워진 것으로 착각한다.
+        private bool _isCleanupDone;
+        public bool IsCleanupDone
+        {
+            get => _isCleanupDone;
+            set { _isCleanupDone = value; OnPropertyChanged(); OnPropertyChanged(nameof(CleanupText)); }
+        }
+
+        // ── 시험 종료·답안 수집 화면에 그대로 나갈 문구 ──
+        // 흔적 삭제는 학생이 답안 회신을 받은 뒤 스스로 하므로, 답안을 걷었는지로 판단한다.
+        // 다만 학생이 "못 지웠다"고 알려 오면 그쪽이 우선이다.
+        public string CollectText => IsAnswerSubmitted ? "완료" : "미수집";
+        public string CleanupText => IsCleanupFailed ? "오류"
+                                   : IsCleanupDone ? "완료"
+                                   : IsAnswerSubmitted ? "확인 필요" : "미실행";
+
+        public bool IsSelected { get => _isSelected; set { _isSelected = value; OnPropertyChanged(); } }
+        public bool IsFileReceived { get => _isFileReceived; set { _isFileReceived = value; OnPropertyChanged(); } }
+        public bool IsApproved
+        {
+            get => _isApproved;
+            set { _isApproved = value; OnPropertyChanged(); OnPropertyChanged(nameof(CanApprove)); }
+        }
+
+        // 종료 화면에서 고를 수 있는 학생인지. 답안을 걷었고 아직 승인하지 않은 학생만 승인 대상이다.
+        public bool CanApprove => IsAnswerSubmitted && !IsApproved;
+
+        // 이 학생의 답안을 받아 저장까지 끝냈는지.
+        // IsFileReceived와 헷갈리기 쉬운데 방향이 반대다 —
+        // 그쪽은 교수가 보낸 시험 파일을 학생이 받은 것이고, 이쪽은 학생 답안을 교수가 받은 것이다.
+        // 학생이 접속을 끊어도 이 기록은 남으므로, 나갔는지 못 냈는지 구분할 수 있다.
+        public bool IsAnswerSubmitted
+        {
+            get => _isAnswerSubmitted;
+            set
+            {
+                _isAnswerSubmitted = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CollectText));
+                OnPropertyChanged(nameof(CleanupText));
+                OnPropertyChanged(nameof(CanApprove));
+                OnPropertyChanged(nameof(ConnectionText));
+            }
+        }
+
+        // 마지막으로 답안을 받은 시각. 다시 내면 새 시각으로 바뀐다 — 마지막 제출이 최종본이다.
+        private DateTime? _submittedAt;
+        public DateTime? SubmittedAt
+        {
+            get => _submittedAt;
+            set { _submittedAt = value; OnPropertyChanged(); OnPropertyChanged(nameof(SubmitTimeText)); }
+        }
+
+        // 제출 시각과, 시험 종료 뒤에 냈다면 종료로부터 얼마 뒤였는지.
+        // 시험 중에 먼저 낸 학생은 '조기 제출'로 적는다.
+        // 종료 뒤에는 학생 PC 감시가 꺼지므로 답안을 고칠 수 있다. 늦게 들어온 답안은 교수가 알아볼 수 있어야 한다.
+        // 자동 수집도 압축·전송에 시간이 걸려 몇 초~몇 분 뒤로 찍힌다. 얼마부터 이상한지는 교수가 판단한다.
+        public string SubmitTimeText
+        {
+            get
+            {
+                if (_submittedAt is not DateTime at) return "-";
+
+                string time = at.ToString("HH:mm:ss");
+                if (Service.ExamState.EndedAt is not DateTime ended || at <= ended) return $"{time} (조기 제출)";
+
+                TimeSpan after = at - ended;
+                string elapsed = after.TotalMinutes >= 1
+                    ? $"{(int)after.TotalMinutes}분 {after.Seconds}초"
+                    : $"{after.Seconds}초";
+                return $"{time} (종료 {elapsed} 뒤)";
+            }
+        }
+
+        // ── 다음 시험을 위해 이 학생의 시험 기록을 되돌린다 ──
+        // 학번·이름·IP·세션과 접속 여부는 그대로 둔다 — 지금 접속해 있는 학생은 계속 접속해 있다.
+        // 되돌리는 것은 이번 시험에서 생긴 것뿐이다(배포·수신·제출·확인 완료·흔적 삭제·감시 보고·응시 여부).
+        // 줄 자체는 지우지 않는다 — 접속이 끊긴 학생은 다음 시험에서 '미접속'으로 남아 보인다.
+        // 부르는 곳은 ExamFlowService.ResetForNextExam 하나다.
+        public void ResetForNextExam()
+        {
+            IsSelected = false;
+            IsDeployTarget = true;
+            IsFileReceived = false;
+            DeployProgress = 0;
+            DeployStatus = "대기 중";
+            SendingSessionId = null;
+
+            IsAnswerSubmitted = false;
+            SubmittedAt = null;
+            IsApproved = false;
+            IsCleanupDone = false;
+            IsCleanupFailed = false;
+
+            // 응시 여부와 감시 보고는 이번 시험의 것이다. 다음 시험에서는 다시 '시작 전'이다.
+            HasEverStarted = false;
+            ClearMonitorStatus();
+
+            // 비고 칸은 맨 마지막에 되돌린다 — 위 값이 바뀔 때마다 이 칸 문구가 따라 바뀌기 때문이다.
+            // 접속이 끊긴 학생에게 남아 있던 '미제출(연결 끊김)'도 이번 시험의 결과라 함께 지운다.
+            Status = "대기";
+        }
+    }
+}

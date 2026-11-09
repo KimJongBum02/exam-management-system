@@ -1,0 +1,368 @@
+using NetworkLib;
+using ExamManager.Shared;
+using System.IO;
+
+namespace StudentUI.Service
+{
+    // 답안 제출 진행 상태. 화면에 무엇을 보여줄지가 이 값으로 정해진다.
+    public enum AnswerSubmitState
+    {
+        Idle,        // 아직 제출한 적 없음
+        Compressing, // 답안 폴더를 압축·암호화하는 중
+        Sending,     // 교수 PC로 전송하는 중
+        WaitingAck,  // 전송은 끝났고 교수의 확인 회신을 기다리는 중
+        Succeeded,   // 교수가 잘 받았다고 회신함 — 이때만 파일을 지워도 된다
+        Failed,      // 어느 단계든 실패 — 답안 파일은 그대로 남아 있다
+    }
+
+    // 학생 답안을 교수 PC로 제출한다.
+    //
+    // 제출을 시작하는 경로는 두 가지다.
+    //   ① 교수가 '답안 일괄 수집'을 누름   → ExamSubmitRequest(34) 수신
+    //   ② 학생이 스스로 '시험 종료'를 누름 → SubmitAsync를 직접 호출 (화면 연결은 후속 작업)
+    //
+    // 어느 쪽이든 절차는 같다: 압축 → 전송 → 교수의 확인 회신 대기.
+    // 확인을 받기 전에는 아무것도 지우지 않는다. 답안이 사라지면 되돌릴 방법이 없기 때문이다.
+    public class AnswerSubmitService
+    {
+        public static AnswerSubmitService Instance { get; } = new AnswerSubmitService();
+
+        // 전송이 이만큼 진행되지 않고 멈춰 있으면 실패로 본다.
+        // 총 시간으로 재지 않는 이유: 답안이 100MB쯤 되고 30명이 동시에 내면
+        // 정상인데도 몇 분씩 걸린다. 잘 가는 전송을 실패로 판정하는 쪽이 더 나쁘다.
+        private static readonly TimeSpan StallTimeout = TimeSpan.FromSeconds(60);
+
+        // 전송이 100%에 닿은 뒤 교수의 확인 회신을 기다리는 시간.
+        //
+        // 교수 PC는 받은 묶음을 저장하고 압축까지 풀어 본 뒤에 회신한다(AnswerCollectService).
+        // 30명이 한꺼번에 내면 그 작업이 학생 수만큼 동시에 돌아 30초를 넘기는 학생이 생기는데,
+        // 그때 실패로 처리하면 **교수 PC 에는 답안이 저장됐는데 학생은 '제출 실패'를 보고 다시 내게** 된다.
+        // 그래서 넉넉히 기다리되, 연결이 끊기면 기다리지 않고 바로 실패로 끝낸다(WaitForAckAsync).
+        private static readonly TimeSpan AckTimeout = TimeSpan.FromMinutes(3);
+
+        // 7za 종료 코드 1 = "일부 파일을 읽지 못해 빼고 묶었음". 실패로 다룬다.
+        private const int SevenZipSomeFilesSkipped = 1;
+
+        // 상태가 바뀔 때마다 알린다. 화면은 이걸 구독해 진행 상황을 보여주면 된다.
+        public event Action<AnswerSubmitState, string>? StateChanged;
+
+        // 답안을 내고 시험 파일 정리까지 끝났다. 지웠으면 true, 남았으면 false.
+        // 이 학생에게는 시험이 완전히 끝난 순간이라 시험 화면이 이걸 보고 마무리한다(ExamWindow).
+        // StateChanged 로는 가를 수 없다 — 정리에 실패해도 제출 자체는 성공(Succeeded)이기 때문이다.
+        // 제출을 끝낸 배경 작업에서 올라오므로 받는 쪽에서 화면 스레드로 넘겨야 한다.
+        public event Action<bool>? CleanupFinished;
+
+        public AnswerSubmitState State { get; private set; } = AnswerSubmitState.Idle;
+
+        private readonly object _gate = new object();
+        private bool _inProgress;
+
+        // 전송 진행률 감시용. 콜백이 네이티브 스레드에서 올라오므로 volatile로 둔다.
+        private volatile string _sendingFileName = "";
+        private volatile int _sendPercent;
+        private volatile bool _sendFailed;
+        private long _lastProgressTicks;
+
+        // 교수의 확인 회신을 기다리는 곳.
+        private TaskCompletionSource<bool>? _ackWaiter;
+
+        private AnswerSubmitService() { }
+
+        // 앱 시작 시 한 번 호출 — 구독만 해둔다.
+        public void Start()
+        {
+            NetworkService.Instance.PacketReceived += OnPacketReceived;
+            NetworkService.Instance.FileProgress += OnFileProgress;
+            NetworkService.Instance.FileError += OnFileError;
+        }
+
+        private void OnPacketReceived(PacketType type, IntPtr payload, uint payloadLen)
+        {
+            if (type == PacketType.ExamSubmitRequest) HandleSubmitRequest(payload, payloadLen);
+            else if (type == PacketType.CommandAck) HandleCommandAck(payload, payloadLen);
+        }
+
+        // ① 교수가 '답안 일괄 수집'을 누름
+        private void HandleSubmitRequest(IntPtr payload, uint payloadLen)
+        {
+            if (!ExamSubmitPayload.TryDecode(payload, payloadLen, out _, out string password, out _))
+                return;
+
+            // 먼저 내고 시험 파일까지 지운 학생에게도 교수의 일괄 수집 요청이 온다.
+            // 그대로 진행하면 묶을 폴더가 없어 '제출 실패' 창이 뜬다. 이미 낸 답안은 교수 PC 에 있으므로 넘어간다.
+            if (State == AnswerSubmitState.Succeeded && !Directory.Exists(ExamFileStore.Instance.ExtractedRoot))
+                return;
+
+            // 수신 스레드를 붙잡으면 안 되므로 압축·전송은 따로 돌린다.
+            _ = SubmitAsync(password);
+        }
+
+        // 교수의 확인 회신. 기다리는 쪽을 깨운다.
+        private void HandleCommandAck(IntPtr payload, uint payloadLen)
+        {
+            if (!CommandAckPayload.TryDecode(payload, payloadLen,
+                                             out PacketType commandType, out bool success, out _))
+                return;
+
+            // 다른 명령에 대한 회신이면 무시한다.
+            if (commandType != PacketType.ExamSubmitRequest) return;
+
+            _ackWaiter?.TrySetResult(success);
+        }
+
+        // 전송 진행률. 네이티브가 보내기와 받기에 같은 콜백을 쓰므로
+        // 우리가 보내는 파일 이름일 때만 센다.
+        private void OnFileProgress(string transferId, string fileName, int percent)
+        {
+            if (!string.Equals(fileName, _sendingFileName, StringComparison.OrdinalIgnoreCase)) return;
+
+            _sendPercent = percent;
+            Interlocked.Exchange(ref _lastProgressTicks, DateTime.UtcNow.Ticks);
+        }
+
+        private void OnFileError(string transferId, string message)
+        {
+            if (_sendingFileName.Length == 0) return;
+            _sendFailed = true;
+        }
+
+        // 학생이 스스로 '시험 종료'를 누를 때 부르는 경로.
+        // 교수 요청 없이 먼저 내는 것이므로 암호는 이번 시험을 받을 때 함께 온 것을 쓴다.
+        public Task<bool> SubmitAsync() => SubmitAsync(ExamFileStore.Instance.ExamPassword);
+
+        // ── 제출 본체 ──
+        public async Task<bool> SubmitAsync(string archivePassword)
+        {
+            // 두 경로(교수 요청 / 학생 버튼)가 겹쳐 들어와도 한 번만 돌게 막는다.
+            lock (_gate)
+            {
+                if (_inProgress) return false;
+                _inProgress = true;
+            }
+
+            string? archivePath = null;
+            try
+            {
+                // 이어 받을 기록 없이 프로그램을 다시 켠 뒤에는 어느 폴더가 이번 시험인지 모른다.
+                // 그대로 묶으면 '시험 파일' 폴더 전체(예전 시험, 같은 PC 의 교수 배포 파일까지)를 보내고,
+                // 교수의 회신을 받은 뒤 그 폴더를 통째로 지운다. 시험 파일을 다시 받을 때까지 제출하지 않는다.
+                if (!ExamFileStore.Instance.HasExamFolder)
+                    return Fail("답안 제출 실패.\n시험 파일을 받은 기록이 없습니다. 교수님께 재배포를 요청하십시오.");
+
+                // 학생이 작업 폴더 이름을 바꿨으면 이름이 달라진 폴더를 찾아 이어서 제출한다.
+                // 그마저 못 찾으면(옮겼거나 지웠거나 폴더가 여럿) 무엇을 되돌려야 하는지 알려 준다.
+                // 예전에는 '압축하지 못했습니다. 다시 시도하십시오.'만 떠서 몇 번을 눌러도 같은 실패만 반복했다.
+                string answerFolder = ExamFileStore.Instance.ResolveAnswerFolder();
+                if (answerFolder.Length == 0)
+                    return Fail("답안 제출 실패.\n작업 폴더를 찾을 수 없습니다.\n\n" +
+                                $"{ExamFileStore.Instance.ExtractedRoot}\n\n" +
+                                "이 폴더의 이름을 바꾸었거나 다른 곳으로 옮겼다면 원래대로 되돌린 뒤 다시 제출하십시오.\n" +
+                                "답안 파일 이름만 바꾸면 되고, 폴더 이름은 그대로 두어야 합니다.");
+
+                // 작업 폴더가 비어 있으면 7za 는 빈 묶음(142바이트)을 만들고 성공(코드 0)으로 끝낸다.
+                // 그대로 보내면 학생은 '정상적으로 제출되었습니다'를 보고 나가는데 교수에게는 빈 폴더가 남는다.
+                // 답안을 실수로 지운 학생이 그 사실을 모른 채 시험을 끝내는 길이라 여기서 막는다.
+                if (!Directory.EnumerateFiles(answerFolder, "*", SearchOption.AllDirectories).Any())
+                    return Fail("답안 제출 실패.\n작업 폴더에 제출할 파일이 하나도 없습니다.\n\n" +
+                                $"{answerFolder}\n\n" +
+                                "답안 파일을 이 폴더에 저장한 뒤 다시 제출하십시오.");
+
+                if (!NetworkService.Instance.IsConnected)
+                    return Fail("답안 제출 실패.\n서버와 연결된 뒤 다시 시도하십시오.");
+
+                // 1. 답안 폴더를 통째로 압축·암호화한다.
+                SetState(AnswerSubmitState.Compressing, "답안을 압축하는 중입니다...");
+                (archivePath, int code) = await Task.Run(() => CompressAnswers(answerFolder, archivePassword));
+                if (archivePath == null)
+                {
+                    // 7za는 못 읽은 파일이 있으면 코드 1을 주고 그 파일만 빼고 묶는다.
+                    // 학생이 편집기를 켜 둔 채 제출하는 흔한 상황이라, 무엇을 해야 하는지 알려 준다.
+                    return Fail(code == SevenZipSomeFilesSkipped
+                        ? "답안 제출 실패.\n시험 중이던 프로그램 종료 후 다시 시도하십시오."
+                        : "답안 제출 실패.\n답안을 압축하지 못했습니다. 다시 시도하십시오.");
+                }
+
+                // 2. 교수 PC로 보낸다.
+                //
+                // 회신을 받을 그릇은 보내기 전에 미리 만든다.
+                // 전송이 끝난 뒤에 만들면, 그 사이에 도착한 회신을 받을 곳이 없어 놓친다.
+                // 교수 PC는 마지막 조각을 받자마자 몇 ms 만에 회신하므로 실제로 자주 일어난다.
+                _ackWaiter = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                SetState(AnswerSubmitState.Sending, "답안을 전송하는 중입니다...");
+                if (!await SendAndWaitAsync(archivePath, archivePassword))
+                    return Fail("답안 제출 실패.\n전송이 끊겼습니다. 다시 시도하십시오.");
+
+                // 3. 교수가 잘 받았는지 확인한다. 이 확인이 있어야 파일을 지울 수 있다.
+                SetState(AnswerSubmitState.WaitingAck, "교수님 PC의 확인을 기다리는 중입니다...");
+                if (!await WaitForAckAsync())
+                    return Fail("답안 제출 실패.\n서버의 수신 확인이 없습니다. 다시 시도하십시오.");
+
+                // 4. 여기서부터가 되돌릴 수 없는 구간이다.
+                //    교수가 확실히 받았다고 회신한 뒤에만 시험 파일을 지운다.
+                SetState(AnswerSubmitState.Succeeded, "답안이 정상적으로 제출되었습니다.");
+                CleanupExamFiles(answerFolder);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return Fail($"답안 제출 실패.\n{ex.Message}");
+            }
+            finally
+            {
+                // 보낼 때 쓴 임시 묶음은 성공이든 실패든 지운다. 100MB가 임시 폴더에 남을 이유가 없다.
+                // 원본 답안 폴더는 실패했다면 그대로 둔다 — 교수가 못 받았을 수 있기 때문이다.
+                if (archivePath != null) TryDeleteFile(archivePath);
+
+                _sendingFileName = "";
+                _ackWaiter = null;
+                lock (_gate) { _inProgress = false; }
+            }
+        }
+
+        // 시험 파일을 지운다. 답안이 교수 PC에 안전히 도착한 뒤에만 불린다.
+        //
+        // 배포받은 폴더만 지우고 그 위의 "시험 파일" 폴더는 남긴다.
+        // 교수 PC 와 학생 PC 를 같은 기계에서 돌리면 두 쪽이 같은 폴더를 쓰는데,
+        // 통째로 지우면 교수가 만들어 둔 배포용 묶음까지 사라진다.
+        // 남은 폴더가 지워지더라도 다음 배포 때 압축을 풀면서 다시 만들어진다.
+        // 삭제에 실패해도 답안은 이미 교수에게 가 있어 유실은 아니다. 다만 그 자리에 앉는
+        // 다음 학생이 앞사람 답안을 보게 되므로, 교수에게 알려 직접 확인하도록 한다.
+        //
+        // 탐색기가 폴더를 열어 두었거나 학생이 편집기를 켜 둔 채면 삭제가 실패한다.
+        // 창을 강제로 닫지는 않는다 — 학생이 열어 둔 다른 창까지 잘못 닫을 수 있다.
+        // examFolder 는 방금 묶어 보낸 그 폴더다. 학생이 이름을 바꿨다면 바뀐 폴더가 들어온다 —
+        // 보낸 것과 지우는 것이 어긋나면 답안이 남거나 엉뚱한 폴더가 지워진다.
+        private void CleanupExamFiles(string examFolder)
+        {
+            try
+            {
+                if (Directory.Exists(examFolder))
+                    ExamFileStore.DeleteFolder(examFolder);
+
+                // 배포받은 원본 .7z도 시험 파일 폴더에 남아 있으므로 함께 지운다(ExamFileStore).
+                ExamFileStore.Instance.DeleteArchive();
+
+                // 지웠다는 사실도 교수에게 알린다.
+                // 실패만 알리면, 학생 PC가 보고 전에 꺼졌을 때 교수 화면에는
+                // 지워진 것처럼 보여 다음 학생이 앞사람 답안을 보게 된다.
+                ReportStatus(StudentStatus.CleanupSucceeded, "시험 파일을 지웠습니다.");
+
+                // 학생 화면은 아직 "수신 완료 100%"에 멈춰 있으므로 여기서 바꿔 준다.
+                ExamFileStore.Instance.MarkAnswerSubmitted(cleanupSucceeded: true);
+                CleanupFinished?.Invoke(true);
+            }
+            catch (Exception ex)
+            {
+                ReportStatus(StudentStatus.CleanupFailed, $"시험 파일을 지우지 못했습니다: {ex.Message}");
+                ExamFileStore.Instance.MarkAnswerSubmitted(cleanupSucceeded: false);
+                SetState(AnswerSubmitState.Succeeded,
+                         "답안 제출에는 성공 했으나, 시험 파일 폴더 초기화에 실패하였습니다.\n교수님께 문의 바랍니다.");
+                CleanupFinished?.Invoke(false);
+            }
+        }
+
+        // 학생 상태를 교수 PC로 보낸다.
+        private static void ReportStatus(StudentStatus status, string detail)
+        {
+            NetworkService.Instance.SendPacket(
+                PacketType.ExamStatusUpdate,
+                ExamStatusUpdatePayload.Encode(status, detail));
+        }
+
+        // 시험 파일을 받아 푼 폴더를 그대로 묶는다.
+        // 배포받은 원본 .7z는 이 폴더 바깥(시험 파일 폴더)에 있으므로 같이 들어가지 않는다.
+        // 묶음 파일은 임시 폴더에 만든다 — 답안 폴더 안에 만들면 자기 자신을 압축하게 된다.
+        //
+        // 종료 코드가 0이 아니면 만들어진 묶음을 버린다. 특히 코드 1이 위험한데,
+        // 7za가 못 읽은 파일만 빼고 나머지로 묶음을 만들어 주기 때문이다.
+        // 테스트로 확인함: 답안 파일이 편집기에 열려 있으면 코드 1 + 답안이 빠진 묶음이 나온다.
+        // 이걸 성공으로 보면 답안 없는 파일을 제출하고 원본까지 지우게 된다.
+        // sourceFolder 는 부르는 쪽이 찾아 준 작업 폴더다(ExamFileStore.ResolveAnswerFolder).
+        private static (string? ArchivePath, int Code) CompressAnswers(string sourceFolder, string password)
+        {
+            // 배포받은 폴더만 묶는다. 지우는 범위와 같아야 걷지 않은 것이 남지 않는다.
+            if (!Directory.Exists(sourceFolder)) return (null, -1);
+
+            // 파일명을 '학번_이름.7z' 형식으로 만든다. 교수가 수신 파일을 보고 학생을 바로 알 수 있게 한다.
+            // 학생 정보가 없는 예외 상황에는 임시 이름을 쓴다.
+            string studentNumber = ExamMonitorService.Instance.StudentNumber;
+            string studentName   = ExamMonitorService.Instance.StudentName;
+            string baseName = (!string.IsNullOrEmpty(studentNumber) && !string.IsNullOrEmpty(studentName))
+                ? $"{studentNumber}_{studentName}"
+                : $"answer_{Guid.NewGuid():N}";
+            string archivePath = Path.Combine(Path.GetTempPath(), $"{baseName}.7z");
+
+            int code = FileSystem.CompressEncrypt(sourceFolder, archivePath, password);
+            if (code != 0 || !File.Exists(archivePath))
+            {
+                TryDeleteFile(archivePath);
+                return (null, code);
+            }
+            return (archivePath, code);
+        }
+
+        // 전송을 시작하고 100%가 될 때까지 지켜본다.
+        // 진행률이 StallTimeout 동안 한 칸도 안 오르면 멈춘 것으로 본다.
+        private async Task<bool> SendAndWaitAsync(string archivePath, string archivePassword)
+        {
+            _sendingFileName = Path.GetFileName(archivePath);
+            _sendPercent = 0;
+            _sendFailed = false;
+            Interlocked.Exchange(ref _lastProgressTicks, DateTime.UtcNow.Ticks);
+
+            // 암호를 함께 실어 보낸다. 교수 PC가 받은 묶음을 열 때 쓴다.
+            NetworkService.Instance.SendFile(archivePath, archivePassword);
+
+            while (true)
+            {
+                await Task.Delay(500);
+
+                if (_sendFailed) return false;
+                if (_sendPercent >= 100) return true;
+
+                var lastProgress = new DateTime(Interlocked.Read(ref _lastProgressTicks), DateTimeKind.Utc);
+                if (DateTime.UtcNow - lastProgress > StallTimeout) return false;
+            }
+        }
+
+        // 확인 회신을 기다린다. 답이 없는 것도 실패로 친다 —
+        // 회신을 못 받았는데 성공으로 넘기면 답안을 지워버리게 된다.
+        private async Task<bool> WaitForAckAsync()
+        {
+            // 그릇은 보내기 전에 이미 만들어 두었다(SubmitAsync 참고).
+            // 전송 중에 회신이 먼저 도착했다면 이 Task는 이미 완료돼 있어 바로 지나간다.
+            TaskCompletionSource<bool>? waiter = _ackWaiter;
+            if (waiter == null) return false;
+
+            // 오래 기다리는 동안 교수 PC 가 꺼질 수 있다. 그때까지 3분을 채울 이유가 없으므로
+            // 연결 상태를 함께 보며 기다린다. 끊겼으면 바로 실패로 끝내고 학생이 다시 낼 수 있게 한다.
+            DateTime deadline = DateTime.UtcNow + AckTimeout;
+            while (DateTime.UtcNow < deadline)
+            {
+                Task finished = await Task.WhenAny(waiter.Task, Task.Delay(TimeSpan.FromSeconds(1)));
+                if (finished == waiter.Task) return waiter.Task.Result;
+                if (!NetworkService.Instance.IsConnected) return false;
+            }
+
+            return false;
+        }
+
+        private bool Fail(string message)
+        {
+            SetState(AnswerSubmitState.Failed, message);
+            return false;
+        }
+
+        private void SetState(AnswerSubmitState state, string message)
+        {
+            State = state;
+            StateChanged?.Invoke(state, message);
+        }
+
+        private static void TryDeleteFile(string path)
+        {
+            try { if (File.Exists(path)) File.Delete(path); } catch (Exception) { }
+        }
+    }
+}

@@ -1,0 +1,104 @@
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using ProfessorUI.Service;
+using ExamManager.Shared;
+
+namespace ProfessorUI.ViewModel
+{
+    // 대시보드 학생 칸 목록. 수강생 명단(StudentExcelStore)과 접속한 학생(StudentStore)을 학번으로 이어 붙인다.
+    //
+    // 화면은 메뉴를 옮길 때마다 새로 만들어지므로 목록은 여기(UiContext)에 두고 늘 맞춰 둔다.
+    // 명단을 불러오면 칸을 다시 만들고, 학생이 처음 접속하면 명단 칸에 붙이거나 새 칸을 뒤에 더한다.
+    public class StudentBoardViewModel : UiBinding
+    {
+        public ObservableCollection<StudentCardViewModel> Cards { get; } = new();
+
+        public StudentBoardViewModel()
+        {
+            StudentStore.Instance.Students.CollectionChanged += OnStudentsChanged;
+            StudentExcelStore.Changed += Rebuild;
+            Rebuild();
+        }
+
+        public bool HasRoster => StudentExcelStore.HasRoster;
+
+        // 명단 한 줄 요약. 칸을 하나씩 세지 않아도 빠진 학생과 잘못 들어온 학생 수를 바로 본다.
+        public string RosterSummaryText
+        {
+            get
+            {
+                if (!StudentExcelStore.HasRoster) return string.Empty;
+
+                int connected = Cards.Count(c => c.Roster != null && c.IsConnected);
+                int notInRoster = Cards.Count(c => c.IsNotInRoster && c.IsConnected);
+                int nameMismatch = Cards.Count(c => c.IsNameMismatch && c.IsConnected);
+
+                string text = $"수강생 명단 {StudentExcelStore.FileName} · {StudentExcelStore.Entries.Count}명 중 {connected}명 접속";
+                if (notInRoster > 0) text += $" · 명단에 없는 학번 {notInRoster}명";
+                if (nameMismatch > 0) text += $" · 이름이 명단과 다른 학생 {nameMismatch}명";
+                return text;
+            }
+        }
+
+        // 칸을 다시 만든다. 담는 순서는 상관없다 — 화면이 학번 순으로 줄 세워 보여 준다(DashboardWindow.CardOrder).
+        private void Rebuild()
+        {
+            foreach (var card in Cards)
+            {
+                card.Detach();
+                card.PropertyChanged -= OnCardChanged;
+            }
+            Cards.Clear();
+
+            var students = StudentStore.Instance.Students;
+            foreach (var entry in StudentExcelStore.Entries)
+                Add(new StudentCardViewModel(entry, students.FirstOrDefault(s => s.StudentId == entry.StudentId)));
+
+            foreach (var student in students.Where(s => StudentExcelStore.Find(s.StudentId) == null))
+                Add(new StudentCardViewModel(null, student));
+
+            NotifySummary();
+        }
+
+        // 학생 목록에는 처음 접속한 학생만 더해지고, 아무것도 남기지 않은 접속은 빠진다
+        // (StudentStore.MarkDisconnected). 빠지면 그 칸도 같이 뺀다.
+        private void OnStudentsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems != null)
+                foreach (StudentStatusViewModel student in e.OldItems)
+                {
+                    // 명단 칸은 자리를 남겨야 한다(명단 학생은 애초에 빠지지도 않는다)
+                    var card = Cards.FirstOrDefault(c => c.Roster == null && c.Student == student);
+                    if (card == null) continue;
+                    card.Detach();
+                    card.PropertyChanged -= OnCardChanged;
+                    Cards.Remove(card);
+                }
+
+            if (e.NewItems != null)
+                foreach (StudentStatusViewModel student in e.NewItems)
+                {
+                    var rosterCard = Cards.FirstOrDefault(c => c.Roster != null && !c.HasStudent && c.StudentId == student.StudentId);
+                    if (rosterCard != null) rosterCard.Attach(student);
+                    else Add(new StudentCardViewModel(null, student));
+                }
+
+            NotifySummary();
+        }
+
+        private void Add(StudentCardViewModel card)
+        {
+            card.PropertyChanged += OnCardChanged;
+            Cards.Add(card);
+        }
+
+        private void OnCardChanged(object? sender, PropertyChangedEventArgs e) => NotifySummary();
+
+        private void NotifySummary()
+        {
+            OnPropertyChanged(nameof(HasRoster));
+            OnPropertyChanged(nameof(RosterSummaryText));
+        }
+    }
+}

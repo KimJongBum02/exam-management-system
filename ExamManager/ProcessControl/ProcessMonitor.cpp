@@ -1,0 +1,682 @@
+#include "pch.h"
+#include "ProcessMonitor.h"
+
+#include <tlhelp32.h>
+#include <chrono>
+#include <cwctype>
+#include <shlobj.h>
+#include <wintrust.h>
+#include <softpub.h>
+#include <wincrypt.h>
+
+#pragma comment(lib, "version.lib")
+#pragma comment(lib, "shell32.lib")
+#pragma comment(lib, "ole32.lib")
+#pragma comment(lib, "wintrust.lib")
+#pragma comment(lib, "crypt32.lib")
+
+// 파일명에서 마지막 확장자 하나를 제거한다.
+// 교수 UI는 .NET Process.ProcessName(확장자 없음)을 보내지만 스냅샷은
+// szExeFile(확장자 포함)을 주므로, 양쪽을 같은 규칙으로 맞춰야 매칭된다.
+// 점이 없는 이름("System", "Registry", "Secure System" 등 시스템 프로세스)은 그대로 둔다.
+static std::wstring StripExtension(const std::wstring& name)
+{
+    size_t dot = name.rfind(L'.');
+    if (dot == std::wstring::npos) return name;
+    return name.substr(0, dot);
+}
+
+// PID로 실행 파일의 전체 경로와 프로세스 생성 시각을 얻는다.
+// 핸들을 두 번 열지 않도록 한 번에 처리한다.
+// System, Registry 같은 시스템 프로세스는 열 수 없으므로 실패가 정상 결과이며,
+// 이때 path는 빈 문자열, creation은 건드리지 않고 false를 돌려준다.
+static bool QueryProcessDetail(DWORD pid, std::wstring& path, FILETIME& creation)
+{
+    HANDLE h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+    if (!h) return false;
+
+    wchar_t buffer[MAX_PATH];
+    DWORD size = MAX_PATH;
+    if (QueryFullProcessImageNameW(h, 0, buffer, &size))
+        path.assign(buffer, size);
+
+    FILETIME exitTime, kernelTime, userTime;
+    bool gotCreation = GetProcessTimes(h, &creation, &exitTime, &kernelTime, &userTime) != FALSE;
+
+    CloseHandle(h);
+    return gotCreation;
+}
+
+// 제품명 키워드 비교용으로 다듬는다. 공백을 모두 빼고 소문자로 바꾼다.
+// 교수 쪽 프로그램 검색(ProgramCatalog)과 같은 규칙이다.
+// 제품명의 띄어쓰기는 사람마다 다르게 기억하므로 "tcp/ipping"도 "TCP/IP Ping"에 걸려야 한다.
+static std::wstring NormalizeLabel(const std::wstring& text)
+{
+    std::wstring result;
+    result.reserve(text.size());
+    for (wchar_t c : text)
+        if (!std::iswspace(c)) result.push_back(static_cast<wchar_t>(std::towlower(c)));
+    return result;
+}
+
+// 이 표시로 시작하는 금지 항목은 실행 파일 이름이 아니라 제품명 키워드다.
+// 교수 UI 의 ProgramControlStore.ProductKeywordPrefix 와 글자까지 같아야 한다.
+// 소스 파일 인코딩에 휘둘리지 않도록 한글을 코드값으로 적는다("제품명:").
+// 한글을 그대로 적으면 컴파일러가 이 파일을 어떤 코드페이지로 읽느냐에 따라 값이 바뀐다.
+static const std::wstring kProductKeywordPrefix = { wchar_t(0xC81C), wchar_t(0xD488), wchar_t(0xBA85), L':' };
+
+// 이 표시로 시작하는 금지 항목은 디지털 서명 게시자다("서명:").
+// 교수 UI 의 ProgramControlStore.SignaturePrefix 와 글자까지 같아야 한다.
+// 한글을 코드값으로 적는 이유는 kProductKeywordPrefix 와 같다(소스 인코딩에 휘둘리지 않게).
+static const std::wstring kSignaturePrefix = { wchar_t(0xC11C), wchar_t(0xBA85), L':' };
+
+// Microsoft 가 배포한 Store 앱의 실행 파일인지.
+//   <Program Files>\WindowsApps\<패키지 폴더>_8wekyb3d8bbwe\...
+// WindowsApps 는 TrustedInstaller 소유라 학생이 파일을 넣거나 바꿀 수 없고,
+// 폴더 이름 끝의 8wekyb3d8bbwe 는 Microsoft 서명 키에서 나오는 발행자 ID 라 다른 패키지가 쓸 수 없다.
+// 위치를 Program Files 로 못 박아야 한다. 사용자 폴더에 같은 이름의 폴더를 만드는 위장을 막기 위함이다.
+// 교수 UI 의 ProgramCatalog.IsMicrosoftStorePackage 와 같은 규칙이어야 한다.
+static bool IsMicrosoftStorePackage(const std::wstring& path)
+{
+    static const std::wstring appsDir = []
+    {
+        std::wstring dir;
+        PWSTR programFiles = nullptr;
+        if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_ProgramFiles, 0, nullptr, &programFiles)))
+            dir = std::wstring(programFiles) + L"\\WindowsApps\\";
+        CoTaskMemFree(programFiles);
+        return dir;
+    }();
+
+    if (appsDir.empty() || path.size() <= appsDir.size()
+        || _wcsnicmp(path.c_str(), appsDir.c_str(), appsDir.size()) != 0)
+        return false;
+
+    // WindowsApps 바로 아래 폴더(패키지 폴더)의 이름이 발행자 ID 로 끝나야 한다.
+    size_t end = path.find(L'\\', appsDir.size());
+    if (end == std::wstring::npos) return false;
+
+    static const std::wstring kMicrosoftPublisher = L"_8wekyb3d8bbwe";
+    std::wstring package = path.substr(appsDir.size(), end - appsDir.size());
+    return package.size() > kMicrosoftPublisher.size()
+        && _wcsicmp(package.c_str() + package.size() - kMicrosoftPublisher.size(), kMicrosoftPublisher.c_str()) == 0;
+}
+
+// 실행 파일의 버전 리소스에서 판정에 쓰는 값을 읽는다.
+// 버전 리소스가 아예 없는 실행 파일이 흔하므로 빈 값도 정상 결과다.
+//
+// originalName — OriginalFilename 에서 확장자를 뗀 것.
+//   컴파일 시점에 박히므로 파일 이름을 바꿔도 따라 변하지 않는다.
+// productLabel — ProductName 과 FileDescription 을 NormalizeLabel 로 다듬어 '|' 로 이은 것.
+//   두 값 사이의 '|' 는 경계를 넘는 일치를 막는다. 키워드에는 '|' 가 들어올 수 없다(목록 구분자).
+//
+// FILE_VER_GET_NEUTRAL이 반드시 필요하다. 이 플래그가 없으면 MUI(다국어 리소스)
+// 리다이렉션이 일어나 System32\ko-KR\ping.exe.mui 쪽 값을 읽고,
+// OriginalFilename이 "ping.exe.mui"로 나와 매칭에 실패한다.
+static VersionStrings QueryVersionStrings(const std::wstring& path)
+{
+    VersionStrings result;
+    if (path.empty()) return result;
+
+    DWORD ignored = 0;
+    DWORD size = GetFileVersionInfoSizeExW(FILE_VER_GET_NEUTRAL, path.c_str(), &ignored);
+    if (size == 0) return result;
+
+    std::vector<BYTE> data(size);
+    if (!GetFileVersionInfoExW(FILE_VER_GET_NEUTRAL, path.c_str(), 0, size, data.data()))
+        return result;
+
+    // 문자열 블록은 언어/코드페이지별로 나뉘어 있어, 번역 테이블을 먼저 읽어야
+    // 조회할 경로를 만들 수 있다. 첫 번째로 값이 나오는 언어를 쓴다.
+    struct LangCodePage { WORD language; WORD codePage; };
+    LangCodePage* translations = nullptr;
+    UINT translationBytes = 0;
+
+    if (!VerQueryValueW(data.data(), L"\\VarFileInfo\\Translation",
+                        reinterpret_cast<void**>(&translations), &translationBytes))
+        return result;
+
+    auto query = [&](const wchar_t* key) -> std::wstring
+    {
+        for (UINT i = 0; i < translationBytes / sizeof(LangCodePage); i++)
+        {
+            wchar_t subBlock[64];
+            swprintf_s(subBlock, L"\\StringFileInfo\\%04x%04x\\%ls",
+                       translations[i].language, translations[i].codePage, key);
+
+            wchar_t* value = nullptr;
+            UINT valueLen = 0;
+
+            if (VerQueryValueW(data.data(), subBlock, reinterpret_cast<void**>(&value), &valueLen) && valueLen > 0)
+                return std::wstring(value, wcsnlen(value, valueLen));
+        }
+        return std::wstring();
+    };
+
+    std::wstring productName = query(L"ProductName");
+    std::wstring fileDescription = query(L"FileDescription");
+
+    result.originalName = StripExtension(query(L"OriginalFilename"));
+    result.productLabel = NormalizeLabel(productName) + L"|" + NormalizeLabel(fileDescription);
+
+    // 알림에 보일 이름. 작업 관리자처럼 파일 설명을 쓴다("Code.exe" → "Visual Studio Code").
+    // 제품명은 윈도우 도구가 모두 "Microsoft Windows Operating System"이라 설명이 없을 때만 쓴다.
+    result.description = fileDescription.empty() ? productName : fileDescription;
+    return result;
+}
+
+// 알림에 쓸 이름을 만든다. "Visual Studio Code (Code.exe)"
+// 교수가 알아보도록 파일 설명을 앞에 두고, 금지·허용 목록(실행 파일 이름)과
+// 맞춰 볼 수 있게 파일명을 괄호로 붙인다. 이름을 바꾼 위장도 여기서 드러난다.
+// 설명이 없거나(Store 판 메모장 등) 파일명과 같으면 파일명만 쓴다.
+static std::wstring MakeLabel(const std::wstring& name, const std::wstring& description)
+{
+    if (description.empty()
+        || _wcsicmp(description.c_str(), name.c_str()) == 0
+        || _wcsicmp(description.c_str(), StripExtension(name).c_str()) == 0)
+        return name;
+
+    return description + L" (" + name + L")";
+}
+
+// 실행 파일의 디지털 서명을 검증하고, 통과하면 게시자 이름(예: "Microsoft Corporation")을 돌려준다.
+// 서명이 없거나 검증에 실패하면 빈 문자열이다 — 위조·손상된 서명은 게시자를 내주지 않는다.
+//
+// 게시자는 파일 이름·원본 이름과 달리 위조할 수 없다. 이름을 바꾸거나 리소스를 지운 도구도
+// 서명이 있으면 게시자로 잡힌다. 대신 검증에 암호 연산이 들어가 무거우므로 경로별로 캐시한다.
+//
+// 폐기 목록 확인(WTD_REVOKE_NONE)은 하지 않는다. 인터넷을 타면 느리고, 시험장이 폐쇄망일 수 있다.
+// 파일 안에 박힌 서명만 본다. 윈도우 시스템 파일은 카탈로그 서명이라 여기서 빈 값이 나오지만,
+// 그런 파일은 어차피 윈도우 폴더 예외(IsUnderWindowsDir)로 게시자 규칙을 적용하지 않는다.
+static std::wstring QueryPublisher(const std::wstring& path)
+{
+    if (path.empty()) return std::wstring();
+
+    WINTRUST_FILE_INFO fileInfo = {};
+    fileInfo.cbStruct = sizeof(fileInfo);
+    fileInfo.pcwszFilePath = path.c_str();
+
+    GUID policy = WINTRUST_ACTION_GENERIC_VERIFY_V2;
+    WINTRUST_DATA data = {};
+    data.cbStruct = sizeof(data);
+    data.dwUIChoice = WTD_UI_NONE;
+    data.fdwRevocationChecks = WTD_REVOKE_NONE;
+    data.dwUnionChoice = WTD_CHOICE_FILE;
+    data.pFile = &fileInfo;
+    data.dwStateAction = WTD_STATEACTION_VERIFY;
+    data.dwProvFlags = 0;   // 선택적 최적화 플래그는 쓰지 않는다. 폐기 확인은 위에서 이미 껐다.
+
+    std::wstring publisher;
+    if (WinVerifyTrust(nullptr, &policy, &data) == ERROR_SUCCESS)
+    {
+        CRYPT_PROVIDER_DATA* prov = WTHelperProvDataFromStateData(data.hWVTStateData);
+        CRYPT_PROVIDER_SGNR* signer = prov ? WTHelperGetProvSignerFromChain(prov, 0, FALSE, 0) : nullptr;
+        CRYPT_PROVIDER_CERT* cert = (signer && signer->csCertChain > 0)
+            ? WTHelperGetProvCertFromChain(signer, 0) : nullptr;
+
+        if (cert && cert->pCert)
+        {
+            DWORD len = CertGetNameStringW(cert->pCert, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0, nullptr, nullptr, 0);
+            if (len > 1)
+            {
+                std::vector<wchar_t> buffer(len);
+                CertGetNameStringW(cert->pCert, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0, nullptr, buffer.data(), len);
+                publisher.assign(buffer.data());
+            }
+        }
+    }
+
+    // 검증 상태를 반드시 닫아 준다(위 VERIFY 가 잡아 둔 자원 해제).
+    data.dwStateAction = WTD_STATEACTION_CLOSE;
+    WinVerifyTrust(nullptr, &policy, &data);
+
+    return publisher;
+}
+
+ProcessMonitor::ProcessMonitor()
+    : m_running(false)
+    , m_myPid(GetCurrentProcessId())
+{}
+
+ProcessMonitor::~ProcessMonitor()
+{
+    Stop();
+}
+
+void ProcessMonitor::SetBlacklist(const std::vector<std::wstring>& list)
+{
+    // 매 검사마다 정규화하지 않도록 보관 시점에 한 번만 다듬는다.
+    // 제품명 키워드는 확장자를 떼지 않는다. "Claude 3.5"의 ".5"는 확장자가 아니다.
+    std::vector<std::wstring> names, keywords, publishers;
+    names.reserve(list.size());
+    for (const auto& item : list)
+    {
+        if (item.compare(0, kProductKeywordPrefix.size(), kProductKeywordPrefix) == 0)
+        {
+            // 표시만 있고 비어 있으면 모든 프로그램의 제품명에 걸리므로 버린다.
+            std::wstring keyword = NormalizeLabel(item.substr(kProductKeywordPrefix.size()));
+            if (!keyword.empty()) keywords.push_back(std::move(keyword));
+        }
+        else if (item.compare(0, kSignaturePrefix.size(), kSignaturePrefix) == 0)
+        {
+            // 게시자도 제품명 키워드처럼 공백을 빼고 소문자로 보관해 포함 비교한다.
+            std::wstring publisher = NormalizeLabel(item.substr(kSignaturePrefix.size()));
+            if (!publisher.empty()) publishers.push_back(std::move(publisher));
+        }
+        else
+        {
+            names.push_back(StripExtension(item));
+        }
+    }
+
+    std::lock_guard<std::mutex> lock(m_listMutex);
+    m_blacklist = std::move(names);
+    m_blacklistKeywords = std::move(keywords);
+    m_blacklistPublishers = std::move(publishers);
+}
+
+void ProcessMonitor::SetWhitelist(const std::vector<std::wstring>& list)
+{
+    std::vector<std::wstring> normalized;
+    normalized.reserve(list.size());
+    for (const auto& item : list)
+        normalized.push_back(StripExtension(item));
+
+    std::lock_guard<std::mutex> lock(m_listMutex);
+    m_whitelist = std::move(normalized);
+}
+
+void ProcessMonitor::SetDetectCallback(DetectCallback callback)
+{
+    std::lock_guard<std::mutex> lock(m_callbackMutex);
+    m_detectCallback = callback;
+}
+
+void ProcessMonitor::Start()
+{
+    // 잠그지 않으면 두 호출이 동시에 아래 if를 통과할 수 있다.
+    // 그러면 감시 스레드가 2개 뜨고, 아직 살아있는 thread 객체를 덮어쓰면서
+    // std::terminate로 앱이 즉사한다. (시험 시작 버튼 중복 클릭 등)
+    std::lock_guard<std::mutex> lock(m_stateMutex);
+
+    if (m_running) return;
+
+    m_running = true;
+    m_prevRunningWhitelist.clear();
+    m_prevRunningBlacklist.clear();
+    m_reportedNew.clear();
+
+    // 감시를 켠 직후 첫 검사는 '정리'다.
+    // 시험 전부터 켜져 있던 금지 프로그램을 끄기는 하되, 부정행위로 알리지는 않는다.
+    // (이전 목록이 비어 있어 첫 검사에서는 실행 중인 것이 전부 신규로 보인다)
+    m_firstCheck = true;
+
+    // 이 시각이 신규 판정의 기준선이다. 스레드를 띄우기 전에 찍어야
+    // 첫 검사와 기준선 사이에 실행된 프로세스를 놓치지 않는다.
+    GetSystemTimeAsFileTime(&m_startTime);
+
+    m_monitorThread = std::thread(&ProcessMonitor::MonitorThreadFunc, this);
+}
+
+void ProcessMonitor::Stop()
+{
+    // Start와 같은 자물쇠를 써서 시작/중지가 서로 엉키지 않게 한다.
+    std::lock_guard<std::mutex> lock(m_stateMutex);
+
+    {
+        // m_wakeMutex를 잡고 바꿔야 한다. 안 그러면 감시 스레드가 조건을 확인한 뒤
+        // 잠들기 직전에 알림이 지나가 버려서, 결국 500ms를 다 기다리게 된다.
+        std::lock_guard<std::mutex> wake(m_wakeMutex);
+        m_running = false;
+    }
+    m_wakeCv.notify_all();
+
+    if (m_monitorThread.joinable())
+    {
+        m_monitorThread.join();
+    }
+}
+
+void ProcessMonitor::MonitorThreadFunc()
+{
+    while (m_running)
+    {
+        CheckOnce();
+
+        // sleep_for와 달리 Stop이 중간에 깨울 수 있다.
+        // 그래서 UI 스레드가 최대 500ms를 기다리는 일이 없다.
+        std::unique_lock<std::mutex> lock(m_wakeMutex);
+        m_wakeCv.wait_for(lock, std::chrono::milliseconds(500),
+                          [this] { return !m_running; });
+    }
+}
+
+std::vector<ProcessInfo> ProcessMonitor::GetRunningProcesses()
+{
+    std::vector<ProcessInfo> running;
+
+    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (snapshot == INVALID_HANDLE_VALUE) return running;
+
+    PROCESSENTRY32W pe;
+    pe.dwSize = sizeof(PROCESSENTRY32W);
+
+    if (Process32FirstW(snapshot, &pe))
+    {
+        do
+        {
+            if (pe.th32ProcessID == m_myPid) continue;
+
+            // 비교용 이름도 여기서 한 번만 만들어 둔다(프로세스당 1회).
+            std::wstring name = pe.szExeFile;
+            std::wstring path;
+            FILETIME creation = {};
+            bool gotCreation = QueryProcessDetail(pe.th32ProcessID, path, creation);
+
+            // 경로 조회는 커널 호출이라 매번 해도 싸지만, 버전 리소스는
+            // 디스크를 읽으므로 경로를 키로 캐시한다. 처음 보는 파일일 때만 실제로 읽는다.
+            VersionStrings version;
+            if (!path.empty())
+            {
+                auto cached = m_versionCache.find(path);
+                if (cached == m_versionCache.end())
+                {
+                    VersionStrings read = QueryVersionStrings(path);
+
+                    // 버전 정보가 없는 Microsoft Store 앱(메모장·그림판·캡처 도구)은 설치 위치가
+                    // 신원을 보증하므로 실행 파일 이름을 원래 이름으로 대신 쓴다. 허용 판정이 이 값을 본다.
+                    if (read.originalName.empty() && IsMicrosoftStorePackage(path))
+                        read.originalName = StripExtension(name);
+
+                    cached = m_versionCache.emplace(path, std::move(read)).first;
+                }
+
+                version = cached->second;
+            }
+
+            // 생성 시각을 못 얻으면 신규로 보지 않는다. 핸들을 못 여는 건 SYSTEM 권한
+            // 프로세스뿐이고, 이를 신규로 처리하면 시험 중 시작되는 윈도우 서비스가
+            // 전부 오탐으로 올라온다. 학생이 띄운 프로세스는 항상 열 수 있다.
+            bool isNew = gotCreation && CompareFileTime(&creation, &m_startTime) > 0;
+
+            running.push_back({ name, StripExtension(name), path, version.originalName, version.productLabel,
+                                MakeLabel(name, version.description), pe.th32ProcessID, isNew });
+        } while (Process32NextW(snapshot, &pe));
+    }
+
+    CloseHandle(snapshot);
+    return running;
+}
+
+bool ProcessMonitor::IsInList(const std::wstring& name, const std::vector<std::wstring>& list)
+{
+    for (const auto& item : list)
+    {
+        if (_wcsicmp(name.c_str(), item.c_str()) == 0)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+// C:\Windows\ 아래의 실행 파일인지. 제품명 키워드가 윈도우 구성요소를 건드리지 않게 하는 데 쓴다.
+static bool IsUnderWindowsDir(const std::wstring& path)
+{
+    static const std::wstring windowsDir = []
+    {
+        wchar_t buffer[MAX_PATH];
+        UINT length = GetSystemWindowsDirectoryW(buffer, MAX_PATH);
+        std::wstring dir(buffer, length);
+        if (!dir.empty() && dir.back() != L'\\') dir += L'\\';
+        return dir;
+    }();
+
+    return !windowsDir.empty() && path.size() > windowsDir.size()
+        && _wcsnicmp(path.c_str(), windowsDir.c_str(), windowsDir.size()) == 0;
+}
+
+// 파일명과 OriginalFilename 중 하나만 걸려도 차단 대상으로 본다. 파일명을 바꿔도
+// OriginalFilename은 남으므로, cheat.exe로 위장한 notepad도 여기서 잡힌다.
+// 종료 판정과 신규 보고 제외가 같은 기준을 써야 하므로 함수로 묶는다.
+//
+// 제품명 키워드는 ProductName·FileDescription 안에 그 단어가 들어 있으면 걸린다.
+// 실행 파일 이름의 철자를 몰라도, 이름을 바꿔도 잡힌다.
+// 대신 포함 여부로 보는 만큼 넓게 걸리므로 허용 목록에 있는 프로그램은 빼 준다.
+// 시험에 쓰는 도구가 키워드 하나 때문에 강제 종료되면 안 된다.
+bool ProcessMonitor::IsBlacklisted(const ProcessInfo& proc, const std::vector<std::wstring>& blacklist,
+                                   const std::vector<std::wstring>& keywords,
+                                   const std::vector<std::wstring>& publishers, const std::vector<std::wstring>& whitelist)
+{
+    if (IsInList(proc.matchName, blacklist)
+        || (!proc.originalName.empty() && IsInList(proc.originalName, blacklist)))
+        return true;
+
+    // 윈도우 폴더 안의 프로그램은 제품명 키워드·서명 게시자로 끄지 않는다.
+    // 윈도우 구성요소는 제품명이 거의 모두 "Microsoft Windows Operating System"이라,
+    // "제품명:Windows" 한 줄이면 작업 표시줄·입력기까지 꺼진다(개발 PC 에서 18개 확인).
+    // 게시자도 마찬가지라 "서명:Microsoft" 한 줄이 윈도우 전체를 끌 수 있어 여기서 막는다.
+    // 이름으로 콕 집어 넣은 것(cmd.exe 등)은 교수의 뜻이므로 위에서 그대로 막는다.
+    if (IsUnderWindowsDir(proc.path)) return false;
+
+    for (const auto& keyword : keywords)
+    {
+        if (proc.productLabel.find(keyword) != std::wstring::npos)
+            return !IsWhitelisted(proc, whitelist);
+    }
+
+    // 서명 게시자 규칙. 검증된 서명의 게시자에 이 단어가 들어 있으면 걸린다.
+    // 이름·원본 이름·제품명을 바꾸거나 지워도 서명은 위조할 수 없어 여기서 잡힌다.
+    // 서명 검증은 무거우므로 규칙이 있고 경로가 있을 때만 읽고, 경로별로 캐시한다.
+    if (!publishers.empty() && !proc.path.empty())
+    {
+        const std::wstring& publisher = GetPublisherCached(proc.path);
+        if (!publisher.empty())
+        {
+            std::wstring normalized = NormalizeLabel(publisher);
+            for (const auto& rule : publishers)
+                if (normalized.find(rule) != std::wstring::npos)
+                    return !IsWhitelisted(proc, whitelist);
+        }
+    }
+    return false;
+}
+
+// 경로별 게시자 캐시. 폴링 스레드에서만 부르므로 별도 락이 필요 없다.
+const std::wstring& ProcessMonitor::GetPublisherCached(const std::wstring& path)
+{
+    auto found = m_publisherCache.find(path);
+    if (found == m_publisherCache.end())
+        found = m_publisherCache.emplace(path, QueryPublisher(path)).first;
+    return found->second;
+}
+
+// 화이트리스트는 블랙리스트와 반대로 엄격하게 본다.
+// 차단은 의심스러우면 걸어도 되지만, 허용은 확실할 때만 줘야 하기 때문이다.
+// 특히 화이트리스트는 신규 프로세스 보고를 면제하므로, 느슨하면 허용된 이름으로
+// 위장하는 것만으로 완전 무탐지가 된다.
+//
+// 파일명과 OriginalFilename이 '둘 다' 목록으로 설명되어야 허용한다.
+// OriginalFilename이 없으면 신원을 증명하지 못한 것이므로 면제하지 않는다.
+// (리소스를 지우고 허용된 이름을 붙이는 우회를 막기 위함)
+//
+// 정상 소프트웨어도 같은 바이너리를 다른 이름으로 배포하므로
+// (git.exe → bash.exe 등) 그런 경우는 두 이름을 모두 목록에 넣으면 된다.
+// 학생의 행위로 볼 수 없는 Windows 자체 구성요소.
+//
+// explorer.exe는 바탕화면과 작업표시줄 그 자체라 로그인 시점부터 항상 떠 있다.
+// 폴더를 열 때마다 새 프로세스가 잠깐 생기는데, 시험 폴더를 자동으로 띄우는 것도
+// 우리 프로그램이라 알림이 계속 쌓인다.
+//
+// 게다가 알려 봐야 막을 수 없다. 학생은 이미 떠 있는 탐색기를 쓰면 되고,
+// 그때는 새 프로세스가 생기지 않아 어차피 잡히지 않는다.
+//
+// type 2('모르는 프로그램') 판정에서만 뺀다.
+// 교수가 블랙리스트에 직접 넣었다면 그건 명시적인 의사이므로 그대로 종료한다.
+static bool IsSystemComponent(const std::wstring& matchName)
+{
+    static const wchar_t* kComponents[] = { L"explorer" };
+
+    for (const wchar_t* name : kComponents)
+        if (_wcsicmp(matchName.c_str(), name) == 0) return true;
+
+    return false;
+}
+// EnumWindows가 창을 하나씩 넘겨줄 때마다 불린다.
+// 학생이 보고 조작할 수 있는 창만 추린다.
+static BOOL CALLBACK CollectWindowOwner(HWND hwnd, LPARAM lparam)
+{
+    // 숨겨진 창은 백그라운드 프로그램이 내부 용도로 만든 것이다.
+    if (!IsWindowVisible(hwnd)) return TRUE;
+
+    // 제목이 없는 창도 대부분 보조 창이다. 학생이 쓰는 프로그램은 제목이 있다.
+    if (GetWindowTextLengthW(hwnd) == 0) return TRUE;
+
+    DWORD pid = 0;
+    GetWindowThreadProcessId(hwnd, &pid);
+    if (pid != 0)
+        reinterpret_cast<std::set<DWORD>*>(lparam)->insert(pid);
+
+    return TRUE;   // 계속 순회
+}
+
+// 지금 화면에 창을 띄우고 있는 프로세스들의 PID를 모은다.
+//
+// RuntimeBroker.exe나 backgroundTaskHost.exe처럼 Windows가 알아서 띄우는 프로세스는
+// 창이 없다. 학생이 직접 실행한 것과 구분하는 기준으로 쓴다.
+std::set<DWORD> ProcessMonitor::GetPidsWithVisibleWindow()
+{
+    std::set<DWORD> pids;
+    EnumWindows(CollectWindowOwner, reinterpret_cast<LPARAM>(&pids));
+    return pids;
+}
+bool ProcessMonitor::IsWhitelisted(const ProcessInfo& proc, const std::vector<std::wstring>& whitelist)
+{
+    return IsInList(proc.matchName, whitelist)
+        && !proc.originalName.empty()
+        && IsInList(proc.originalName, whitelist);
+}
+
+void ProcessMonitor::CheckOnce()
+{
+    std::vector<ProcessInfo> running = GetRunningProcesses();
+
+    std::vector<std::wstring> blacklist, blacklistKeywords, blacklistPublishers, whitelist;
+    {
+        std::lock_guard<std::mutex> lock(m_listMutex);
+        blacklist = m_blacklist;
+        blacklistKeywords = m_blacklistKeywords;
+        blacklistPublishers = m_blacklistPublishers;
+        whitelist = m_whitelist;
+    }
+
+    DetectCallback cb;
+    {
+        std::lock_guard<std::mutex> lock(m_callbackMutex);
+        cb = m_detectCallback;
+    }
+
+    // ===== 1. 블랙리스트: 실행 중이면 종료, 새로 등장했을 때만 알림 =====
+    // 종료는 매 검사마다 시도하되(못 죽인 프로세스는 계속 재시도),
+    // 콜백은 '없다→있다'로 새로 등장한 경우에만 발화해 500ms 반복 알림을 막는다.
+    std::vector<std::wstring> currentBlacklist;
+
+    // 감시를 켠 뒤에 실행된 것만 따로 모은다.
+    // 첫 검사에서 '시험 전부터 켜져 있던 것'과 구분하는 데 쓴다.
+    std::vector<std::wstring> newlyStarted;
+
+    for (const auto& proc : running)
+    {
+        // 리스트와 비교할 때만 정규화된 이름을 쓴다.
+        // 아래 currentBlacklist는 스냅샷끼리의 비교라 알림용 이름(label) 그대로 다뤄도 일관된다.
+        if (IsBlacklisted(proc, blacklist, blacklistKeywords, blacklistPublishers, whitelist))
+        {
+            // Windows 자체 구성요소는 목록에 들어와도 종료하지 않는다.
+            // explorer.exe를 죽이면 바탕화면과 작업표시줄이 통째로 사라진다.
+            // 교수가 실수로 넣으면 학생 PC 전체가 시험 도중 화면을 잃게 되는데,
+            // 그건 어떤 경우에도 의도한 결과가 아니다.
+            if (IsSystemComponent(proc.matchName)) continue;
+
+            // PID를 이미 알고 있으므로 재스냅샷 없이 바로 종료
+            HANDLE h = OpenProcess(PROCESS_TERMINATE, FALSE, proc.pid);
+            if (h)
+            {
+                TerminateProcess(h, 1);
+                CloseHandle(h);
+            }
+
+            if (!IsInList(proc.label, currentBlacklist))
+                currentBlacklist.push_back(proc.label);
+
+            if (proc.isNew && !IsInList(proc.label, newlyStarted))
+                newlyStarted.push_back(proc.label);
+        }
+    }
+
+    for (const auto& name : currentBlacklist)
+    {
+        if (IsInList(name, m_prevRunningBlacklist)) continue;   // 이미 알린 것
+
+        // 첫 검사에서는 감시를 켠 뒤에 실행된 것만 알린다.
+        // 시험 전부터 켜져 있던 금지 프로그램은 끄기는 하되 부정행위가 아니라 정리 대상이다.
+        // (두 번째 검사부터는 이전 목록과 비교하므로 이 구분이 필요 없다)
+        if (m_firstCheck && !IsInList(name, newlyStarted)) continue;
+
+        if (cb) cb(0, name);  // type 0 = 블랙리스트 실행 (신규 등장)
+    }
+
+    m_prevRunningBlacklist = currentBlacklist;
+
+    // ===== 2. 화이트리스트 종료 감지 → 콜백 =====
+    // 교수에게는 참고용으로만 간다. 빌드를 마쳤거나 할 일을 끝내 닫았을 수 있어
+    // 부정행위로 보지 않는다(교수 UI App.xaml.cs). 다시 켜는 것은 알리지 않는다(3번에서 제외).
+    std::vector<std::wstring> currentWhitelist;
+    for (const auto& proc : running)
+    {
+        // 이름당 한 번만 담는다. VS Code 처럼 같은 이름의 프로세스를 여러 개 띄우는
+        // 프로그램은, 중복을 두면 창 하나를 닫을 때 프로세스 수만큼 알림이 간다.
+        if (IsWhitelisted(proc, whitelist) && !IsInList(proc.label, currentWhitelist))
+        {
+            currentWhitelist.push_back(proc.label);
+        }
+    }
+
+    for (const auto& prev : m_prevRunningWhitelist)
+    {
+        if (!IsInList(prev, currentWhitelist))
+        {
+            if (cb) cb(1, prev);  // type 1 = 화이트리스트 종료
+        }
+    }
+
+    m_prevRunningWhitelist = currentWhitelist;
+
+    // ===== 3. 어느 목록에도 없는 신규 프로세스 → 콜백 =====
+    // 블랙리스트는 '알려진 것'만 막으므로, 목록에 없는 프로그램은 그대로 통과한다.
+    // 시험 시작 후 새로 실행됐다는 사실 자체를 근거로 삼아 이 구멍을 메운다.
+    // 종료하지 않고 알리기만 한다. 판단은 교수 몫이다.
+    //
+    // 단, 창이 있는 것만 본다. Windows가 알아서 띄우는 백그라운드 프로세스
+    // (RuntimeBroker.exe 등)까지 잡으면 알림이 그런 것들로 가득 차 진짜 부정행위가 묻힌다.
+    // 창 없이 도는 금지 프로그램은 블랙리스트가 창 여부와 무관하게 종료하므로 여기서 뺀다.
+    std::set<DWORD> windowedPids = GetPidsWithVisibleWindow();
+
+    for (const auto& proc : running)
+    {
+        if (!proc.isNew) continue;
+        if (IsBlacklisted(proc, blacklist, blacklistKeywords, blacklistPublishers, whitelist)) continue;   // 이미 type 0으로 보고됨
+        if (IsWhitelisted(proc, whitelist)) continue;        // 시험에 필요한 프로그램
+        if (IsSystemComponent(proc.matchName)) continue;     // Windows 자체 구성요소
+        if (m_reportedNew.count(proc.pid)) continue;         // PID당 한 번만 알린다
+
+        // 창이 아직 안 떴을 수도 있으므로 여기서는 기록하지 않고 넘긴다.
+        // 다음 검사에서 창이 생기면 그때 알린다.
+        if (!windowedPids.count(proc.pid)) continue;
+
+        m_reportedNew.insert(proc.pid);
+        if (cb) cb(2, proc.label);  // type 2 = 목록에 없는 신규 프로세스
+    }
+
+    // 첫 검사가 끝났다. 다음 검사부터는 실제 부정행위로 보고 알린다.
+    m_firstCheck = false;
+}

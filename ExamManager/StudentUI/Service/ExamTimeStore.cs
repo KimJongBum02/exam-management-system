@@ -1,0 +1,194 @@
+using NetworkLib;
+using ExamManager.Shared;
+using System.Windows.Threading;
+
+namespace StudentUI.Service
+{
+    // 시험 남은 시간을 앱 전체에서 공유한다.
+    //
+    // 교수가 '시험 시작'을 누른 순간(ExamPhaseChange(InProgress) 수신)부터 세기 시작한다.
+    // 화면이 바뀌어도 시간이 초기화되면 안 되므로 화면이 아니라 여기에 둔다.
+    //
+    // 시작 시각을 교수가 보내 주는 대신 학생이 신호를 받은 시각으로 잡는다.
+    // 강의실 PC마다 시계가 맞다는 보장이 없어, 교수가 보낸 시각을 그대로 믿으면
+    // 시계가 틀어진 PC에서 엉뚱한 시간이 나온다. 신호는 전원에게 거의 동시에
+    // 도착하므로 학생 간 차이는 무시할 수 있다.
+    public class ExamTimeStore : UiBinding
+    {
+        public static ExamTimeStore Instance { get; } = new ExamTimeStore();
+
+        // 시험 시간. 바뀌면 이 값만 고치면 된다. 화면의 '전체 시간'과 남은 시간 표기 방식이 이 값을 따라간다.
+        public static readonly TimeSpan ExamDuration = TimeSpan.FromMinutes(50);
+
+        // 화면에 '50 분'으로 적는 값. 숫자를 화면에 또 적어 두면 시험 시간을 바꿀 때 한쪽만 바뀐다.
+        public int TotalMinutes => (int)ExamDuration.TotalMinutes;
+
+        private readonly DispatcherTimer _ticker;
+        private DateTime _startedAt;
+
+        private ExamTimeStore()
+        {
+            _ticker = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            _ticker.Tick += (s, e) => Tick();
+        }
+
+        // 앱 시작 시 한 번 호출 — 구독만 해둔다.
+        public void Start()
+        {
+            NetworkService.Instance.PacketReceived += OnPacketReceived;
+
+            // 학생이 스스로 답안을 내고 나가는 경우, 교수의 종료 신호가 오지 않는다.
+            // 그래도 그 학생의 시험은 끝난 것이므로 타이머를 멈춘다.
+            AnswerSubmitService.Instance.StateChanged += (state, _) =>
+            {
+                if (state != AnswerSubmitState.Succeeded) return;
+
+                // 제출은 배경 작업에서 끝난다. 타이머는 화면 스레드에서만 다룰 수 있다.
+                UiThread.Post(Finish);
+            };
+        }
+
+        // ── 바인딩용 상태 ──
+        private bool _isRunning;
+        public bool IsRunning
+        {
+            get => _isRunning;
+            private set { _isRunning = value; OnPropertyChanged(); }
+        }
+
+        private TimeSpan _remaining = ExamDuration;
+        public TimeSpan Remaining
+        {
+            get => _remaining;
+            private set
+            {
+                _remaining = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(RemainingText));
+                OnPropertyChanged(nameof(IsTimeUp));
+            }
+        }
+
+        // 한 시간이 안 되는 시험은 "49 : 58"(분:초), 한 시간 이상이면 "01 : 00 : 00"(시:분:초).
+        // 남은 시간이 아니라 '시험 시간'을 보고 정한다 — 남은 시간으로 정하면 한 시간을 지나는 순간 칸 수가 바뀐다.
+        public string RemainingText =>
+            ExamDuration < TimeSpan.FromHours(1)
+                ? $"{_remaining.Minutes:00} : {_remaining.Seconds:00}"
+                : $"{(int)_remaining.TotalHours:00} : {_remaining.Minutes:00} : {_remaining.Seconds:00}";
+
+        // 시간이 다 됐는지. 다 돼도 답안을 자동 제출하지는 않는다 —
+        // 학생이 마지막으로 저장하는 중일 수 있고, 교수가 시간을 더 주는 경우도 있다.
+        // 종료는 교수가 '시험 종료' 버튼으로 결정한다.
+        public bool IsTimeUp => IsRunning && _remaining <= TimeSpan.Zero;
+
+        // 시험이 끝났는지. 멈춘 것과 끝난 것을 구분해야 문구가 "대기 중"으로 되돌아가지 않는다.
+        private bool _isFinished;
+        public bool IsFinished
+        {
+            get => _isFinished;
+            private set { _isFinished = value; OnPropertyChanged(); }
+        }
+
+        public string StatusText =>
+            IsFinished ? "시험 종료" :
+            IsTimeUp   ? "시험 시간 종료" :
+            IsRunning  ? "시험 진행 중" : "시험 대기 중";
+
+        // ── 교수 신호 처리 (네이티브 스레드에서 호출됨) ──
+        private void OnPacketReceived(PacketType type, IntPtr payload, uint payloadLen)
+        {
+            if (type != PacketType.ExamPhaseChange) return;
+            if (!ExamPhasePayload.TryDecode(payload, payloadLen, out ExamPhase phase)) return;
+
+            // 타이머는 UI 스레드에서만 다룰 수 있다.
+            UiThread.Post(() =>
+            {
+                if (phase == ExamPhase.InProgress) Begin();
+                else if (phase >= ExamPhase.SubmitRequested) Finish();
+            });
+        }
+
+        public void Reset()
+        {
+            _ticker.Stop();
+            IsRunning = false;
+            IsFinished = false;
+            FinishedAt = null;
+            Remaining = ExamDuration;
+            OnPropertyChanged(nameof(IsRunning));
+            OnPropertyChanged(nameof(IsFinished));
+            OnPropertyChanged(nameof(StatusText));
+            OnPropertyChanged(nameof(RemainingText));
+            OnPropertyChanged(nameof(IsTimeUp));
+        }
+
+        private void Begin()
+        {
+            // 같은 신호가 두 번 와도 시간을 되돌리지 않는다.
+            if (IsRunning) return;
+
+            _startedAt = DateTime.UtcNow;
+            IsFinished = false;
+            IsRunning = true;
+            Remaining = ExamDuration;
+            _ticker.Start();
+            OnPropertyChanged(nameof(StatusText));
+        }
+
+        // 시험을 시작한 시각. 이어 받기 기록에 남긴다(ExamSessionStore 참고).
+        public DateTime StartedAtUtc => _startedAt;
+
+        // 다시 켠 프로그램이 진행 중이던 시험의 남은 시간을 이어서 센다.
+        // 교수가 이미 끝낸 시험이면 끝난 상태로 되돌린다 — 종료 화면에서 답안을 낼 수 있게 한다.
+        public void Resume(DateTime startedAtUtc, bool examEnded)
+        {
+            _startedAt = startedAtUtc;
+            if (examEnded)
+            {
+                Finish();
+                FinishedAt = null;   // 언제 끝났는지는 기록에 없다
+                return;
+            }
+
+            IsFinished = false;
+            IsRunning = true;
+            _ticker.Start();
+            Tick();
+            OnPropertyChanged(nameof(StatusText));
+        }
+
+        // 시험이 끝났다. 교수의 종료 신호나 학생 본인의 제출 완료로 불린다.
+        public void Finish()
+        {
+            _ticker.Stop();
+            IsRunning = false;
+            if (!IsFinished) FinishedAt = DateTime.Now;   // 종료 신호가 두 번 와도 처음 시각을 남긴다
+            IsFinished = true;
+            OnPropertyChanged(nameof(StatusText));
+        }
+
+        // 시험이 끝난 시각. 종료 화면에 보여 준다. 모르면 null.
+        private DateTime? _finishedAt;
+        public DateTime? FinishedAt
+        {
+            get => _finishedAt;
+            private set { _finishedAt = value; OnPropertyChanged(); }
+        }
+
+        private void Tick()
+        {
+            TimeSpan left = ExamDuration - (DateTime.UtcNow - _startedAt);
+
+            if (left <= TimeSpan.Zero)
+            {
+                // 0에서 멈춘다. 음수로 내려가면 화면에 이상한 값이 찍힌다.
+                Remaining = TimeSpan.Zero;
+                _ticker.Stop();
+                OnPropertyChanged(nameof(StatusText));
+                return;
+            }
+
+            Remaining = left;
+        }
+    }
+}
