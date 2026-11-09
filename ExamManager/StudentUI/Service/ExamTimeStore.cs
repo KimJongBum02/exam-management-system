@@ -158,7 +158,7 @@ namespace StudentUI.Service
         }
 
         // 시험이 끝났다. 교수의 종료 신호나 학생 본인의 제출 완료로 불린다.
-        private void Finish()
+        public void Finish()
         {
             _ticker.Stop();
             IsRunning = false;

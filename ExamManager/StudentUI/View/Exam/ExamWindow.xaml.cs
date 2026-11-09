@@ -149,22 +149,37 @@ namespace StudentUI.View.Exam
         // 제출·정리를 마치고 스스로 닫는 중. 이때도 종료 확인창을 묻지 않는다.
         private bool _finishing;
 
+        // Close() 가 시작된 뒤 — 이 시점부터 WPF 도 Visibility=Visible 을 예외로 막는다.
+        // 아래 종료 확인창이 떠 있는 동안에도 시험 시작·종료 알림은 계속 들어오므로,
+        // 그 사이에 덮개를 띄우려 하면 학생 앱이 통째로 죽는다(2026-11-06 crash.log).
+        private bool _closing;
+
         // 창을 닫으면 앱이 그대로 종료되고 수신한 시험 파일 상태도 사라지므로,
         // 사용자가 직접 닫을 때만(전환도 아니고 마무리도 아닐 때) 실수 방지 확인을 한 번 한다.
         protected override void OnClosing(CancelEventArgs e)
         {
+            _closing = true;
+
             if (IsNavigating || _finishing)
             {
                 base.OnClosing(e);
                 return;
             }
 
-            var answer = MessageBox.Show(
+            // 소유자를 넘긴다 — 주지 않으면 이 확인창이 덮개(Topmost) 뒤로 숨고,
+            // 덮개의 버튼이 그대로 눌려 닫는 도중에 로그아웃·제출이 돌아간다.
+            var answer = MessageBox.Show(this,
                 "시험 화면을 닫으면 프로그램이 종료됩니다.\n정말 종료하시겠습니까?",
                 "종료 확인", MessageBoxButton.YesNo, MessageBoxImage.Warning);
 
             if (answer != MessageBoxResult.Yes)
+            {
                 e.Cancel = true;
+                _closing = false;
+                // 확인창이 떠 있는 동안 건너뛴 상태 변화를 따라잡는다.
+                // 여기서 바로 부르면 WPF 가 아직 '닫는 중'이라 덮개를 띄우지 못한다 — 취소가 끝난 뒤로 넘긴다.
+                UiThread.Post(UpdatePresentation);
+            }
 
             base.OnClosing(e);
         }
@@ -240,6 +255,7 @@ namespace StudentUI.View.Exam
         //   시험, 끝난 뒤     → 전체화면 덮개(종료 잠금 화면에서 답안을 낸다)
         private void UpdatePresentation()
         {
+            if (_closing) return;   // 닫는 중에 덮개를 띄우면 WPF 가 예외를 던져 학생 앱이 끝난다
             switch (Service.ClassControlService.Instance.CurrentMode)
             {
                 case ClassMode.Exam:
