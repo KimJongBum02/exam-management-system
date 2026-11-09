@@ -528,10 +528,15 @@ namespace StudentUI.ViewModel
                 {
                     SubmitStatus = message;
 
-                    // 제출이 끝나면 결과를 확실히 알려 준다.
-                    // 실패했어도 답안은 PC에 그대로 남아 있으므로 다시 제출할 수 있다.
+                    // 제출이 끝나면 이 학생의 시험은 끝이다. 시간이 남은 조기 제출이어도 덮개(종료 화면)로
+                    // 바꿔 준다 — 그래야 제출 결과 줄과 '몇 초 뒤 닫힙니다' 안내가 보인다.
+                    // 성공 팝업을 두지 않는 이유: 덮개가 Topmost 라서 소유자 없는 MessageBox 는 그 뒤로 숨고,
+                    // 같은 말을 덮개의 제출 상태 줄이 이미 하고 있다(2026-11-06).
                     if (state == AnswerSubmitState.Succeeded)
-                        MessageBox.Show(message, "제출 완료", MessageBoxButton.OK, MessageBoxImage.Information);
+                        ExamTime.Finish();
+                    // 실패는 팝업을 남긴다. 실패하면 자동 종료도 없고 학생이 다시 내야 하는데,
+                    // 조기 제출 중에는 덮개가 떠 있지 않아 알려 줄 자리가 여기밖에 없다.
+                    // (답안은 PC 에 그대로 남아 있으므로 다시 제출할 수 있다)
                     else if (state == AnswerSubmitState.Failed)
                         MessageBox.Show(message, "제출 실패", MessageBoxButton.OK, MessageBoxImage.Warning);
                 });
