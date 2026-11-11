@@ -53,6 +53,11 @@ namespace ProfessorUI.Common
             Distribute.ResetForNextExam();
             Chat.ResetForNextExam();
             ExamLog.ResetForNextExam();
+
+            // 작성해 둔 퀴즈·설문 문제도 비운다. 낸 문제의 응답 기록은 화면이 비운다 —
+            // 퀴즈는 비우기 전에 엑셀 저장이 끼어 있어 실패를 알려야 한다(ExamEndWindow.Reset_Click).
+            Quiz.Clear();
+            Survey.CurrentQuestion = string.Empty;
         }
     }
 }

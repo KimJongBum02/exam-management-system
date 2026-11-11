@@ -156,7 +156,7 @@ namespace ProfessorUI.View.Professor
         private void ClassModeLocked_Click(object sender, RoutedEventArgs e) => SetClassMode(ClassMode.Locked);
         private void ClassModeExam_Click(object sender, RoutedEventArgs e) => SetClassMode(ClassMode.Exam);
 
-        private void SetClassMode(ClassMode mode)
+        internal void SetClassMode(ClassMode mode)
         {
             // 통제·시험은 학생 입력을 잠그고 덮개를 띄운다 — 그러면 교수가 보낸 원격 입력까지 함께 막히고
             // 화면은 덮개만 보여, 원격 창은 못 쓰는데 떠 있는 상태가 된다. 먼저 끊고 알린다.

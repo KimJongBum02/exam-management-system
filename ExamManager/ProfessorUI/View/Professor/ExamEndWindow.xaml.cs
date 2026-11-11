@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using NetworkLib;
 using ProfessorUI.Service;
 using ProfessorUI.Common;
 using ProfessorUI.ViewModel;
@@ -91,7 +92,9 @@ namespace ProfessorUI.View.Professor
                 " · 시험 종료·답안 수집\n" +
                 " · 채팅\n" +
                 " · 프로그램 관리\n" +
-                " · 화면 모니터링\n";
+                " · 화면 모니터링\n" +
+                " · 퀴즈 · 설문 (설문 응답은 저장되지 않아 다시 볼 수 없습니다)\n" +
+                " · 화면 모드를 자유 모드로 변경";
 
             // 끝내 답안을 걷지 못한 학생은 정리하면 표에서도 지워진다. 마지막으로 한 번 더 보여 준다.
             // 대상은 [미수집 학생 다시 수집] 과 같다 — 이번 시험을 치른 학생 중 답안이 없는 학생이다.
@@ -107,7 +110,21 @@ namespace ProfessorUI.View.Professor
                                 MessageBoxResult.No) != MessageBoxResult.Yes)
                 return;
 
+            // 낸 퀴즈·설문의 응답 기록도 비운다(작성 칸은 UiContext.ResetForNextExam 이 비운다).
+            // 퀴즈는 비우기 전에 엑셀로 한 번 더 저장되고, 저장하지 못하면 비우지 않는다(QuizService.ClearSession).
+            // 그때는 알리고 나머지 정리는 그대로 진행한다 — 퀴즈 파일 하나 때문에 다음 시험이 잠기면 안 된다.
+            if (!QuizService.Instance.ClearSession())
+                MessageBox.Show("퀴즈 기록을 파일로 저장할 수 없어 비우지 못했습니다. " +
+                                $"해당 경로에 저장할 수 있는지 확인해 주세요.\n\n{QuizService.SessionFolder}",
+                                "퀴즈 기록", MessageBoxButton.OK, MessageBoxImage.Warning);
+            SurveyService.Instance.ClearSession();
+
             _ctx.ResetForNextExam();
+
+            // 시험이 끝났으니 학생 PC 를 잠근 채 두지 않는다. 남겨 두면 다음 학생이 접속하는 순간
+            // 그 모드를 그대로 받는다(ClassModeState.SendOnConnect). 상단바 표시까지 함께 맞추려고
+            // 교수가 직접 누를 때와 같은 길을 쓴다.
+            MainWindow.From(this)?.SetClassMode(ClassMode.Free);
 
             // 정리하면 이 화면의 메뉴는 다시 잠긴다(MainWindow.ApplyPhaseGates). 머물러 있을 자리가 아니므로
             // 버튼 이름 그대로 시험 준비 마법사 1단계로 보낸다.
